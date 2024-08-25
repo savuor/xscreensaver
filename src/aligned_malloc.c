@@ -13,29 +13,15 @@ software for any purpose.  It is provided "as is" without express or
 implied warranty.
 */
 
-#include "config.h"
-
+#include "precomp.h"
 #include "aligned_malloc.h"
-
-#include <stddef.h>
-#include <stdlib.h>
-
-#include <assert.h>
-#include <errno.h>
 
 /* Might be changed by thread_util.c:threads_available()
  */
 unsigned int aligned_malloc_default_alignment = sizeof(void *);
 
 
-#if HAVE_UNISTD_H
-#	include <unistd.h>
-#endif
 
-#if defined __MACH__ && defined __APPLE__ /* OS X, iOS */
-#	include <sys/sysctl.h>
-#	include <inttypes.h>
-#endif
 
 #define IS_POWER_OF_2(x) ((x) > 0 && !((x) & ((x) - 1)))
 
@@ -74,19 +60,7 @@ OpenRISC: 16 (Linux has the cache line size as a todo.)
 Unicore: 1 << 5
 */
 
-#if defined __MACH__ && defined __APPLE__ /* OS X, iOS */
-#	include <TargetConditionals.h> /* For TARGET_OS_IPHONE. */
-#	ifdef TARGET_OS_IPHONE
-#		define _CACHE_LINE_SIZE 64
-#	endif
-#endif
 
-#if defined __FreeBSD__ && !defined _CACHE_LINE_SIZE
-#	include <machine/param.h>
-#	ifdef CACHE_LINE_SIZE
-#		define _CACHE_LINE_SIZE CACHE_LINE_SIZE
-#	endif
-#endif
 
 #if !defined _CACHE_LINE_SIZE
 #	if defined __i386 || defined __x86_64

@@ -27,19 +27,7 @@
  *  Created: 10-Dec-2018 by jwz.
  */
 
-# include "config.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <signal.h>
-
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-#include <X11/Xos.h>
+#include "precomp.h"
 
 #include "screenhackI.h"
 #include "fixed-funcs.h"

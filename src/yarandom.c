@@ -50,13 +50,7 @@
    Irix 6.2; Indy r5k; SGI cc version 6; gcc version 2.7.2.1.
  */
 
-#include "config.h"
-
-
-#ifdef HAVE_UNISTD_H
-# include <unistd.h>  /* for getpid() */
-#endif
-#include <sys/time.h> /* for gettimeofday() */
+#include "precomp.h"
 
 #include "yarandom.h"
 # undef ya_rand_init

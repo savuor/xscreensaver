@@ -12,6 +12,8 @@
 #ifndef __FIXED_FUNCS_H__
 #define __FIXED_FUNCS_H__
 
+#include "precomp.h"
+
 // from resources.h
 extern Bool get_boolean_resource (Display*,char*,char*);
 extern int get_integer_resource (Display*,char*,char*);

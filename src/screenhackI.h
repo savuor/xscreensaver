@@ -53,43 +53,12 @@
 #ifndef __SCREENHACK_I_H__
 #define __SCREENHACK_I_H__
 
-# include "config.h"
+#include "precomp.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <time.h>
-
-#ifdef __hpux
- /* Which of the ten billion standards does values.h belong to?
-    What systems always have it? */
-# include <values.h>
-#endif
-
-#ifdef HAVE_JWXYZ
-# include "jwxyz.h"
-# include <string.h> /* X11/Xos.h brings this in. */
-#else  /* real X11 */
 # include <X11/Xlib.h>
 # include <X11/Xutil.h>
 # include <X11/Xresource.h>
 # include <X11/Xos.h>
-#endif /* !HAVE_JWXYZ */
-
-#ifdef HAVE_JWXYZ
-# define DEFAULT_VISUAL -1   /* From utils/visual.c. */
-# define GL_VISUAL	 -6
-#endif /* HAVE_JWXYZ */
-
-#if defined(HAVE_IPHONE) || defined(HAVE_ANDROID)
-# define HAVE_MOBILE
-#endif
-
-#ifdef HAVE_ANDROID
- /* So that hacks' debug output shows up in logcat... */
-# undef  fprintf
-# define fprintf(S, ...) Log(__VA_ARGS__)
-#endif
 
 /* M_PI ought to have been defined in math.h, but... */
 #ifndef M_PI

@@ -13,22 +13,7 @@ software for any purpose.  It is provided "as is" without express or
 implied warranty.
 */
 
-#include "config.h"
-
-#include <assert.h>
-#include <errno.h>
-#include <limits.h>
-#include <stdlib.h>
-#include <stdio.h> /* Only used by thread_memory_alignment(). */
-#include <string.h>
-
-#if HAVE_ALLOCA_H
-#	include <alloca.h>
-#endif
-
-#if defined __MACH__ && defined __APPLE__ /* OS X, iOS */
-#	include <sys/sysctl.h>
-#endif
+#include "precomp.h"
 
 #include "thread_util.h"
 
@@ -36,10 +21,6 @@ implied warranty.
 #include "fixed-funcs.h"
 
 #if HAVE_PTHREAD
-
-#	if !HAVE_UNISTD_H
-#		error unistd.h must be present whenever pthread.h is.
-#	endif
 
 const pthread_mutex_t mutex_initializer =
 #	if defined _GNU_SOURCE && !defined NDEBUG
@@ -117,78 +98,6 @@ int threads_available(Display *dpy)
 		defined __DragonFly__ || \
 		defined __minix
 
-/*
-   BSD Unixes use sysctl(3) for this.
-   Some BSDs also support sysconf(3) for this, but in each case this was added
-   after sysctl(3).
-   Linux: sysctl is present, but strongly deprecated.
-   Minix uses the NetBSD userspace, so it has both this and sysconf(3).
-   QNX: sysctl is present for kern.* and net.*, but it doesn't say anything
-   about hw.*
-*/
-
-/* __APPLE__ without __MACH__ is OS 9 or earlier. __APPLE__ with __MACH__ is OS X. */
-
-/*
-The usual thing to do here is for sysctl(3) to call __sysctl(2).
-  http://cvsweb.netbsd.org/bsdweb.cgi/src/lib/libc/gen/sysctl.c?only_with_tag=HEAD
-  http://svnweb.freebsd.org/base/head/lib/libc/gen/sysctl.c?view=markup
-*/
-
-/*
-   OS X: Xcode Instruments (as of Xcode 4; Apple likes to move things like
-   this around) can disable CPUs as a debugging tool.
-   Instruments -> Preferences... (Command-,) -> General -> Active Processor Cores
-   FreeBSD, OpenBSD: It doesn't look like CPUs can be disabled.
-   NetBSD: CPUs can be disabled manually through cpuctl(8).
-*/
-
-#		include <stddef.h>
-
-/* FreeBSD: sys/sysctl.h needs sys/types.h, but the one doesn't bring the
-   other in automatically. */
-#		include <sys/types.h>
-#		include <sys/sysctl.h>
-
-static unsigned _hardware_concurrency(void)
-{
-	int count;
-	size_t size = sizeof(count);
-
-#		if defined __APPLE__ && defined __MACH__
-	/* Apple sez: sysctl("hw.logicalcpu") is affected by the "current power
-       management mode", so use hw.logicalcpu_max. */
-	/* https://developer.apple.com/library/mac/#documentation/Darwin/Reference/ManPages/man3/sysctl.3.html */
-	if(!sysctlbyname("hw.logicalcpu_max", &count, &size, NULL, 0)) /* Preferred on more recent Darwin. */
-	{
-		assert(size == sizeof(count));
-		return count;
-	}
-#		endif
-
-#		if defined HW_NCPUONLINE
-	/* NetBSD has this. */
-	{
-		static const int name[] = {CTL_HW, HW_NCPUONLINE};
-		if(!sysctl(name, 2, &count, &size, NULL, 0))
-		{
-			assert(size == sizeof(count));
-			return count;
-		}
-	}
-#		endif
-
-	{
-		static const int name[] = {CTL_HW, HW_NCPU};
-		if(!sysctl((int *)name, 2, &count, &size, NULL, 0)) /* (int *) is for OS X. */
-		{
-			assert(size == sizeof(count));
-			return count;
-		}
-	}
-
-	return 1;
-}
 
 #	elif HAVE_UNISTD_H && defined _SC_NPROCESSORS_ONLN
 

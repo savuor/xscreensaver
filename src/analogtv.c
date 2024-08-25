@@ -69,20 +69,8 @@
   Updated for new xshm.c.
 */
 
-#ifdef HAVE_JWXYZ
-# include "jwxyz.h"
-#else /* !HAVE_JWXYZ */
-# include <X11/Xlib.h>
-# include <X11/Xutil.h>
-#endif
-#include <limits.h>
+#include "precomp.h"
 
-#include <assert.h>
-#include <errno.h>
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include "fixed-funcs.h"
 #include "analogtv.h"
 #include "yarandom.h"

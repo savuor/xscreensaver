@@ -12,6 +12,8 @@
 #ifndef _XSCREENSAVER_ANALOGTV_H
 #define _XSCREENSAVER_ANALOGTV_H
 
+#include "precomp.h"
+
 #include "thread_util.h"
 #include "fixed-funcs.h"
 

@@ -13,6 +13,8 @@
 #ifndef _XIMAGE_LOADER_H_
 #define _XIMAGE_LOADER_H_
 
+#include "precomp.h"
+
 extern XImage *file_to_ximage (Display *, Visual *, const char *filename);
 
 #endif /* _XIMAGE_LOADER_H_ */

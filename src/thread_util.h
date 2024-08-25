@@ -69,23 +69,8 @@ implied warranty.
       performance gains may be slim to non-existant.
  */
 
+#include "precomp.h"
 #include "aligned_malloc.h"
-
-/* For HAVE_PTHREAD. */
-#	include "config.h"
-
-#include <stddef.h>
-
-#if HAVE_UNISTD_H
-/* For _POSIX_THREADS. */
-#	include <unistd.h>
-#endif
-
-#if defined HAVE_JWXYZ
-#	include "jwxyz.h"
-#else
-#	include <X11/Xlib.h>
-#endif
 
 #if HAVE_PTHREAD
 int threads_available(Display *dpy);

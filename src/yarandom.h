@@ -12,9 +12,9 @@
 #ifndef __YARANDOM_H__
 #define __YARANDOM_H__
 
-# include "config.h"
+#include "precomp.h"
 
-# include <inttypes.h>
+# include "config.h"
 
 #undef random
 #undef rand
@@ -39,10 +39,6 @@
 #undef srand48
 #undef rand_r
 #undef RAND_MAX
-
-#ifdef VMS
-# include "vms-gtod.h"
-#endif
 
 extern unsigned int ya_random (void);
 extern void ya_rand_init (unsigned int);

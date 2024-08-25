@@ -13,6 +13,7 @@
 #ifndef __XSCREENSAVER_RECORD_ANIM_H__
 # define __XSCREENSAVER_RECORD_ANIM_H__
 
+#include "precomp.h"
 
 #define time screenhack_record_anim_time
 #define gettimeofday screenhack_record_anim_gettimeofday
