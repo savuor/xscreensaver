@@ -98,12 +98,6 @@ typedef struct analogtv_input_s {
 
 } analogtv_input;
 
-typedef struct analogtv_font_s {
-  XImage *text_im;
-  int char_w, char_h;
-  int x_mult, y_mult;
-} analogtv_font;
-
 typedef struct analogtv_reception_s {
 
   analogtv_input *input;
@@ -271,11 +265,6 @@ void analogtv_setup_teletext(analogtv_input *input);
 
 /* Functions for rendering content into an analogtv_input */
 
-void analogtv_make_font(Display *dpy, Window window,
-                        analogtv_font *f, int w, int h, char *fontname);
-int analogtv_font_pixel(analogtv_font *f, int c, int x, int y);
-void analogtv_font_set_pixel(analogtv_font *f, int c, int x, int y, int value);
-void analogtv_font_set_char(analogtv_font *f, int c, char *s);
 void analogtv_lcp_to_ntsc(double luma, double chroma, double phase,
                           int ntsc[4]);
 
@@ -288,13 +277,6 @@ void analogtv_draw_solid_rel_lcp(analogtv_input *input,
                                  double left, double right,
                                  double top, double bot,
                                  double luma, double chroma, double phase);
-
-void analogtv_draw_char(analogtv_input *input, analogtv_font *f,
-                        int c, int x, int y, int ntsc[4]);
-void analogtv_draw_string(analogtv_input *input, analogtv_font *f,
-                          char *s, int x, int y, int ntsc[4]);
-void analogtv_draw_string_centered(analogtv_input *input, analogtv_font *f,
-                                   char *s, int x, int y, int ntsc[4]);
 
 int analogtv_handle_events (analogtv *it);
 

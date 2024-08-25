@@ -80,7 +80,6 @@ struct state {
   Display *dpy;
   Window window;
   analogtv *tv;
-  analogtv_font ugly_font;
 
   int n_stations;
   analogtv_input **stations;
