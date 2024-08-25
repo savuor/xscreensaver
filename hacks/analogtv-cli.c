@@ -27,9 +27,7 @@
  *  Created: 10-Dec-2018 by jwz.
  */
 
-#ifdef HAVE_CONFIG_H
 # include "config.h"
-#endif
 
 #ifndef HAVE_FFMPEG
 # error HAVE_FFMPEG is required

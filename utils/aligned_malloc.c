@@ -13,9 +13,7 @@ software for any purpose.  It is provided "as is" without express or
 implied warranty.
 */
 
-#if HAVE_CONFIG_H
 #	include "config.h"
-#endif
 
 #include "aligned_malloc.h"
 

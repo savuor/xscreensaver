@@ -71,10 +71,8 @@ implied warranty.
 
 #include "aligned_malloc.h"
 
-#if HAVE_CONFIG_H
 /* For HAVE_PTHREAD. */
 #	include "config.h"
-#endif
 
 #include <stddef.h>
 

@@ -58,9 +58,7 @@ common_flags = [
 compile_flags = common_flags + ["-O2", "-c"]
 link_flags = common_flags
 
-common_defs = [
-    "HAVE_CONFIG_H"
-]
+common_defs = []
 
 objects = {
     "analogtv-cli"   : ("./hacks/analogtv-cli.c",   "./objs/analogtv-cli.o",   []),

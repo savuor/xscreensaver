@@ -50,10 +50,8 @@
    Irix 6.2; Indy r5k; SGI cc version 6; gcc version 2.7.2.1.
  */
 
+#include "config.h"
 
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
 
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>  /* for getpid() */

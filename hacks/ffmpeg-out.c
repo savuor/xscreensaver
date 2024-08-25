@@ -12,9 +12,7 @@
  * Created: 28 Apr 2023 by dmo2118@gmail.com
  */
 
-#ifdef HAVE_CONFIG_H
 # include "config.h"
-#endif
 
 #ifndef HAVE_FFMPEG
 # error HAVE_FFMPEG is required

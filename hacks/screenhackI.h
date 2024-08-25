@@ -53,9 +53,7 @@
 #ifndef __SCREENHACK_I_H__
 #define __SCREENHACK_I_H__
 
-#ifdef HAVE_CONFIG_H
 # include "config.h"
-#endif /* HAVE_CONFIG_H */
 
 #include <stdio.h>
 #include <stdlib.h>
