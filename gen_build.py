@@ -19,13 +19,7 @@ def link_args(flags, link_dirs, libs, objs, out):
 
 print("mkdir ./hacks/images/gen/")
 imgs = [
-    "wood", "toast", "hmac", "tunnel1", "amiga", "tunnelstar", "atm", "matrix1b", "matrix1", "som", "wood2",
-    "osx_10_2", "timetunnel0", "earth_night", "earth", "sea-texture", "apple", "start", "matrix2b", "logo-360",
-    "mac", "matrix3", "matrix2", "brick1", "sball", "testcard_pm5544", "tunnel3", "dvd", "android", "blocktube",
-    "brick2", "timetunnel1", "iris", "earth_flat", "tunnel0", "ground", "sball-bg", "logo-32", "tunnel2",
-    "logo-180", "macbomb", "sclera", "osx_10_3", "testcard_rca", "testcard_bbcf", "tunnel4", "tree",
-    "chromesphere", "oceantiles_12", "bob", "jigglymap", "gnome2", "logo-50", "sun", "gnome1", "ransomware",
-    "scales", "pacman", "earth_water", "tunnel5", "atari", "apple2font", "timetunnel2", "lament512", "6x10font"
+    "6x10font"
 ]
 for i in imgs:
     print("./utils/bin2c ./hacks/images/" + i + ".png ./hacks/images/gen/" + i + "_png.h")
