@@ -81,58 +81,6 @@
 # define GL_VISUAL	 -6
 #endif /* HAVE_JWXYZ */
 
-#ifdef USE_GL
-
-/* I'm told that the Sun version of OpenGL needs to have the constant
-   SUN_OGL_NO_VERTEX_MACROS defined in order for morph3d to compile
-   (the number of arguments to the glNormal3f macro changes...)
-   Verified with gcc 2.7.2.2 and Sun cc 4.2 with OpenGL 1.1.1 dev 4
-   on Solaris 2.5.1.
- */
-# if defined(__sun) && defined(__SVR4)	/* Solaris */
-#  define SUN_OGL_NO_VERTEX_MACROS 1
-# endif /* Solaris */
-
-# ifdef HAVE_GLSL
-#  define GL_GLEXT_PROTOTYPES
-# endif
-
-# if defined(HAVE_COCOA) && !defined(HAVE_IPHONE)  /* macOS */
-#  include <OpenGL/gl.h>
-#  include <OpenGL/glu.h>
-# elif defined(HAVE_IPHONE)
-#  ifdef HAVE_GLES3
-#   include "OpenGLES/ES3/gl.h"
-#  endif
-# elif defined(HAVE_ANDROID)
-#  include <GLES/gl.h>
-#  ifdef HAVE_GLES3
-#   include <GLES3/gl3.h>
-#  endif
-# else /* real X11 */
-#  include <GL/gl.h>
-#  include <GL/glu.h>
-#  ifdef HAVE_EGL
-#   include <EGL/egl.h>
-#   include <EGL/eglext.h>
-#  else
-#   include <GL/glx.h>
-#  endif
-
-   /* Sep 2022, Sep 2023: The Raspberry Pi 4b Broadcom driver doesn't do
-      GL_LINE_SMOOTH properly, so we must disable it. See init_GL(). */
-   extern void (* glEnable_fn) (GLuint);
-#  define glEnable (* glEnable_fn)
-
-# endif /* real X11 */
-
-# ifdef HAVE_JWZGLES
-#  include "jwzgles.h"
-# endif
-
-#endif /* HAVE_GL */
-
-
 #if defined(HAVE_IPHONE) || defined(HAVE_ANDROID)
 # define HAVE_MOBILE
 #endif

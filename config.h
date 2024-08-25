@@ -1,58 +1,13 @@
+/* All non-related stuff removed*/
 /* config.h.  Generated from config.h.in by configure.  */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
-
 
 /* xscreensaver, Copyright © 1991-2022 Jamie Zawinski.
  * Generate this file by running 'configure' rather than editing it by hand.
  */
 
-
-/* Define this to allow root to unlock, when not using PAM. */
-/* #undef ALLOW_ROOT_PASSWD */
-
-/* Define to 1 if translation of program messages to the user's native
-   language is requested. */
-#define ENABLE_NLS 1
-
-/* This is the name of the gettext package to use. */
-#define GETTEXT_PACKAGE "xscreensaver"
-
 /* Define this if gettimeofday takes two arguments. */
 #define GETTIMEOFDAY_TWO_ARGS 1
-
-/* Define this for Solaris getpwanam. */
-/* #undef HAVE_ADJUNCT_PASSWD */
-
-/* Define to 1 if you have the Mac OS X function
-   CFLocaleCopyPreferredLanguages in the CoreFoundation framework. */
-/* #undef HAVE_CFLOCALECOPYPREFERREDLANGUAGES */
-
-/* Define to 1 if you have the Mac OS X function CFPreferencesCopyAppValue in
-   the CoreFoundation framework. */
-/* #undef HAVE_CFPREFERENCESCOPYAPPVALUE */
-
-/* Define to 1 if you have the <crypt.h> header file. */
-#define HAVE_CRYPT_H 1
-
-/* Define if the GNU dcgettext() function is already present or preinstalled.
-   */
-#define HAVE_DCGETTEXT 1
-
-/* Define to 1 if you have the <dirent.h> header file, and it defines 'DIR'.
-   */
-#define HAVE_DIRENT_H 1
-
-/* Define this if you have the X Double Buffer Extension. */
-#define HAVE_DOUBLE_BUFFER_EXTENSION 1
-
-/* Define this if you have the XDPMS extension. */
-#define HAVE_DPMS_EXTENSION 1
-
-/* Define this if OpenGL bindings are via EGL instead of GLX. */
-#define HAVE_EGL 1
-
-/* Define this for DEC/SCO "Enhanced Security" with getprpwnam. */
-/* #undef HAVE_ENHANCED_PASSWD */
 
 /* Define to 1 if you have the 'fcntl' function. */
 #define HAVE_FCNTL 1
@@ -69,9 +24,6 @@
 /* Define this if you have the gdk_pixbuf_apply_embedded_orientation function
    (gdk-pixbuf 2.12). */
 #define HAVE_GDK_PIXBUF_APPLY_EMBEDDED_ORIENTATION 1
-
-/* Define this if you have GDK-Pixbuf-Xlib. */
-/* #undef HAVE_GDK_PIXBUF_XLIB */
 
 /* Define to 1 if you have the 'getaddrinfo' function. */
 #define HAVE_GETADDRINFO 1

@@ -32,18 +32,6 @@
 # pragma GCC diagnostic pop
 #endif
 
-#ifdef USE_GL
-# ifdef HAVE_JWXYZ
-#  include "jwxyz.h"
-# else /* !HAVE_JWXYZ -- real Xlib */
-#  include <GL/glx.h>
-#  include <GL/glu.h>
-# endif /* !HAVE_JWXYZ */
-# ifdef HAVE_JWZGLES
-#  include "jwzgles.h"
-# endif /* HAVE_JWZGLES */
-#endif /* USE_GL */
-
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -62,12 +50,8 @@ struct record_anim_state {
   int fade_frames;
   double start_time;
   XImage *img;
-# ifdef USE_GL
-  char *data2;
-# else  /* !USE_GL */
   Pixmap p;
   GC gc;
-# endif /* !USE_GL */
 
   char *outfile;
   ffmpeg_out_state *ffst;
@@ -135,9 +119,7 @@ screenhack_record_anim_init (Screen *screen, Window window, int target_frames)
   Display *dpy = DisplayOfScreen (screen);
   record_anim_state *st;
 
-# ifndef USE_GL
   XGCValues gcv;
-# endif /* !USE_GL */
 
   if (target_frames <= 0) return 0;
 
@@ -156,21 +138,12 @@ screenhack_record_anim_init (Screen *screen, Window window, int target_frames)
 
   XGetWindowAttributes (dpy, st->window, &st->xgwa);
 
-# ifdef USE_GL
-  st->img = XCreateImage (dpy, st->xgwa.visual, 24,
-                          ZPixmap, 0, 0, st->xgwa.width, st->xgwa.height,
-                          32, 0);
-  st->data2 = (char *) calloc (st->xgwa.width, st->xgwa.height * 3);
-
-# else    /* !USE_GL */
-
   st->gc = XCreateGC (dpy, st->window, 0, &gcv);
   st->p = XCreatePixmap (dpy, st->window,
                          st->xgwa.width, st->xgwa.height, st->xgwa.depth);
   st->img = XCreateImage (dpy, st->xgwa.visual, st->xgwa.depth,
                           ZPixmap, 0, 0, st->xgwa.width, st->xgwa.height,
                           8, 0);
-# endif /* !USE_GL */
 
   st->img->data = (char *) calloc (st->img->height, st->img->bytes_per_line);
 
@@ -232,8 +205,6 @@ screenhack_record_anim (record_anim_state *st)
   int obpl    = st->img->bytes_per_line;
   char *odata = st->img->data;
 
-# ifndef USE_GL
-
   Display *dpy = DisplayOfScreen (st->screen);
 
   /* Under XQuartz we can't just do XGetImage on the Window, we have to
@@ -270,35 +241,6 @@ screenhack_record_anim (record_anim_state *st)
     }
   else if (st->img->bytes_per_line != st->img->width * 3)
     abort();
-
-# else  /* USE_GL */
-
-  int y;
-
-# ifdef HAVE_JWZGLES
-#  undef glReadPixels /* Kludge -- unimplemented in the GLES compat layer */
-# endif
-
-  /* First OpenGL frame tends to be random data like a shot of my desktop,
-     since it is the front buffer when we were drawing in the back buffer.
-     Leave it black. */
-  /* glDrawBuffer (GL_BACK); */
-  if (st->frame_count != 0)
-    glReadPixels (0, 0, st->xgwa.width, st->xgwa.height,
-                  GL_BGR, GL_UNSIGNED_BYTE, st->img->data);
-
-  /* Flip vertically */
-  {
-    int bpl = st->xgwa.width * 3;
-    for (y = 0; y < st->xgwa.height; y++)
-      memcpy (st->data2     + bpl * y,
-              st->img->data + bpl * (st->xgwa.height - y - 1),
-              bpl);
-    st->img->data = st->data2;
-    st->img->bytes_per_line = bpl;
-  }
-
-# endif /* USE_GL */
 
   if (st->frame_count < st->fade_frames)
     fade_frame (st, (unsigned char *) st->img->data,
@@ -371,22 +313,16 @@ screenhack_record_anim (record_anim_state *st)
 void
 screenhack_record_anim_free (record_anim_state *st)
 {
-# ifndef USE_GL
   Display *dpy = DisplayOfScreen (st->screen);
-# endif /* !USE_GL */
   struct stat s;
 
   fprintf (stderr, "%s: wrote %d frames\n", progname, st->frame_count);
 
-# ifdef USE_GL
-  free (st->data2);
-# else  /* !USE_GL */
   free (st->img->data);
   st->img->data = 0;
   XDestroyImage (st->img);
   XFreeGC (dpy, st->gc);
   XFreePixmap (dpy, st->p);
-# endif /* !USE_GL */
 
   ffmpeg_out_close (st->ffst);
 
