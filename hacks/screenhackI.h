@@ -106,11 +106,7 @@
 #endif
 
 #include "yarandom.h"
-#include "usleep.h"
 #include "resources.h"
-#include "hsv.h"
-#include "colors.h"
-#include "grabclient.h"
 #include "visual.h"
 
 #undef countof

@@ -86,7 +86,6 @@
 #include "resources.h"
 #include "analogtv.h"
 #include "yarandom.h"
-#include "grabclient.h"
 #include "visual.h"
 #include "ximage-loader.h"
 
