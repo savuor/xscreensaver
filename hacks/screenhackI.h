@@ -166,8 +166,6 @@
 #include "colors.h"
 #include "grabclient.h"
 #include "visual.h"
-#include "xft.h"
-#include "font-retry.h"
 
 #ifdef HAVE_RECORD_ANIM
 # include "recanim.h"

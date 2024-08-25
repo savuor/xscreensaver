@@ -85,8 +85,6 @@
 #include "yarandom.h"
 #include "grabclient.h"
 #include "visual.h"
-#include "xft.h"
-#include "font-retry.h"
 #include "ximage-loader.h"
 
 /* #define DEBUG 1 */

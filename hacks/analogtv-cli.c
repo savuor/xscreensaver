@@ -51,7 +51,6 @@
 #include "resources.h"
 #include "visual.h"
 #include "yarandom.h"
-#include "font-retry.h"
 #include "ximage-loader.h"
 #include "thread_util.h"
 #include "xshm.h"
