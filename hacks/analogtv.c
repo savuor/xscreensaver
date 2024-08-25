@@ -2204,7 +2204,7 @@ analogtv_reception_update(analogtv_reception *rec)
 /* jwz: since MacOS doesn't have "6x10", I dumped this font to a PNG...
  */
 
-#include "images/gen/6x10font_png.h"
+#include "6x10font_png.h"
 
 void
 analogtv_make_font(Display *dpy, Window window, analogtv_font *f,
