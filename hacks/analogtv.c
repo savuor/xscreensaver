@@ -79,7 +79,10 @@
 
 #include <assert.h>
 #include <errno.h>
-#include "utils.h"
+#include <math.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 #include "resources.h"
 #include "analogtv.h"
 #include "yarandom.h"
