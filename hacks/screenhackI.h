@@ -113,10 +113,6 @@
 #include "grabclient.h"
 #include "visual.h"
 
-#ifdef HAVE_RECORD_ANIM
-# include "recanim.h"
-#endif
-
 #undef countof
 #define countof(x) (sizeof((x))/sizeof((*x)))
 

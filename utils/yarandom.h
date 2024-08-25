@@ -14,9 +14,7 @@
 
 # include "config.h"
 
-#ifdef HAVE_INTTYPES_H
 # include <inttypes.h>
-#endif
 
 #undef random
 #undef rand
@@ -118,12 +116,8 @@ static double _frand_tmp_;
  * "NRAND(n) * RANDSIGN()" (where RANDSIGN() returns either -1 or 1) is used
  * to get random numbers from the range (-n,n).
  */
-#ifdef HAVE_INTTYPES_H
 # define NRAND(n)       ((int32_t) ((uint64_t) random() * (uint32_t) (n) / \
                                     ((uint64_t) RAND_MAX + 1)))
-#else
-# define NRAND(n)       ((int) (LRAND() % (n)))
-#endif
 
 #define MAXRAND         (2147483648.0) /* unsigned 1<<31 as a float */
 #define SRAND(n)        /* already seeded by screenhack.c */
