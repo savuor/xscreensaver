@@ -5,9 +5,6 @@
 		}
 	],
 	"settings": {
-		"files.associations": {
-			"font-retry.h": "c"
-		},
 		"cmake.cmakePath": "/home/savuor/installs/cmake-3.27.7-linux-x86_64/bin/cmake",
 		"cmake.buildDirectory": "${userHome}/builds/analogtv-xscr/${buildType}"
 	},
