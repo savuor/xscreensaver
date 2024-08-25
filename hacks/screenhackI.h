@@ -166,7 +166,6 @@
 #include "colors.h"
 #include "grabclient.h"
 #include "visual.h"
-#include "fps.h"
 #include "xft.h"
 #include "font-retry.h"
 
@@ -207,8 +206,6 @@ struct xscreensaver_function_table {
                                 unsigned int w, unsigned int h);
   Bool           (*event_cb)   (Display *, Window, void *, XEvent *);
   void           (*free_cb)    (Display *, Window, void *);
-  void           (*fps_cb)     (Display *, Window, fps_state *, void *);
-  void           (*fps_free)   (fps_state *);
 
 # ifndef HAVE_JWXYZ
   Visual *       (*pick_visual_hook) (Screen *);
