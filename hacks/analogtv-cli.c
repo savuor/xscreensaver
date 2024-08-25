@@ -29,10 +29,6 @@
 
 # include "config.h"
 
-#ifndef HAVE_FFMPEG
-# error HAVE_FFMPEG is required
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

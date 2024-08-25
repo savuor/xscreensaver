@@ -13,13 +13,28 @@
 #include "screenhackI.h"
 #include "ximage-loader.h"
 
+extern Pixmap file_to_pixmap (Display *, Window, const char *filename,
+                              int *width_ret, int *height_ret,
+                              Pixmap *mask_ret);
+
+extern Pixmap image_data_to_pixmap (Display *, Window, 
+                                    const unsigned char *image_data,
+                                    unsigned long data_size,
+                                    int *width_ret, int *height_ret,
+                                    Pixmap *mask_ret);
+
+/* This XImage has RGBA data, which is what OpenGL code typically expects.
+   Also it is upside down: the origin is at the bottom left of the image.
+   X11 typically expects 0RGB as it has no notion of alpha, only 1-bit masks.
+   With X11 code, you should probably use the _pixmap routines instead.
+ */
+extern XImage *image_data_to_ximage (Display *, Visual *,
+                                     const unsigned char *image_data,
+                                     unsigned long data_size);
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-
-#if defined(HAVE_GDK_PIXBUF) || defined(HAVE_COCOA) || defined(HAVE_ANDROID)
-# undef HAVE_LIBPNG
-#endif
 
 #ifdef HAVE_COCOA
 # include "grabclient.h"  /* for osx_load_image_file() */
@@ -45,10 +60,6 @@
 # endif
 
 #endif /* HAVE_GDK_PIXBUF */
-
-#ifdef HAVE_LIBPNG
-# include <png.h>
-#endif
 
 #ifdef HAVE_ANDROID
  /* So that debug output shows up in logcat... */
@@ -196,266 +207,7 @@ make_ximage (Display *dpy, Visual *visual, const char *filename,
 
 #elif defined(HAVE_JWXYZ) /* MacOS, iOS or Android */
 
-/* Loads the image to an XImage, RGBA -- MacOS, iOS or Android version.
- */
-static XImage *
-make_ximage (Display *dpy, Visual *visual, const char *filename,
-             const unsigned char *image_data, unsigned long data_size)
-{
-  XImage *ximage = 0;
-
-  if (filename)
-    {
-# ifdef HAVE_COCOA  /* MacOS */
-      XRectangle geom;
-      Screen *screen = DefaultScreenOfDisplay (dpy);
-      Window window = RootWindowOfScreen (screen);
-      XWindowAttributes xgwa;
-      XGetWindowAttributes (dpy, window, &xgwa);
-      Pixmap pixmap =
-        XCreatePixmap (dpy, window, xgwa.width, xgwa.height, xgwa.depth);
-      int x, y;
-
-      if (! osx_load_image_file (screen, window, pixmap, filename, &geom))
-        {
-          fprintf (stderr, "%s: %s failed\n", progname, filename);
-          return 0;
-        }
-
-      ximage = XGetImage (dpy, pixmap, geom.x, geom.y,
-                          geom.width, geom.height,
-                          ~0L, ZPixmap);
-      if (!ximage) abort();
-
-      /* Have to convert ABGR to RGBA */
-      for (y = 0; y < ximage->height; y++)
-        for (x = 0; x < ximage->width; x++)
-          {
-            unsigned long p = XGetPixel (ximage, x, y);
-            unsigned long a = (p >> 24) & 0xFF;
-            unsigned long b = (p >> 16) & 0xFF;
-            unsigned long g = (p >>  8) & 0xFF;
-            unsigned long r = (p >>  0) & 0xFF;
-            p = (r << 24) | (g << 16) | (b << 8) | (a << 0);
-            XPutPixel (ximage, x, y, p);
-          }
-
-      XFreePixmap (dpy, pixmap);
-
-# else   /* !HAVE_COCOA -- iOS or Android. */
-      fprintf (stderr, "%s: image file loading not supported\n", progname);
-      return 0;
-# endif  /* !HAVE_COCOA */
-    }
-  else
-    {
-      ximage = jwxyz_png_to_ximage (dpy, visual, image_data, data_size);
-    }
-
-  return ximage;
-}
-
 #elif defined(HAVE_LIBPNG)
-
-typedef struct {
-  const unsigned char *buf;
-  png_size_t siz, ptr;
-} png_read_closure;
-
-static void
-png_reader_fn (png_structp png_ptr, png_bytep buf, png_size_t siz)
-{
-  png_read_closure *r = png_get_io_ptr (png_ptr);
-  if (siz > r->siz - r->ptr)
-    png_error (png_ptr, "PNG internal read error");
-  memcpy (buf, r->buf + r->ptr, siz);
-  r->ptr += siz;
-}
-
-
-/* Loads the image to an XImage, RGBA -- libpng version.
- */
-static XImage *
-make_ximage (Display *dpy, Visual *visual,
-             const char *filename, const unsigned char *image_data,
-             unsigned long data_size)
-{
-  XImage *image = 0;
-  png_structp png_ptr;
-  png_infop info_ptr;
-  png_infop end_info;
-  png_uint_32 width, height, channels;
-  int bit_depth, color_type, interlace_type;
-  FILE *fp = 0;
-  /* Must be at top or it goes out of scope in the setjmp! */
-  png_read_closure closure;
-
-  png_ptr = png_create_read_struct (PNG_LIBPNG_VER_STRING, 0, 0, 0);
-  if (!png_ptr) return 0;
-
-  info_ptr = png_create_info_struct (png_ptr);
-  if (!info_ptr)
-    {
-      png_destroy_read_struct (&png_ptr, 0, 0);
-      return 0;
-    }
-
-  end_info = png_create_info_struct (png_ptr);
-  if (!end_info)
-    {
-      png_destroy_read_struct (&png_ptr, &info_ptr, 0);
-      return 0;
-    }
-
-  if (setjmp (png_jmpbuf(png_ptr)))
-    {
-      png_destroy_read_struct (&png_ptr, &info_ptr, &end_info);
-      return 0;
-    }
-
-  if (filename)
-    {
-      fp = fopen (filename, "r");
-      if (! fp)
-        {
-          fprintf (stderr, "%s: unable to read %s\n", progname, filename);
-          return 0;
-        }
-      png_init_io (png_ptr, fp);
-    }
-  else
-    {
-      closure.buf = image_data;
-      closure.siz = data_size;
-      closure.ptr = 0;
-      png_set_read_fn (png_ptr, (void *) &closure, png_reader_fn);
-    }
-
-  png_read_info (png_ptr, info_ptr);
-  png_get_IHDR (png_ptr, info_ptr,
-                &width, &height, &bit_depth, &color_type,
-                &interlace_type, 0, 0);
-
-  png_set_strip_16 (png_ptr);  /* Truncate 16 bits per component to 8 */
-  png_set_packing (png_ptr);   /* Unpack to 1 pixel per byte */
-
-# if 0
-  if (color_type == PNG_COLOR_TYPE_PALETTE)  /* Colormap to RGB */
-    png_set_palette_rgb (png_ptr);
-
-  if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)  /* Mono to 8bit */
-    png_set_gray_1_2_4_to_8 (png_ptr);
-# endif
-
-  if (png_get_valid (png_ptr, info_ptr, PNG_INFO_tRNS)) /* Fix weird alpha */
-    png_set_tRNS_to_alpha (png_ptr);
-
-  /* At least 8 bits deep */
-  if (color_type == PNG_COLOR_TYPE_PALETTE && bit_depth <= 8)
-    png_set_expand (png_ptr);
-
-   if (bit_depth == 8 &&          /* Convert RGB to RGBA */
-           (color_type == PNG_COLOR_TYPE_RGB ||
-            color_type == PNG_COLOR_TYPE_PALETTE))
-     png_set_filler (png_ptr, 0xFF, PNG_FILLER_AFTER);
-
-  /* Grayscale to color */
-  if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
-    png_set_expand (png_ptr);
-
-
-  /* Convert graysale to color */
-  if (color_type == PNG_COLOR_TYPE_GRAY ||
-      color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
-    png_set_gray_to_rgb (png_ptr);
-
-# if 0
-  {
-    png_color_16 *bg;
-    if (png_get_bKGD (png_ptr, info_ptr, &bg))
-      png_set_background (png_ptr, bg, PNG_BACKGROUND_GAMMA_FILE, 1, 1.0);
-  }
-# endif
-
-  /* Commit */
-  png_read_update_info (png_ptr, info_ptr);
-
-  channels = png_get_channels (png_ptr, info_ptr);
-
-  {
-    png_bytep *rows = png_malloc (png_ptr, height * sizeof(*rows));
-    int x, y;
-    for (y = 0; y < height; y++)
-      rows[y] = png_malloc (png_ptr, png_get_rowbytes (png_ptr, info_ptr));
-    png_read_image (png_ptr, rows);
-    png_read_end (png_ptr, info_ptr);
-
-    image = XCreateImage (dpy, visual, 32, ZPixmap, 0, 0,
-                          width, height, 32, 0);
-    image->data = (char *) malloc (height * image->bytes_per_line);
-
-    /* Set the bit order in the XImage structure to whatever the
-       local host's native bit order is.
-     */
-    image->bitmap_bit_order =
-      image->byte_order =
-        (bigendian() ? MSBFirst : LSBFirst);
-
-    if (!image->data)
-      {
-        fprintf (stderr, "%s: out of memory (%lu x %lu)\n",
-                 progname, (unsigned long)width, (unsigned long)height);
-        return 0;
-      }
-
-    for (y = 0; y < height; y++)
-      {
-        png_bytep i = rows[y];
-        for (x = 0; x < width; x++)
-          {
-            unsigned long rgba;
-            switch (channels) {
-            case 4:
-              rgba = ((i[3] << 24) |
-                      (i[2] << 16) |
-                      (i[1] << 8)  |
-                       i[0]);
-              break;
-            case 3:
-              rgba = ((0xFF << 24) |
-                      (i[2] << 16) |
-                      (i[1] << 8)  |
-                       i[0]);
-              break;
-            case 2:
-              rgba = ((i[1] << 24) |
-                      (i[0] << 16) |
-                      (i[0] << 8)  |
-                       i[0]);
-              break;
-            case 1:
-              rgba = ((0xFF << 24) |
-                      (i[0] << 16) |
-                      (i[0] << 8)  |
-                       i[0]);
-              break;
-            default:
-              abort();
-            }
-            XPutPixel (image, x, y, rgba);
-            i += channels;
-          }
-        png_free (png_ptr, rows[y]);
-      }
-
-    png_free (png_ptr, rows);
-  }
-
-  png_destroy_read_struct (&png_ptr, &info_ptr, &end_info);  
-  if (fp) fclose (fp);
-
-  return image;
-}
 
 
 #else /* No image loaders! */

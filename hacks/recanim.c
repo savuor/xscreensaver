@@ -12,6 +12,7 @@
 
 #include "screenhackI.h"
 
+#include "recanim.h"
 
 typedef struct record_anim_state record_anim_state;
 
@@ -27,10 +28,6 @@ extern void screenhack_record_anim_gettimeofday (struct timeval *
 # endif
                                                  );
 
-
-#ifndef HAVE_FFMPEG
-# error HAVE_FFMPEG is required
-#endif
 
 #include "ffmpeg-out.h"
 

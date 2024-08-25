@@ -9,14 +9,8 @@
 /* Define this if gettimeofday takes two arguments. */
 #define GETTIMEOFDAY_TWO_ARGS 1
 
-/* Define this if you have the ffmpeg libraries. */
-#define HAVE_FFMPEG 1
-
 /* Define this if you have GDK-Pixbuf. */
 #define HAVE_GDK_PIXBUF 1
-
-/* Define this if you have the Portable Network Graphics library. */
-#define HAVE_LIBPNG 1
 
 /* Define this if you have POSIX threads. */
 #define HAVE_PTHREAD 1
