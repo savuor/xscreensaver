@@ -61,19 +61,19 @@ link_flags = common_flags
 common_defs = []
 
 objects = {
-    "analogtv-cli"   : ("./hacks/analogtv-cli.c",   "./objs/analogtv-cli.o",   []),
-    "analogtv"       : ("./hacks/analogtv.c",       "./objs/analogtv2.o",      []),
-    "ximage-loader"  : ("./hacks/ximage-loader.c",  "./objs/ximage-loader.o",  []),
-    "recanim"        : ("./hacks/recanim.c",        "./objs/recanim.o",        []),
-    "ffmpeg-out"     : ("./hacks/ffmpeg-out.c",     "./objs/ffmpeg-out.o",     []),
-    "yarandom"       : ("./utils/yarandom.c",       "./objs/yarandom.o",       []),
-    "aligned_malloc" : ("./utils/aligned_malloc.c", "./objs/aligned_malloc.o", []),
-    "thread_util"    : ("./utils/thread_util.c",    "./objs/thread_util.o",    [] ),
+    "analogtv-cli"   : ("./hacks/analogtv-cli.c",   "./objs/analogtv-cli.o",   ),
+    "analogtv"       : ("./hacks/analogtv.c",       "./objs/analogtv2.o",      ),
+    "ximage-loader"  : ("./hacks/ximage-loader.c",  "./objs/ximage-loader.o",  ),
+    "recanim"        : ("./hacks/recanim.c",        "./objs/recanim.o",        ),
+    "ffmpeg-out"     : ("./hacks/ffmpeg-out.c",     "./objs/ffmpeg-out.o",     ),
+    "yarandom"       : ("./utils/yarandom.c",       "./objs/yarandom.o",       ),
+    "aligned_malloc" : ("./utils/aligned_malloc.c", "./objs/aligned_malloc.o", ),
+    "thread_util"    : ("./utils/thread_util.c",    "./objs/thread_util.o",     ),
 }
 
 print ("mkdir objs")
 for k, v in objects.items():
-    args = compile_args(include_dirs, compile_flags, common_defs + v[2], v[1], v[0])
+    args = compile_args(include_dirs, compile_flags, common_defs, v[1], v[0])
     print (" ".join(args))
 
 
