@@ -89,82 +89,11 @@ Unicore: 1 << 5
 #endif
 
 #if !defined _CACHE_LINE_SIZE
-#	if defined __alpha || defined __alpha__
-/* DEC Alpha */
-#		define _CACHE_LINE_SIZE 64 /* EV6 and above. EV4 and EV5 use 32 bytes. */
-#	elif defined __arm__
-/* ARM architecture */
-#		define _CACHE_LINE_SIZE (1 << 6)
-#	elif defined __AVR || defined __AVR__
-/* Atmel AVR32 */
-#		define _CACHE_LINE_SIZE (1 << 5)
-#	elif defined __bfin || defined __BFIN__
-/* Analog Devices Blackfin */
-#		define _CACHE_LINE_SIZE (1 << 5)
-#	elif defined _TMS320C6X || defined __TMS320C6X__
-/* Texas Instruments TMS320C6x */
-#		define _CACHE_LINE_SIZE (1 << 7) /* From L2. L1 data cache line is 1 << 6. */
-#	elif defined __cris
-/* Axis Communications ETRAX CRIS */
-#		define _CACHE_LINE_SIZE 32
-#	elif defined __ia64__ || defined _IA64
-/* Intel Itanium */
-#		define _CACHE_LINE_SIZE (1 << 7)
-#	elif defined __M32R__ || defined __m32r__
-/* Mitsubishi/Renesas M32R */
-#		define _CACHE_LINE_SIZE (1 << 4)
-#	elif defined __m68k__ || defined M68000 || defined __MC68K__
-/* Motorola 68000 */
-#		define _CACHE_LINE_SIZE (1 << 4)
-#	elif defined __MICROBLAZE__ || defined __microblaze__
-/* Xilinx MicroBlaze */
-#		define _CACHE_LINE_SIZE (1 << 5)
-#	elif defined __mips__ || defined __mips || defined __MIPS__
-/* MIPS */
-#		define _CACHE_LINE_SIZE (1 << 6)
-#	elif defined __mn10300__ || defined __MN10300__
-/* Matsushita/Panasonic MN103 */
-#		define _CACHE_LINE_SIZE 32 /* MN103E010 has 16 bytes. */
-#	elif defined __hppa || defined __hppa__
-/* Hewlett-Packard PA-RISC */
-#		define _CACHE_LINE_SIZE 64 /* PA-RISC 2.0 uses 64 bytes, PA-RISC 1.1 uses 32. */
-#	elif defined __powerpc || defined _ARCH_PPC
-/* Power Architecture (a.k.a. PowerPC) */
-#		define _CACHE_LINE_SIZE (1 << 7) /* Linux has a list of PPC models with associated L1_CACHE_SHIFT values. */
-#	elif defined __s390__ || defined __370__ || defined __zarch__ || defined __SYSC_ZARCH__
-/* IBM System/390 */
-#		define _CACHE_LINE_SIZE 256
-#	elif defined SUNPLUS || defined __SCORE__ || defined __score__
-/* Sunplus S+core */
-#		define _CACHE_LINE_SIZE (1 << 4)
-#	elif defined __sh__
-/* Hitachi SuperH */
-#		define _CACHE_LINE_SIZE (1 << 5) /* SH3 and earlier used 1 << 4. */
-#	elif defined __sparc__ || defined __sparc
-/* SPARC */
-#		define _CACHE_LINE_SIZE (1 << 7) /* Linux and FreeBSD disagree as to what this should be. */
-#	elif defined __tile__
-/* Tilera TILE series */
-#		define _CACHE_LINE_SIZE (1 << 6) /* TILEPro uses different sizes for L1 and L2. */
-#	elif defined __i386 || defined __x86_64
+#	if defined __i386 || defined __x86_64
 /* x86(-64) */
 #		define _CACHE_LINE_SIZE (1 << 7)
-#	elif defined __xtensa__ || defined __XTENSA__
-/* Cadence Design Systems/Tensilica Xtensa */
-#		define _CACHE_LINE_SIZE (1 << 5) /* 1 << 4 on some models. */
 #	endif
 #endif /* !defined _CACHE_LINE_SIZE */
-
-#if defined __NetBSD__ && !defined _CACHE_LINE_SIZE
-/*
-NetBSD defines COHERENCY_UNIT to be 32 on MIPS, and 64 for all other platforms -- which is wrong. Still, this is what the kernel
-uses; if this value didn't work, the system wouldn't run.
-*/
-#	include <sys/param.h>
-#		ifdef COHERENCY_UNIT
-#		define _CACHE_LINE_SIZE COHERENCY_UNIT
-#	endif
-#endif
 
 #ifndef _CACHE_LINE_SIZE
 #	define _CACHE_LINE_SIZE 256 /* Fallback cache line size. */
@@ -241,21 +170,6 @@ static unsigned _get_cache_line_size(void)
 
 		/* Currently, this fails for every platform that isn't x86. Perhaps
            future versions will support other processors? */
-	}
-#	endif
-
-#	if defined __MACH__ && defined __APPLE__
-	{
-		uint32_t result; /* sysctl.h says that hw.cachelinesize is a
-                            CTLTYPE_INT. */
-		size_t size = sizeof(result);
-		static const int name[] = {CTL_HW, HW_CACHELINE};
-
-		if(!sysctl((int *)name, 2, &result, &size, NULL, 0)) /* (int *) is for OS X. */
-		{
-			assert(size == sizeof(result));
-			return result;
-		};
 	}
 #	endif
 
