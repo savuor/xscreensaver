@@ -328,11 +328,12 @@ analogtv_configure(analogtv *it)
   wlim = it->xgwa.width;
   ratio = wlim / (float) hlim;
 
-#if defined(HAVE_MOBILE) || defined(NO_CONSTRAIN_RATIO)
+// NO_CONSTRAIN_RATIO is defined
+//#if defined(HAVE_MOBILE) || defined(NO_CONSTRAIN_RATIO)
   /* Fill the whole iPhone screen, even though that distorts the image. */
   min_ratio = 0;
   max_ratio = 10;
-#endif
+//#endif
 
   if (wlim < 266 || hlim < 200)
     {

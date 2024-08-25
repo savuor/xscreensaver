@@ -63,17 +63,17 @@ common_defs = [
 ]
 
 objects = {
-    "analogtv-cli"   : ("./hacks/analogtv-cli.c",   "./hacks/analogtv-cli.o",   ["ANALOGTV_SCALE=1", "NO_CONSTRAIN_RATIO", "STANDALONE"]),
-    "analogtv"       : ("./hacks/analogtv.c",       "./hacks/analogtv2.o",      ["ANALOGTV_SCALE=1", "NO_CONSTRAIN_RATIO", "STANDALONE"]),
-    "ximage-loader"  : ("./hacks/ximage-loader.c",  "./hacks/ximage-loader.o",  ["STANDALONE"]),
-    "recanim"        : ("./hacks/recanim.c",        "./hacks/recanim.o",        ["STANDALONE"]),
-    "ffmpeg-out"     : ("./hacks/ffmpeg-out.c",     "./hacks/ffmpeg-out.o",     ["STANDALONE"]),
-    "yarandom"       : ("./utils/yarandom.c",       "./utils/yarandom.o",       []),
-    "aligned_malloc" : ("./utils/aligned_malloc.c", "./utils/aligned_malloc.o", []),
-    "thread_util"    : ("./utils/thread_util.c",    "./utils/thread_util.o",    [] ),
-    "font-retry"     : ("./utils/font-retry.c",     "./utils/font-retry.o",     ["USE_XFT"]),
+    "analogtv-cli"   : ("./hacks/analogtv-cli.c",   "./objs/analogtv-cli.o",   []),
+    "analogtv"       : ("./hacks/analogtv.c",       "./objs/analogtv2.o",      []),
+    "ximage-loader"  : ("./hacks/ximage-loader.c",  "./objs/ximage-loader.o",  []),
+    "recanim"        : ("./hacks/recanim.c",        "./objs/recanim.o",        []),
+    "ffmpeg-out"     : ("./hacks/ffmpeg-out.c",     "./objs/ffmpeg-out.o",     []),
+    "yarandom"       : ("./utils/yarandom.c",       "./objs/yarandom.o",       []),
+    "aligned_malloc" : ("./utils/aligned_malloc.c", "./objs/aligned_malloc.o", []),
+    "thread_util"    : ("./utils/thread_util.c",    "./objs/thread_util.o",    [] ),
 }
 
+print ("mkdir objs")
 for k, v in objects.items():
     args = compile_args(include_dirs, compile_flags, common_defs + v[2], v[1], v[0])
     print (" ".join(args))
@@ -88,5 +88,5 @@ libs = [
     "SM", "ICE", "Xft", "Xt", "X11", "Xext", "m"
 ]
 objs = [v[1] for v in objects.values()]
-args = link_args(link_flags, link_dirs, libs, objs, "./hacks/analogtv-cli")
+args = link_args(link_flags, link_dirs, libs, objs, "./analogtv-cli")
 print (" ".join(args))
