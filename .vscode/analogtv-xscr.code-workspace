@@ -1,0 +1,48 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"font-retry.h": "c"
+		},
+		"cmake.cmakePath": "/home/savuor/installs/cmake-3.27.7-linux-x86_64/bin/cmake",
+		"cmake.buildDirectory": "${userHome}/builds/analogtv-xscr/${buildType}"
+	},
+	"launch": {
+		// Use IntelliSense to learn about possible attributes.
+		// Hover to view descriptions of existing attributes.
+		// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "analogtv-cli",
+				"type": "cppdbg",
+				"request": "launch",
+				"program": "${command:cmake.buildDirectory}/analogtv-cli",
+				"args": ["~/Pictures/90s/*", "~/Videos/90s.mp4", "--duration", "60", "--verbose", "--powerup"],
+				"stopAtEntry": false,
+				"cwd": "${fileDirname}",
+				"environment": [],
+				"externalConsole": false,
+				"MIMode": "gdb",
+				"setupCommands": [
+					{
+						"description": "Enable pretty-printing for gdb",
+						"text": "-enable-pretty-printing",
+						"ignoreFailures": true
+					},
+					{
+						"description": "Set Disassembly Flavor to Intel",
+						"text": "-gdb-set disassembly-flavor intel",
+						"ignoreFailures": true
+					}
+				]
+			}
+		],
+		"compounds": []
+	}
+}
