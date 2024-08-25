@@ -17,14 +17,6 @@ def link_args(flags, link_dirs, libs, objs, out):
     args.extend(["-l" + s for s in libs])
     return args
 
-print("mkdir ./hacks/images/gen/")
-imgs = [
-    "6x10font"
-]
-for i in imgs:
-    print("./utils/bin2c ./hacks/images/" + i + ".png ./hacks/images/gen/" + i + "_png.h")
-
-
 include_dirs = [
     ".",
     "./hacks",
