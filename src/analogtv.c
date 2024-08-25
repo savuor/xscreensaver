@@ -83,10 +83,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "resources.h"
+#include "fixed-funcs.h"
 #include "analogtv.h"
 #include "yarandom.h"
-#include "visual.h"
 #include "ximage-loader.h"
 
 /* #define DEBUG 1 */

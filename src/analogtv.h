@@ -13,7 +13,7 @@
 #define _XSCREENSAVER_ANALOGTV_H
 
 #include "thread_util.h"
-#include "xshm.h"
+#include "fixed-funcs.h"
 
 #if defined(HAVE_IPHONE) || defined(HAVE_ANDROID)
 # define HAVE_MOBILE

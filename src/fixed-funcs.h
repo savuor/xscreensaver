@@ -1,5 +1,4 @@
-/* xscreensaver, Copyright (c) 1993, 1994, 1995, 1996, 1997, 1998, 2001
- *  by Jamie Zawinski <jwz@jwz.org>
+/* xscreensaver, Copyright (c) 1992-2014 Jamie Zawinski <jwz@jwz.org>
  *
  * Permission to use, copy, modify, distribute, and sell this software and its
  * documentation for any purpose is hereby granted without fee, provided that
@@ -10,32 +9,32 @@
  * implied warranty.
  */
 
-/* The MIT-SHM (Shared Memory) extension is pretty tricky to use.
-   This file contains the common boiler-plate for creating a shared
-   XImage structure, and for making sure that the shared memory segments
-   get allocated and shut down cleanly.
- */
+#ifndef __FIXED_FUNCS_H__
+#define __FIXED_FUNCS_H__
 
-#ifndef __XSCREENSAVER_XSHM_H__
-#define __XSCREENSAVER_XSHM_H__
+// from resources.h
+extern Bool get_boolean_resource (Display*,char*,char*);
+extern int get_integer_resource (Display*,char*,char*);
+extern double get_float_resource (Display*,char*,char*);
+extern unsigned int get_pixel_resource (Display*,Colormap,char*,char*);
 
-#ifdef HAVE_XSHM_EXTENSION
+// from visual.h
+extern int visual_depth (Screen *, Visual *);
+extern int visual_pixmap_depth (Screen *, Visual *);
+extern int visual_class (Screen *, Visual *);
+extern int visual_cells (Screen *, Visual *);
+extern int screen_number (Screen *);
+
+extern void visual_rgb_masks (Screen *screen, Visual *visual,
+                              unsigned long *red_mask,
+                              unsigned long *green_mask,
+                              unsigned long *blue_mask);
+
+// from xshm.h
 
 # include <sys/ipc.h>
 # include <sys/shm.h>
 # include <X11/extensions/XShm.h>
-
-#else /* !HAVE_XSHM_EXTENSION */
-
-typedef struct {
-  int shmid; /* Always -1. */
-} dummy_segment_info;
-
-/* In case XShmSegmentInfo  */
-#undef XShmSegmentInfo
-#define XShmSegmentInfo dummy_segment_info
-
-#endif
 
 extern XImage *create_xshm_image (Display *dpy, Visual *visual,
                                   unsigned int depth,
@@ -45,10 +44,7 @@ extern Bool put_xshm_image (Display *dpy, Drawable d, GC gc, XImage *image,
                             int src_x, int src_y, int dest_x, int dest_y,
                             unsigned int width, unsigned int height,
                             XShmSegmentInfo *shm_info);
-extern Bool get_xshm_image (Display *dpy, Drawable d, XImage *image,
-                            int x, int y, unsigned long plane_mask,
-                            XShmSegmentInfo *shm_info);
 extern void destroy_xshm_image (Display *dpy, XImage *image,
                                 XShmSegmentInfo *shm_info);
 
-#endif /* __XSCREENSAVER_XSHM_H__ */
+#endif /* __FIXED_FUNCS_H__ */

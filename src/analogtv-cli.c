@@ -42,12 +42,10 @@
 #include <X11/Xos.h>
 
 #include "screenhackI.h"
-#include "resources.h"
-#include "visual.h"
+#include "fixed-funcs.h"
 #include "yarandom.h"
 #include "ximage-loader.h"
 #include "thread_util.h"
-#include "xshm.h"
 #include "analogtv.h"
 #include "ffmpeg-out.h"
 

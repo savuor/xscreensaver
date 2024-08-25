@@ -33,7 +33,7 @@ implied warranty.
 #include "thread_util.h"
 
 #include "aligned_malloc.h"
-#include "resources.h"
+#include "fixed-funcs.h"
 
 #if HAVE_PTHREAD
 

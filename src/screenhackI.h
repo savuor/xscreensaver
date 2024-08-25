@@ -106,8 +106,7 @@
 #endif
 
 #include "yarandom.h"
-#include "resources.h"
-#include "visual.h"
+#include "fixed-funcs.h"
 
 #undef countof
 #define countof(x) (sizeof((x))/sizeof((*x)))

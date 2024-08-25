@@ -16,8 +16,7 @@ add_compile_options(
 
 include_directories(
     "."
-    "./hacks"
-    "./utils"
+    "./src"
     "/usr/include/gdk-pixbuf-2.0"
     "/usr/include/gio-unix-2.0"
     "/usr/include/glib-2.0"
@@ -39,12 +38,12 @@ link_libraries(
 )
 
 add_executable(analogtv-cli
-    "./hacks/analogtv-cli.c"
-    "./hacks/analogtv.c"
-    "./hacks/ximage-loader.c"
-    "./hacks/recanim.c"
-    "./hacks/ffmpeg-out.c"
-    "./utils/yarandom.c"
-    "./utils/aligned_malloc.c"
-    "./utils/thread_util.c"
+    "./src/analogtv-cli.c"
+    "./src/analogtv.c"
+    "./src/ximage-loader.c"
+    "./src/recanim.c"
+    "./src/ffmpeg-out.c"
+    "./src/yarandom.c"
+    "./src/aligned_malloc.c"
+    "./src/thread_util.c"
 )
