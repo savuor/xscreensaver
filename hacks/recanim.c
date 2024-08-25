@@ -11,7 +11,22 @@
  */
 
 #include "screenhackI.h"
-#include "recanim.h"
+
+
+typedef struct record_anim_state record_anim_state;
+
+extern record_anim_state *screenhack_record_anim_init (Screen *, Window,
+                                                       int frames);
+extern void screenhack_record_anim (record_anim_state *);
+extern void screenhack_record_anim_free (record_anim_state *);
+
+extern time_t screenhack_record_anim_time (time_t *);
+extern void screenhack_record_anim_gettimeofday (struct timeval *
+# ifdef GETTIMEOFDAY_TWO_ARGS
+                                                 , struct timezone *
+# endif
+                                                 );
+
 
 #ifndef HAVE_FFMPEG
 # error HAVE_FFMPEG is required
