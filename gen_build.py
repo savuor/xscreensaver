@@ -62,7 +62,8 @@ common_flags = [
     "-Wno-overlength-strings",
     "-pthread"
 ]
-compile_flags = common_flags + ["-g", "-O2", "-c"]
+#compile_flags = common_flags + ["-g", "-O2", "-c"]
+compile_flags = common_flags + ["-O2", "-c"]
 link_flags = common_flags
 
 common_defs = [
