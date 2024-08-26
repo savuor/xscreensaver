@@ -34,10 +34,6 @@ extern void visual_rgb_masks (Screen *screen, Visual *visual,
 
 // from xshm.h
 
-# include <sys/ipc.h>
-# include <sys/shm.h>
-# include <X11/extensions/XShm.h>
-
 extern XImage *create_xshm_image (Display *dpy, Visual *visual,
                                   unsigned int depth,
                                   int format, XShmSegmentInfo *shm_info,
