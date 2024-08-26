@@ -15,9 +15,7 @@
 #include "precomp.h"
 
 // from resources.h
-extern int get_integer_resource (char*);
 extern double get_float_resource (char*);
-extern unsigned int get_pixel_resource (char*);
 
 // from visual.h
 extern int visual_depth (Screen *, Visual *);

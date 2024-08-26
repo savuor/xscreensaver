@@ -494,11 +494,7 @@ analogtv_allocate(Window window)
   it->visclass=visual_class(it->xgwa.screen, it->xgwa.visual);
   it->visdepth=it->xgwa.depth;
   if (it->visclass == TrueColor || it->visclass == DirectColor) {
-    if (get_integer_resource ("use_cmap")) {
-      it->use_cmap=1;
-    } else {
-      it->use_cmap=0;
-    }
+    it->use_cmap=0;
     it->use_color=!mono_p;
   }
   else if (it->visclass == PseudoColor || it->visclass == StaticColor) {
@@ -544,11 +540,11 @@ analogtv_allocate(Window window)
 
   }
 
-  gcv.background=get_pixel_resource("background");
+  gcv.background=0;
 
   it->gc = dummy_XCreateGC(it->window, GCBackground, &gcv);
 
-  dummy_XSetWindowBackground(it->window, gcv.background);
+  dummy_XSetWindowBackground(it->window, 0);
   dummy_XClearWindow(window);
 
   analogtv_configure(it);

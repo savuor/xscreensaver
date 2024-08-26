@@ -34,7 +34,7 @@ static int _has_pthread = 0; /* Initialize when needed. */
 static int _cache_line_size = sizeof(void *);
 
 /* This is actually the init function for various things in here. */
-int threads_available(void)
+static int threads_available(void)
 {
 /*	This is maybe not thread-safe, but: this should -- and generally will --
 	be called before the program launches its second thread. */

@@ -365,20 +365,6 @@ get_float_resource (char *name)
   abort();
 }
 
-int
-get_integer_resource (char *name)
-{
-  if (!strcmp(name, "use_cmap")) return 0;
-  abort();
-}
-
-unsigned int
-get_pixel_resource (char *name)
-{
-  if (!strcmp(name, "background")) return 0;
-  abort();
-}
-
 Bool
 put_xshm_image (Drawable d, GC gc, XImage *image,
                 int src_x, int src_y, int dest_x, int dest_y,

@@ -72,11 +72,6 @@ implied warranty.
 #include "precomp.h"
 #include "aligned_malloc.h"
 
-int threads_available(void);
-/* > 0: Threads are available. This is normally _POSIX_VERSION.
-    -1: Threads are not available.
-*/
-
 unsigned hardware_concurrency(void);
 /* This is supposed to return the number of available CPU cores. This number
    isn't necessarily constant: a system administrator can hotplug or
