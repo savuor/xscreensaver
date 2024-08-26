@@ -17,17 +17,6 @@
 // from resources.h
 extern double get_float_resource (char*);
 
-// from visual.h
-extern int visual_depth (Screen *, Visual *);
-extern int visual_pixmap_depth (Screen *, Visual *);
-extern int visual_class (Screen *, Visual *);
-extern int visual_cells (Screen *, Visual *);
-
-extern void visual_rgb_masks (Screen *screen, Visual *visual,
-                              unsigned long *red_mask,
-                              unsigned long *green_mask,
-                              unsigned long *blue_mask);
-
 // from xshm.h
 
 extern XImage *create_xshm_image (Visual *visual,

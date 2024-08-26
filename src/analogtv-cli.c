@@ -202,11 +202,14 @@ custom_XCreateImage (Visual *v, unsigned int depth,
   ximage->bitmap_bit_order = ximage->byte_order;
   ximage->bitmap_pad = bitmap_pad;
   ximage->depth = depth;
-  visual_rgb_masks (0, v, &r, &g, &b);
+  r = 0x00FF0000L;
+  g = 0x0000FF00L;
+  b = 0x000000FFL;
+
   ximage->red_mask   = (depth == 1 ? 0 : r);
   ximage->green_mask = (depth == 1 ? 0 : g);
   ximage->blue_mask  = (depth == 1 ? 0 : b);
-  ximage->bits_per_pixel = (depth == 1 ? 1 : visual_pixmap_depth (0, v));
+  ximage->bits_per_pixel = (depth == 1 ? 1 : 32);
   ximage->bytes_per_line = bytes_per_line;
 
   custom_XInitImage (ximage);
@@ -374,35 +377,6 @@ put_xshm_image (Drawable d, GC gc, XImage *image,
                     width, height);
 }
 
-int
-visual_class (Screen *s, Visual *v)
-{
-  return TrueColor;
-}
-
-int
-visual_depth (Screen *s, Visual *v)
-{
-  return 32;
-}
-
-int
-visual_pixmap_depth (Screen *s, Visual *v)
-{
-  return 32;
-}
-
-void
-visual_rgb_masks (Screen *screen, Visual *visual,
-                  unsigned long *red_mask,
-                  unsigned long *green_mask,
-                  unsigned long *blue_mask)
-{
-  *red_mask   = 0x00FF0000L;
-  *green_mask = 0x0000FF00L;
-  *blue_mask  = 0x000000FFL;
-}
-
 
 static void
 update_smpte_colorbars(analogtv_input *input)
@@ -522,7 +496,7 @@ static Bool
 scale_ximage (Screen *screen, Visual *visual,
               XImage *ximage, int new_width, int new_height)
 {
-  int depth = visual_depth (screen, visual);
+  int depth = 32;
   int x, y;
   double xscale, yscale;
 

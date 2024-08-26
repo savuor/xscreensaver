@@ -267,7 +267,7 @@ analogtv_alloc_image(analogtv *it)
 {
   /* On failure, it->image is NULL. */
 
-  unsigned bits_per_pixel = visual_pixmap_depth(it->screen, it->xgwa.visual);
+  unsigned bits_per_pixel = 32;
   unsigned align = thread_memory_alignment() * 8 - 1;
   /* Width is in bits. */
   unsigned width = (it->usewidth * bits_per_pixel + align) & ~align;
@@ -491,23 +491,15 @@ analogtv_allocate(Window window)
 
   it->screen=it->xgwa.screen;
   it->colormap=it->xgwa.colormap;
-  it->visclass=visual_class(it->xgwa.screen, it->xgwa.visual);
+  it->visclass=TrueColor;
   it->visdepth=it->xgwa.depth;
-  if (it->visclass == TrueColor || it->visclass == DirectColor) {
-    it->use_cmap=0;
-    it->use_color=!mono_p;
-  }
-  else if (it->visclass == PseudoColor || it->visclass == StaticColor) {
-    it->use_cmap=1;
-    it->use_color=!mono_p;
-  }
-  else {
-    it->use_cmap=1;
-    it->use_color=0;
-  }
+  it->use_cmap=0;
+  it->use_color=!mono_p;
 
-  visual_rgb_masks (it->xgwa.screen, it->xgwa.visual,
-                    &it->red_mask, &it->green_mask, &it->blue_mask);
+  it->red_mask   = 0x00FF0000L;
+  it->green_mask = 0x0000FF00L;
+  it->blue_mask  = 0x000000FFL;
+
   it->red_shift=it->red_invprec=-1;
   it->green_shift=it->green_invprec=-1;
   it->blue_shift=it->blue_invprec=-1;
