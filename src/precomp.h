@@ -21,9 +21,6 @@
 #include <unistd.h>
 
 #include <X11/Xlib.h>
-#include <X11/Xos.h>
-#include <X11/Xresource.h>
-#include <X11/Xutil.h>
 
 /// ffmpeg
 
