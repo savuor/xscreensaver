@@ -17,10 +17,6 @@
 #include "thread_util.h"
 #include "fixed-funcs.h"
 
-#if defined(HAVE_IPHONE) || defined(HAVE_ANDROID)
-# define HAVE_MOBILE
-#endif
-
 /* To simulate an NTSC CRT monitor with way more scanlines, and thus
    apply an ahistorical tv-like effect to a larger image, increase
    this resolution multiplier.
@@ -245,11 +241,8 @@ typedef struct analogtv_s {
 analogtv *analogtv_allocate(Display *dpy, Window window);
 analogtv_input *analogtv_input_allocate(void);
 
-/* call if window size changes */
-void analogtv_reconfigure(analogtv *it);
 
 void analogtv_set_defaults(analogtv *it, char *prefix);
-void analogtv_release(analogtv *it);
 int analogtv_set_demod(analogtv *it);
 void analogtv_setup_frame(analogtv *it);
 void analogtv_setup_sync(analogtv_input *input, int do_cb, int do_ssavi);
@@ -280,19 +273,6 @@ void analogtv_draw_solid_rel_lcp(analogtv_input *input,
                                  double top, double bot,
                                  double luma, double chroma, double phase);
 
-int analogtv_handle_events (analogtv *it);
-
-#define ANALOGTV_DEFAULTS_SHM "*useSHM:           True",
-
-#ifndef HAVE_MOBILE
-# define ANALOGTV_DEF_BRIGHTNESS "2"
-# define ANALOGTV_DEF_CONTRAST "150"
-#else
-  /* Need to really crank this up for it to look good on the iPhone screen. */
-# define ANALOGTV_DEF_BRIGHTNESS "3"
-# define ANALOGTV_DEF_CONTRAST "400"
-#endif
-
 /* Brightness: useful range is around -75 to 100.
    Contrast:   useful range is around 0 - 500.
    Color:      useful range is around +/- 500.
@@ -304,19 +284,20 @@ int analogtv_handle_events (analogtv *it);
 
 #define ANALOGTV_DEFAULTS \
   "*TVColor:         70", \
-  "*TVTint:          5",  \
-  "*TVBrightness:  " ANALOGTV_DEF_BRIGHTNESS,  \
-  "*TVContrast:    " ANALOGTV_DEF_CONTRAST, \
+  "*TVTint:           5",  \
+  "*TVBrightness:     2",  \
+  "*TVContrast:     150", \
   "*Background:      Black", \
   "*use_cmap:        0",  \
   "*geometry:	     800x600", \
   "*fpsSolid:	     True", \
   "*lowrez:	     True", \
-  THREAD_DEFAULTS \
-  ANALOGTV_DEFAULTS_SHM
+  "*useThreads: True", \
+  "*useSHM:           True",
 
 #define ANALOGTV_OPTIONS \
-  THREAD_OPTIONS \
+  {"-threads",    ".useThreads", XrmoptionNoArg, "True"},      \
+  {"-no-threads", ".useThreads", XrmoptionNoArg, "False"},     \
   { "-use-cmap",        ".use_cmap",     XrmoptionSepArg, 0 }, \
   { "-tv-color",        ".TVColor",      XrmoptionSepArg, 0 }, \
   { "-tv-tint",         ".TVTint",       XrmoptionSepArg, 0 }, \

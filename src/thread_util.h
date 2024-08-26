@@ -373,12 +373,6 @@ void io_thread_finish(struct io_thread *self);
 /* Call from the main thread to wait for the worker thread to finish. This
    cleans up the io_thread. */
 
-#	define THREAD_DEFAULTS       "*useThreads: True",
-#	define THREAD_DEFAULTS_XLOCK "*useThreads: True\n"
-#	define THREAD_OPTIONS \
-	{"-threads",    ".useThreads", XrmoptionNoArg, "True"}, \
-	{"-no-threads", ".useThreads", XrmoptionNoArg, "False"},
-
 /*
    If a variable 'member' is known to be a member (named 'member_name') of a
    struct (named 'struct_name'), then this can find a pointer to the struct

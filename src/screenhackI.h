@@ -60,15 +60,6 @@
 # include <X11/Xresource.h>
 # include <X11/Xos.h>
 
-/* M_PI ought to have been defined in math.h, but... */
-#ifndef M_PI
-# define M_PI 3.1415926535
-#endif
-
-#ifndef M_PI_2
-# define M_PI_2 1.5707963267
-#endif
-
 #ifndef Button6
 # define Button6 6
 # define Button7 7
@@ -94,31 +85,6 @@
 #define sleep  __ERROR_do_not_sleep_in_xscreensaver__
 
 extern Bool mono_p;
-
-struct xscreensaver_function_table {
-
-  const char *progclass;
-  const char * const *defaults;
-  const XrmOptionDescRec *options;
-
-  void           (*setup_cb)   (struct xscreensaver_function_table *, void *);
-  void *         setup_arg;
-
-  void *         (*init_cb)    (Display *, Window);
-  unsigned long  (*draw_cb)    (Display *, Window, void *);
-  void           (*reshape_cb) (Display *, Window, void *,
-                                unsigned int w, unsigned int h);
-  Bool           (*event_cb)   (Display *, Window, void *, XEvent *);
-  void           (*free_cb)    (Display *, Window, void *);
-
-# ifndef HAVE_JWXYZ
-  Visual *       (*pick_visual_hook) (Screen *);
-  Bool           (*validate_visual_hook) (Screen *, const char *, Visual *);
-# else
-  int            visual;
-# endif
-
-};
 
 extern const char *progname;
 

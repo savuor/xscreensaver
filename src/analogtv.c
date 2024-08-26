@@ -405,13 +405,6 @@ analogtv_configure(analogtv *it)
   it->need_clear=1;
 }
 
-void
-analogtv_reconfigure(analogtv *it)
-{
-  XGetWindowAttributes (it->dpy, it->window, &it->xgwa);
-  analogtv_configure(it);
-}
-
 /* Can be any power-of-two <= 32. 16 a slightly better choice for 2-3 threads. */
 #define ANALOGTV_SUBTOTAL_LEN 32
 
@@ -578,22 +571,7 @@ analogtv_allocate(Display *dpy, Window window)
   return NULL;
 }
 
-void
-analogtv_release(analogtv *it)
-{
-  if (it->image) {
-    destroy_xshm_image(it->dpy, it->image, &it->shm_info);
-    it->image=NULL;
-  }
-  if (it->gc) XFreeGC(it->dpy, it->gc);
-  it->gc=NULL;
-  if (it->n_colors) XFreeColors(it->dpy, it->colormap, it->colors, it->n_colors, 0L);
-  it->n_colors=0;
-  threadpool_destroy(&it->threads);
-  thread_free(it->rx_signal);
-  thread_free(it->signal_subtotals);
-  free(it);
-}
+
 
 
 /*
