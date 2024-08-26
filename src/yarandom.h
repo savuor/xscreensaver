@@ -14,8 +14,6 @@
 
 #include "precomp.h"
 
-# include "config.h"
-
 #undef random
 #undef rand
 #undef drand48

@@ -20,8 +20,6 @@ implied warranty.
 #include "aligned_malloc.h"
 #include "fixed-funcs.h"
 
-#if HAVE_PTHREAD
-
 const pthread_mutex_t mutex_initializer =
 #	if defined _GNU_SOURCE && !defined NDEBUG
 	PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
@@ -61,8 +59,6 @@ int threads_available(Display *dpy)
 	return _has_pthread;
 }
 
-#endif /* HAVE_PTHREAD */
-
 /*
    hardware_concurrency() -
 
@@ -90,16 +86,7 @@ int threads_available(Display *dpy)
    This might not work right on less common systems for various reasons.
 */
 
-#if HAVE_PTHREAD
-#	if defined __APPLE__ && defined __MACH__ || \
-		defined __FreeBSD__ || \
-		defined __OpenBSD__ || \
-		defined __NetBSD__ || \
-		defined __DragonFly__ || \
-		defined __minix
-
-
-#	elif HAVE_UNISTD_H && defined _SC_NPROCESSORS_ONLN
+#if defined _SC_NPROCESSORS_ONLN
 
 /*
 Supported by:
@@ -135,22 +122,13 @@ static unsigned _hardware_concurrency(void)
 	return count > 0 ? count : 1;
 }
 
-#	else
-
-static unsigned _hardware_concurrency(void)
-{
-	return 1; /* Fallback for unknown systems. */
-}
-
 #	endif
-#endif
+
 
 unsigned hardware_concurrency(Display *dpy)
 {
-#if HAVE_PTHREAD
 	if(threads_available(dpy) >= 0)
 		return _hardware_concurrency();
-#endif
 	return 1;
 }
 
@@ -159,22 +137,16 @@ unsigned hardware_concurrency(Display *dpy)
 unsigned thread_memory_alignment(Display *dpy)
 {
 	(void)threads_available(dpy);
-#if HAVE_PTHREAD
 	return _cache_line_size;
-#else
-	return sizeof(void *);
-#endif
 }
 
 /* Thread pool - */
 
 static unsigned _threadpool_count_serial(struct threadpool *self)
 {
-#if HAVE_PTHREAD
 	assert(_has_pthread);
 	if(_has_pthread >= 0)
 		return 0;
-#endif
 	return self->count;
 }
 
@@ -191,8 +163,6 @@ static void _serial_destroy(struct threadpool *self)
 
 	free(self->serial_threads);
 }
-
-#if HAVE_PTHREAD
 
 static void _parallel_abort(struct threadpool *self)
 {
@@ -378,7 +348,6 @@ static void _unlock_and_destroy(struct threadpool *self)
 	_serial_destroy(self);
 }
 
-#endif /* HAVE_PTHREAD */
 
 int threadpool_create(struct threadpool *self, const struct threadpool_class *cls, Display *dpy, unsigned count)
 {
@@ -426,7 +395,6 @@ int threadpool_create(struct threadpool *self, const struct threadpool_class *cl
 		}
 	}
 
-#if HAVE_PTHREAD
 	assert(_has_pthread); /* _has_pthread should be either -1 or >0. */
 	if(_has_pthread >= 0)
 	{
@@ -474,28 +442,24 @@ int threadpool_create(struct threadpool *self, const struct threadpool_class *cl
 			return startup.last_errno;
 		}
 	}
-#endif
 
 	return 0;
 }
 
 void threadpool_destroy(struct threadpool *self)
 {
-#if HAVE_PTHREAD
 	if(_has_pthread >= 0)
 	{
 		PTHREAD_VERIFY(pthread_mutex_lock(&self->mutex));
 		_unlock_and_destroy(self);
 		return;
 	}
-#endif
 
 	_serial_destroy(self);
 }
 
 void threadpool_run(struct threadpool *self, void (*func)(void *))
 {
-#if HAVE_PTHREAD
 	if(_has_pthread >= 0)
 	{
 		unsigned count = _threadpool_count_parallel(self);
@@ -511,7 +475,6 @@ void threadpool_run(struct threadpool *self, void (*func)(void *))
 		PTHREAD_VERIFY(pthread_cond_broadcast(&self->cond));
 		PTHREAD_VERIFY(pthread_mutex_unlock(&self->mutex));
 	}
-#endif
 
 	/* It's perfectly valid to move this to the beginning of threadpool_wait(). */
 	{
@@ -527,7 +490,6 @@ void threadpool_run(struct threadpool *self, void (*func)(void *))
 
 void threadpool_wait(struct threadpool *self)
 {
-#if HAVE_PTHREAD
 	if(_has_pthread >= 0)
 	{
 		PTHREAD_VERIFY(pthread_mutex_lock(&self->mutex));
@@ -535,12 +497,10 @@ void threadpool_wait(struct threadpool *self)
 			PTHREAD_VERIFY(pthread_cond_wait(&self->cond, &self->mutex));
 		PTHREAD_VERIFY(pthread_mutex_unlock(&self->mutex));
 	}
-#endif
 }
 
 /* io_thread - */
 
-#if HAVE_PTHREAD
 /* Without threads at compile time, there's only stubs in thread_util.h. */
 
 #	define VERSION_CHECK(cc_major, cc_minor, req_major, req_minor) \
@@ -716,4 +676,3 @@ void io_thread_finish(struct io_thread *self)
 	}
 }
 
-#endif /* HAVE_PTHREAD */

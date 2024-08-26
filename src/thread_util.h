@@ -72,11 +72,7 @@ implied warranty.
 #include "precomp.h"
 #include "aligned_malloc.h"
 
-#if HAVE_PTHREAD
 int threads_available(Display *dpy);
-#else
-#	define threads_available(dpy) (-1)
-#endif
 /* > 0: Threads are available. This is normally _POSIX_VERSION.
     -1: Threads are not available.
 */
@@ -177,8 +173,6 @@ unsigned thread_memory_alignment(Display *dpy);
 
 #define thread_free(ptr) aligned_free(ptr)
 
-#if HAVE_PTHREAD
-#	if defined _POSIX_THREADS && _POSIX_THREADS >= 0
 /*
    See The Open Group Base Specifications Issue 7, <unistd.h>, Constants for
    Options and Option Groups
@@ -198,14 +192,6 @@ unsigned thread_memory_alignment(Display *dpy);
 extern const pthread_mutex_t mutex_initializer;
 extern const pthread_cond_t cond_initializer;
 
-#	else
-		/* Whatever caused HAVE_PTHREAD to be defined (configure script,
-           usually) made a mistake if this is reached. */
-		/* Maybe this should be a warning. */
-#		error HAVE_PTHREAD is defined, but _POSIX_THREADS is not.
-		/* #undef HAVE_PTHREAD */
-#	endif
-#endif
 
 struct threadpool
 {
@@ -223,7 +209,6 @@ struct threadpool
 
 	void *serial_threads;
 
-#if HAVE_PTHREAD
 	pthread_mutex_t mutex;
 	pthread_cond_t cond;
 
@@ -234,7 +219,6 @@ struct threadpool
 	unsigned parallel_unfinished;
 
 	pthread_t *parallel_threads;
-#endif
 };
 
 /*
@@ -347,18 +331,12 @@ enum _io_thread_status
 
 struct io_thread
 {
-#if HAVE_PTHREAD
 	/* Common misconception: "volatile" should be applied to atomic variables,
 	   such as 'status', below. This is false, see
 	   <http://stackoverflow.com/q/2484980>. */
 	enum _io_thread_status status;
 	pthread_t thread;
-#else
-	char gcc_emits_a_warning_when_the_struct_has_no_members;
-#endif
 };
-
-#if HAVE_PTHREAD
 
 void *io_thread_create(struct io_thread *self, void *parent, void *(*start_routine)(void *), Display *dpy, unsigned stacksize);
 /*
@@ -395,29 +373,11 @@ void io_thread_finish(struct io_thread *self);
 /* Call from the main thread to wait for the worker thread to finish. This
    cleans up the io_thread. */
 
-#else
-
-#define IO_THREAD_STACK_MIN 0
-
-#define io_thread_create(self, parent, start_routine, dpy, stacksize) NULL
-#define io_thread_return(self) 0
-#define io_thread_is_done(self) 1
-#define io_thread_cancel(self) 0
-#define io_thread_finish(self)
-
-#endif
-
-#if HAVE_PTHREAD
 #	define THREAD_DEFAULTS       "*useThreads: True",
 #	define THREAD_DEFAULTS_XLOCK "*useThreads: True\n"
 #	define THREAD_OPTIONS \
 	{"-threads",    ".useThreads", XrmoptionNoArg, "True"}, \
 	{"-no-threads", ".useThreads", XrmoptionNoArg, "False"},
-#else
-#	define THREAD_DEFAULTS
-#	define THREAD_DEFAULTS_XLOCK
-#	define THREAD_OPTIONS
-#endif
 
 /*
    If a variable 'member' is known to be a member (named 'member_name') of a

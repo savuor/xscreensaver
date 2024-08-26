@@ -282,11 +282,7 @@ void analogtv_draw_solid_rel_lcp(analogtv_input *input,
 
 int analogtv_handle_events (analogtv *it);
 
-#ifdef HAVE_XSHM_EXTENSION
 #define ANALOGTV_DEFAULTS_SHM "*useSHM:           True",
-#else
-#define ANALOGTV_DEFAULTS_SHM
-#endif
 
 #ifndef HAVE_MOBILE
 # define ANALOGTV_DEF_BRIGHTNESS "2"

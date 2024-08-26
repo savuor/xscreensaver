@@ -25,9 +25,7 @@ extern void screenhack_record_anim_free (record_anim_state *);
 
 extern time_t screenhack_record_anim_time (time_t *);
 extern void screenhack_record_anim_gettimeofday (struct timeval *
-# ifdef GETTIMEOFDAY_TWO_ARGS
                                                  , struct timezone *
-# endif
                                                  );
 
 
@@ -61,12 +59,8 @@ static double
 double_time (void)
 {
   struct timeval now;
-# ifdef GETTIMEOFDAY_TWO_ARGS
   struct timezone tzp;
   gettimeofday(&now, &tzp);
-# else
-  gettimeofday(&now);
-# endif
 
   return (now.tv_sec + ((double) now.tv_usec * 0.000001));
 }
@@ -81,16 +75,11 @@ static double recanim_time_warp = 0;
 
 void
 screenhack_record_anim_gettimeofday (struct timeval *tv
-# ifdef GETTIMEOFDAY_TWO_ARGS
                                      , struct timezone *tz
-# endif
+
                                      )
 {
-  gettimeofday (tv
-# ifdef GETTIMEOFDAY_TWO_ARGS
-                , tz
-# endif
-                );
+  gettimeofday (tv, tz);
   tv->tv_sec  -= (time_t) recanim_time_warp;
   tv->tv_usec -= 1000000 * (recanim_time_warp - (time_t) recanim_time_warp);
 }
@@ -99,14 +88,9 @@ time_t
 screenhack_record_anim_time (time_t *o)
 {
   struct timeval tv;
-# ifdef GETTIMEOFDAY_TWO_ARGS
   struct timezone tz;
-# endif
-  screenhack_record_anim_gettimeofday (&tv
-# ifdef GETTIMEOFDAY_TWO_ARGS
-                                       , &tz
-# endif
-                                       );
+
+  screenhack_record_anim_gettimeofday (&tv, &tz);
   if (o) *o = tv.tv_sec;
   return tv.tv_sec;
 }

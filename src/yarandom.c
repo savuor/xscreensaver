@@ -95,12 +95,9 @@ ya_rand_init(unsigned int seed)
   if (seed == 0)
     {
       struct timeval tp;
-#ifdef GETTIMEOFDAY_TWO_ARGS
       struct timezone tzp;
       gettimeofday(&tp, &tzp);
-#else
-      gettimeofday(&tp);
-#endif
+
       /* Since the multiplications will have a larger effect on the
          upper bits than the lower bits, after every addition in the
          seed, perform a bitwise rotate by an odd number, resulting

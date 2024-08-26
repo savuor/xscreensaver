@@ -105,11 +105,10 @@ static unsigned _get_cache_line_size(void)
 
 	/* uClibc, newlib, dietlibc, musl, Bionic do not have this. */
 
-#	if HAVE_UNISTD_H && ( \
-	defined _SC_LEVEL1_DCACHE_LINESIZE || \
-	defined _SC_LEVEL2_CACHE_LINESIZE || \
-	defined _SC_LEVEL3_CACHE_LINESIZE || \
-	defined _SC_LEVEL4_CACHE_LINESIZE)
+#	if (defined _SC_LEVEL1_DCACHE_LINESIZE || \
+		defined _SC_LEVEL2_CACHE_LINESIZE || \
+		defined _SC_LEVEL3_CACHE_LINESIZE || \
+		defined _SC_LEVEL4_CACHE_LINESIZE)
 	{
 		static const int names[] =
 		{

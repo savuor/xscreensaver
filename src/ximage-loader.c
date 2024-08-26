@@ -44,8 +44,6 @@ bigendian (void)
 }
 
 
-#ifdef HAVE_GDK_PIXBUF
-
 /* Loads the image to an XImage, RGBA -- GDK Pixbuf version.
  */
 static XImage *
@@ -65,12 +63,6 @@ make_ximage (Display *dpy, Visual *visual, const char *filename,
         {
           /* Turns out gdk-pixbuf works even if you don't have display
              connection, which is good news for analogtv-cli. */
-# ifdef HAVE_GDK_PIXBUF_XLIB
-          /* Aug 2022: nothing seems to go wrong if we don't do this at all?
-             gtk-2.24.33, gdk-pixbuf 2.42.8. */
-          gdk_pixbuf_xlib_init (dpy, DefaultScreen (dpy));
-          xlib_rgb_init (dpy, DefaultScreenOfDisplay (dpy));
-# endif
         }
       initted = 1;
     }
@@ -171,25 +163,6 @@ make_ximage (Display *dpy, Visual *visual, const char *filename,
     return image;
   }
 }
-
-#elif defined(HAVE_JWXYZ) /* MacOS, iOS or Android */
-
-#elif defined(HAVE_LIBPNG)
-
-
-#else /* No image loaders! */
-
-static XImage *
-make_ximage (Display *dpy, Visual *visual,
-             const char *filename, const unsigned char *image_data,
-             unsigned long data_size)
-{
-  fprintf (stderr, "%s: no image loading support!\n", progname);
-  return 0;
-}
-
-#endif /* no loaders */
-
 
 /* Given a bitmask, returns the position and width of the field.
  */
