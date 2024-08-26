@@ -210,13 +210,21 @@ custom_XCreateImage (Display *dpy, Visual *v, unsigned int depth,
   ximage->bits_per_pixel = (depth == 1 ? 1 : visual_pixmap_depth (0, v));
   ximage->bytes_per_line = bytes_per_line;
 
-  XInitImage (ximage);
+  custom_XInitImage (ximage);
   if (! ximage->f.put_pixel) abort();
   return ximage;
 }
 
+int
+custom_XDestroyImage (XImage *ximage)
+{
+  if (ximage->data) free (ximage->data);
+  free (ximage);
+  return 0;
+}
+
 Pixmap
-XCreatePixmap (Display *dpy, Drawable d, unsigned int width,
+dummy_XCreatePixmap (Display *dpy, Drawable d, unsigned int width,
                unsigned int height, unsigned int depth)
 {
   abort();
@@ -374,7 +382,7 @@ create_xshm_image (Display *dpy, Visual *visual,
   int error = thread_malloc ((void **)&image->data, dpy,
                              image->height * image->bytes_per_line);
   if (error) {
-    XDestroyImage (image);
+    custom_XDestroyImage (image);
     image = NULL;
   } else {
     memset (image->data, 0, image->height * image->bytes_per_line);
@@ -388,7 +396,7 @@ destroy_xshm_image (Display *dpy, XImage *image, XShmSegmentInfo *shm_info)
 {
   thread_free (image->data);
   image->data = NULL;
-  XDestroyImage (image);
+  custom_XDestroyImage (image);
 }
 
 Bool
@@ -602,8 +610,8 @@ scale_ximage (Screen *screen, Visual *visual,
       if (ximage2->data) free (ximage2->data);
       ximage->data = 0;
       ximage2->data = 0;
-      XDestroyImage (ximage);
-      XDestroyImage (ximage2);
+      custom_XDestroyImage (ximage);
+      custom_XDestroyImage (ximage2);
       return False;
     }
 
@@ -620,7 +628,7 @@ scale_ximage (Screen *screen, Visual *visual,
   (*ximage) = (*ximage2);
 
   ximage2->data = 0;
-  XDestroyImage (ximage2);
+  custom_XDestroyImage (ximage2);
 
   return True;
 }

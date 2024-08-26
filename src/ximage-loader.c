@@ -272,23 +272,23 @@ make_pixmap (Display *dpy, Window window,
           XPutPixel (mask, x, y, (a ? 1 : 0));
       }
 
-  XDestroyImage (in);
+  custom_XDestroyImage (in);
   in = 0;
 
-  pixmap = XCreatePixmap (dpy, window, out->width, out->height, xgwa.depth);
+  pixmap = dummy_XCreatePixmap (dpy, window, out->width, out->height, xgwa.depth);
   gc = dummy_XCreateGC (dpy, pixmap, 0, &gcv);
   XPutImage (dpy, pixmap, gc, out, 0, 0, 0, 0, out->width, out->height);
   XFreeGC (dpy, gc);
 
   if (mask)
     {
-      Pixmap p2 = XCreatePixmap (dpy, window, mask->width, mask->height, 1);
+      Pixmap p2 = dummy_XCreatePixmap (dpy, window, mask->width, mask->height, 1);
       gcv.foreground = 1;
       gcv.background = 0;
       gc = dummy_XCreateGC (dpy, p2, GCForeground|GCBackground, &gcv);
       XPutImage (dpy, p2, gc, mask, 0, 0, 0, 0, mask->width, mask->height);
       XFreeGC (dpy, gc);
-      XDestroyImage (mask);
+      custom_XDestroyImage (mask);
       mask = 0;
       *mask_ret = p2;
     }
@@ -296,7 +296,7 @@ make_pixmap (Display *dpy, Window window,
   if (width_ret)  *width_ret  = out->width;
   if (height_ret) *height_ret = out->height;
 
-  XDestroyImage (out);
+  custom_XDestroyImage (out);
 
   return pixmap;
 }

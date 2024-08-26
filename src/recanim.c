@@ -122,7 +122,7 @@ screenhack_record_anim_init (Screen *screen, Window window, int target_frames)
   XGetWindowAttributes (dpy, st->window, &st->xgwa);
 
   st->gc = dummy_XCreateGC (dpy, st->window, 0, &gcv);
-  st->p = XCreatePixmap (dpy, st->window,
+  st->p = dummy_XCreatePixmap (dpy, st->window,
                          st->xgwa.width, st->xgwa.height, st->xgwa.depth);
   st->img = custom_XCreateImage (dpy, st->xgwa.visual, st->xgwa.depth,
                           ZPixmap, 0, 0, st->xgwa.width, st->xgwa.height,
@@ -303,7 +303,7 @@ screenhack_record_anim_free (record_anim_state *st)
 
   free (st->img->data);
   st->img->data = 0;
-  XDestroyImage (st->img);
+  custom_XDestroyImage (st->img);
   XFreeGC (dpy, st->gc);
   XFreePixmap (dpy, st->p);
 

@@ -57,6 +57,7 @@ custom_XCreateImage (Display *dpy, Visual *v, unsigned int depth,
                     int format, int offset, char *data,
                     unsigned int width, unsigned int height,
                     int bitmap_pad, int bytes_per_line);
-
+int
+custom_XDestroyImage (XImage *ximage);
 
 #endif /* __FIXED_FUNCS_H__ */
