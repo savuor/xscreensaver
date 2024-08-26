@@ -172,7 +172,6 @@ typedef struct analogtv_s {
   Colormap colormap;
   int usewidth,useheight,xrepl,subwidth;
   XImage *image; /* usewidth * useheight */
-  GC gc;
   int screen_xo,screen_yo; /* centers image in window */
 
   int flutter_horiz_desync;

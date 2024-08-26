@@ -190,8 +190,6 @@ make_pixmap (Window window,
   XWindowAttributes xgwa;
   XImage *in, *out, *mask = 0;
   Pixmap pixmap;
-  XGCValues gcv;
-  GC gc;
   int x, y;
 
   unsigned long crpos=0, cgpos=0, cbpos=0, capos=0; /* bitfield positions */
@@ -265,18 +263,13 @@ make_pixmap (Window window,
   in = 0;
 
   pixmap = dummy_XCreatePixmap ( window, out->width, out->height, xgwa.depth);
-  gc = dummy_XCreateGC ( pixmap, 0, &gcv);
-  custom_XPutImage ( pixmap, gc, out, 0, 0, 0, 0, out->width, out->height);
-  dummy_XFreeGC (gc);
+
+  custom_XPutImage ( pixmap, out, 0, 0, 0, 0, out->width, out->height);
 
   if (mask)
     {
       Pixmap p2 = dummy_XCreatePixmap ( window, mask->width, mask->height, 1);
-      gcv.foreground = 1;
-      gcv.background = 0;
-      gc = dummy_XCreateGC ( p2, GCForeground|GCBackground, &gcv);
-      custom_XPutImage ( p2, gc, mask, 0, 0, 0, 0, mask->width, mask->height);
-      dummy_XFreeGC ( gc);
+      custom_XPutImage ( p2, mask, 0, 0, 0, 0, mask->width, mask->height);
       custom_XDestroyImage (mask);
       mask = 0;
       *mask_ret = p2;

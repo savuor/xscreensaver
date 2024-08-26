@@ -453,7 +453,6 @@ analogtv_allocate(Window window)
     analogtv_thread_destroy
   };
 
-  XGCValues gcv;
   analogtv *it=NULL;
   int i;
   const size_t rx_signal_len = ANALOGTV_SIGNAL_LEN + 2*ANALOGTV_H;
@@ -531,10 +530,6 @@ analogtv_allocate(Window window)
     }
 
   }
-
-  gcv.background=0;
-
-  it->gc = dummy_XCreateGC(it->window, GCBackground, &gcv);
 
   dummy_XSetWindowBackground(it->window, 0);
   dummy_XClearWindow(window);
@@ -1899,7 +1894,7 @@ analogtv_draw(analogtv *it, double noiselevel,
   }
 
   if (overall_bot > overall_top) {
-    put_xshm_image( it->window, it->gc, it->image,
+    put_xshm_image( it->window, it->image,
                    0, overall_top,
                    it->screen_xo, it->screen_yo+overall_top,
                    it->usewidth, overall_bot - overall_top);

@@ -96,13 +96,6 @@ dummy_XClearWindow ( Window window)
   return 0;
 }
 
-GC
-dummy_XCreateGC( Drawable d, unsigned long mask, XGCValues *gcv)
-{
-  return 0;
-}
-
-
 static unsigned long
 ximage_getpixel_1 (XImage *ximage, int x, int y)
 {
@@ -233,12 +226,6 @@ dummy_XCreatePixmap (Drawable d, unsigned int width,
 }
 
 int
-dummy_XFreeGC (GC gc)
-{
-  abort();
-}
-
-int
 dummy_XFreePixmap (Pixmap p)
 {
   abort();
@@ -260,7 +247,7 @@ static uint32_t *image_ptr(XImage *image, unsigned int x, unsigned int y)
 }
 
 int
-custom_XPutImage (Drawable d, GC gc, XImage *image, 
+custom_XPutImage (Drawable d, XImage *image, 
            int src_x, int src_y, int dest_x, int dest_y,
            unsigned int w, unsigned int h)
 {
@@ -366,11 +353,11 @@ get_float_resource (char *name)
 }
 
 Bool
-put_xshm_image (Drawable d, GC gc, XImage *image,
+put_xshm_image (Drawable d, XImage *image,
                 int src_x, int src_y, int dest_x, int dest_y,
                 unsigned int width, unsigned int height)
 {
-  return custom_XPutImage ( d, gc, image, src_x, src_y, dest_x, dest_y,
+  return custom_XPutImage ( d, image, src_x, src_y, dest_x, dest_y,
                     width, height);
 }
 
@@ -887,7 +874,7 @@ analogtv_convert (const char **infiles, const char *outfile,
         int h = ximage->height;
         int x = (output_w - w) / 2;
         int y = (output_h - h) / 2;
-        custom_XPutImage ( 0, 0, ximage, 0, 0, x, y, w, h);
+        custom_XPutImage ( 0, ximage, 0, 0, x, y, w, h);
       }
     }
 
