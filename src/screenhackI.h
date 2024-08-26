@@ -55,16 +55,6 @@
 
 #include "precomp.h"
 
-# include <X11/Xlib.h>
-# include <X11/Xutil.h>
-# include <X11/Xresource.h>
-# include <X11/Xos.h>
-
-#ifndef Button6
-# define Button6 6
-# define Button7 7
-#endif
-
 #include "yarandom.h"
 #include "fixed-funcs.h"
 
@@ -72,17 +62,6 @@
 #define countof(x) (sizeof((x))/sizeof((*x)))
 
 #define RANDSIGN() ((random() & 1) ? 1 : -1)
-
-
-/* Be Posixly correct */
-#undef  bzero
-#define bzero  __ERROR_use_memset_not_bzero_in_xscreensaver__
-#undef  bcopy
-#define bcopy  __ERROR_use_memcpy_not_bcopy_in_xscreensaver__
-#undef  ftime
-#define ftime  __ERROR_use_gettimeofday_not_ftime_in_xscreensaver__
-#undef  sleep
-#define sleep  __ERROR_do_not_sleep_in_xscreensaver__
 
 extern Bool mono_p;
 
