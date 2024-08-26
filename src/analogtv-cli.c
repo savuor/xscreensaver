@@ -356,7 +356,7 @@ destroy_xshm_image (Display *dpy, XImage *image)
 }
 
 Bool
-get_boolean_resource (Display *dpy, char *name, char *class)
+get_boolean_resource (char *name)
 {
   if (!strcmp(name, "useThreads")) return True;
   abort();
@@ -364,7 +364,7 @@ get_boolean_resource (Display *dpy, char *name, char *class)
 
 static int darkp = 0;
 double
-get_float_resource (Display *dpy, char *name, char *class)
+get_float_resource (char *name)
 {
   if (!strcmp(name, "TVTint")) return 5;		/* default 5   */
   if (!strcmp(name, "TVColor")) return 70;		/* default 70  */
@@ -375,14 +375,14 @@ get_float_resource (Display *dpy, char *name, char *class)
 }
 
 int
-get_integer_resource (Display *dpy, char *name, char *class)
+get_integer_resource (char *name)
 {
   if (!strcmp(name, "use_cmap")) return 0;
   abort();
 }
 
 unsigned int
-get_pixel_resource (Display *dpy, Colormap cmap, char *name, char *class)
+get_pixel_resource (char *name)
 {
   if (!strcmp(name, "background")) return 0;
   abort();

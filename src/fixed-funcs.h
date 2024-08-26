@@ -15,10 +15,10 @@
 #include "precomp.h"
 
 // from resources.h
-extern Bool get_boolean_resource (Display*,char*,char*);
-extern int get_integer_resource (Display*,char*,char*);
-extern double get_float_resource (Display*,char*,char*);
-extern unsigned int get_pixel_resource (Display*,Colormap,char*,char*);
+extern Bool get_boolean_resource (char*);
+extern int get_integer_resource (char*);
+extern double get_float_resource (char*);
+extern unsigned int get_pixel_resource (char*);
 
 // from visual.h
 extern int visual_depth (Screen *, Visual *);
@@ -62,8 +62,7 @@ int custom_XPutImage (Display *dpy, Drawable d, GC gc, XImage *image,
                         unsigned int w, unsigned int h);
 int custom_XQueryColor (Display *dpy, Colormap cmap, XColor *color);
 int custom_XQueryColors (Display *dpy, Colormap cmap, XColor *c, int n);
-int
-dummy_XSetWindowBackground (Display *dpy, Window win, unsigned long bg);
+int dummy_XSetWindowBackground (Display *dpy, Window win, unsigned long bg);
 
 
 #endif /* __FIXED_FUNCS_H__ */

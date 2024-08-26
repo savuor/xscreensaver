@@ -49,7 +49,7 @@ int threads_available(Display *dpy)
 
 		if(_has_pthread >= 0)
 		{
-			if(get_boolean_resource(dpy, "useThreads", "Boolean"))
+			if(get_boolean_resource("useThreads"))
 				_cache_line_size = get_cache_line_size();
 			else
 				_has_pthread = -1;

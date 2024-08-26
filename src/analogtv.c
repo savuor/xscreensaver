@@ -191,13 +191,13 @@ analogtv_set_defaults(analogtv *it, char *prefix)
   char buf[256];
 
   sprintf(buf,"%sTVTint",prefix);
-  it->tint_control = get_float_resource(it->dpy, buf,"TVTint");
+  it->tint_control = get_float_resource(buf);
   sprintf(buf,"%sTVColor",prefix);
-  it->color_control = get_float_resource(it->dpy, buf,"TVColor")/100.0;
+  it->color_control = get_float_resource(buf)/100.0;
   sprintf(buf,"%sTVBrightness",prefix);
-  it->brightness_control = get_float_resource(it->dpy, buf,"TVBrightness") / 100.0;
+  it->brightness_control = get_float_resource(buf) / 100.0;
   sprintf(buf,"%sTVContrast",prefix);
-  it->contrast_control = get_float_resource(it->dpy, buf,"TVContrast") / 100.0;
+  it->contrast_control = get_float_resource(buf) / 100.0;
   it->height_control = 1.0;
   it->width_control = 1.0;
   it->squish_control = 0.0;
@@ -496,7 +496,7 @@ analogtv_allocate(Display *dpy, Window window)
   it->visclass=visual_class(it->xgwa.screen, it->xgwa.visual);
   it->visdepth=it->xgwa.depth;
   if (it->visclass == TrueColor || it->visclass == DirectColor) {
-    if (get_integer_resource (it->dpy, "use_cmap", "Integer")) {
+    if (get_integer_resource ("use_cmap")) {
       it->use_cmap=1;
     } else {
       it->use_cmap=0;
@@ -546,8 +546,7 @@ analogtv_allocate(Display *dpy, Window window)
 
   }
 
-  gcv.background=get_pixel_resource(it->dpy, it->colormap,
-                                    "background", "Background");
+  gcv.background=get_pixel_resource("background");
 
   it->gc = dummy_XCreateGC(it->dpy, it->window, GCBackground, &gcv);
 # ifdef HAVE_JWXYZ
