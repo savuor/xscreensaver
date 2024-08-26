@@ -123,7 +123,7 @@ screenhack_record_anim_init (Screen *screen, Window window, int target_frames)
   st->gc = dummy_XCreateGC (st->window, 0, &gcv);
   st->p = dummy_XCreatePixmap (st->window,
                          st->xgwa.width, st->xgwa.height, st->xgwa.depth);
-  st->img = custom_XCreateImage (st->xgwa.visual, st->xgwa.depth,
+  st->img = custom_XCreateImage (st->xgwa.depth,
                           ZPixmap, 0, 0, st->xgwa.width, st->xgwa.height,
                           8, 0);
 

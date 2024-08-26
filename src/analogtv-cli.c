@@ -183,7 +183,7 @@ custom_XInitImage (XImage *ximage)
 }
 
 XImage *
-custom_XCreateImage (Visual *v, unsigned int depth,
+custom_XCreateImage (unsigned int depth,
                     int format, int offset, char *data,
                     unsigned int width, unsigned int height,
                     int bitmap_pad, int bytes_per_line)
@@ -328,14 +328,11 @@ dummy_XSetWindowBackground (Window win, unsigned long bg)
 }
 
 XImage *
-create_xshm_image (Visual *visual,
-		   unsigned int depth,
-		   int format,
-		   unsigned int width, unsigned int height)
+create_xshm_image (unsigned int depth, int format, unsigned int width, unsigned int height)
 {
 # undef BitmapPad
 # define BitmapPad 8
-  XImage *image = custom_XCreateImage (visual, depth, format, 0, NULL,
+  XImage *image = custom_XCreateImage (depth, format, 0, NULL,
                                 width, height, BitmapPad, 0);
   int error = thread_malloc ((void **)&image->data, image->height * image->bytes_per_line);
   if (error) {
@@ -493,14 +490,14 @@ flip_ximage (XImage *ximage)
    destroyed and freed.
  */
 static Bool
-scale_ximage (Screen *screen, Visual *visual,
+scale_ximage (Screen *screen,
               XImage *ximage, int new_width, int new_height)
 {
   int depth = 32;
   int x, y;
   double xscale, yscale;
 
-  XImage *ximage2 = custom_XCreateImage (visual, depth,
+  XImage *ximage2 = custom_XCreateImage (depth,
                                   ZPixmap, 0, 0,
                                   new_width, new_height, 8, 0);
   ximage2->data = (char *) calloc (ximage2->height, ximage2->bytes_per_line);
@@ -549,7 +546,6 @@ analogtv_convert (const char **infiles, const char *outfile,
   struct state *st = &global_state;
   Window window = 0;
   Screen *screen = 0;
-  Visual *visual = 0;
   int i;
   int nfiles;
   unsigned long curticks = 0, curticks_sub = 0;
@@ -573,7 +569,7 @@ analogtv_convert (const char **infiles, const char *outfile,
     int maxw = 0, maxh = 0;
     for (i = 0; i < nfiles; i++)
       {
-        XImage *ximage = file_to_ximage (0, infiles[i]);
+        XImage *ximage = file_to_ximage (infiles[i]);
         ximages[i] = ximage;
         if (verbose_p > 1)
           fprintf (stderr, "%s: loaded %s %dx%d\n", progname, infiles[i],
@@ -612,7 +608,7 @@ analogtv_convert (const char **infiles, const char *outfile,
               w2 = output_w;
               h2 = output_w / r2;
             }
-          if (! scale_ximage (screen, visual, ximage, w2, h2))
+          if (! scale_ximage (screen, ximage, w2, h2))
             abort();
         }
     }
@@ -620,7 +616,7 @@ analogtv_convert (const char **infiles, const char *outfile,
   memset (st, 0, sizeof(*st));
   st->window = window;
 
-  st->output_frame = custom_XCreateImage ( 0, ximages[0]->depth,
+  st->output_frame = custom_XCreateImage ( ximages[0]->depth,
                                    ximages[0]->format, 0, NULL,
                                    output_w, output_h,
                                    ximages[0]->bitmap_pad, 0);
@@ -629,13 +625,13 @@ analogtv_convert (const char **infiles, const char *outfile,
 
   if (logofile) {
     int x, y;
-    st->logo = file_to_ximage ( 0, logofile);
+    st->logo = file_to_ximage ( logofile);
     if (verbose_p)
       fprintf (stderr, "%s: loaded %s %dx%d\n", 
                progname, logofile, st->logo->width, st->logo->height);
     flip_ximage (st->logo);
     /* Pull the alpha out of the logo and make a separate mask ximage. */
-    st->logo_mask = custom_XCreateImage (0, st->logo->depth, st->logo->format, 0,
+    st->logo_mask = custom_XCreateImage (st->logo->depth, st->logo->format, 0,
                                   NULL, st->logo->width, st->logo->height,
                                   st->logo->bitmap_pad, 0);
     st->logo_mask->data = (char *)

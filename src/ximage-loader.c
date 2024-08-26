@@ -30,8 +30,7 @@ extern Pixmap image_data_to_pixmap ( Window,
    X11 typically expects 0RGB as it has no notion of alpha, only 1-bit masks.
    With X11 code, you should probably use the _pixmap routines instead.
  */
-extern XImage *image_data_to_ximage ( Visual *,
-                                     const unsigned char *image_data,
+extern XImage *image_data_to_ximage (const unsigned char *image_data,
                                      unsigned long data_size);
 
 
@@ -47,7 +46,7 @@ bigendian (void)
 /* Loads the image to an XImage, RGBA -- GDK Pixbuf version.
  */
 static XImage *
-make_ximage ( Visual *visual, const char *filename,
+make_ximage (const char *filename,
              const unsigned char *image_data, unsigned long data_size)
 {
   GdkPixbuf *pb;
@@ -100,7 +99,7 @@ make_ximage ( Visual *visual, const char *filename,
     int chan = gdk_pixbuf_get_n_channels (pb);
     int x, y;
 
-    image = custom_XCreateImage (visual, 32, ZPixmap, 0, 0, w, h, 32, 0);
+    image = custom_XCreateImage (32, ZPixmap, 0, 0, w, h, 32, 0);
     image->data = (char *) malloc(h * image->bytes_per_line);
 
     /* Set the bit order in the XImage structure to whatever the
@@ -204,11 +203,11 @@ make_pixmap (Window window,
 
   custom_XGetWindowAttributes (window, &xgwa);
 
-  in = make_ximage (xgwa.visual, filename, image_data, data_size);
+  in = make_ximage (filename, image_data, data_size);
   if (!in) return 0;
 
   /* Create a new image in the depth and bit-order of the server. */
-  out = custom_XCreateImage (xgwa.visual, xgwa.depth, ZPixmap, 0, 0,
+  out = custom_XCreateImage (xgwa.depth, ZPixmap, 0, 0,
                       in->width, in->height, 8, 0);
 
   out->bitmap_bit_order = in->bitmap_bit_order;
@@ -222,7 +221,7 @@ make_pixmap (Window window,
 
   if (mask_ret)
     {
-      mask = custom_XCreateImage (xgwa.visual, 1, XYPixmap, 0, 0,
+      mask = custom_XCreateImage (1, XYPixmap, 0, 0,
                            in->width, in->height, 8, 0);
       mask->byte_order = in->byte_order;
       mask->data = (char *) malloc (mask->height * mask->bytes_per_line);
@@ -342,19 +341,18 @@ file_to_pixmap (Window window, const char *filename,
    With X11 code, you should probably use the _pixmap routines instead.
  */
 XImage *
-image_data_to_ximage ( Visual *visual,
-                      const unsigned char *image_data,
+image_data_to_ximage (const unsigned char *image_data,
                       unsigned long data_size)
 {
-  XImage *ximage = make_ximage ( visual, 0, image_data, data_size);
+  XImage *ximage = make_ximage ( 0, image_data, data_size);
   flip_ximage (ximage);
   return ximage;
 }
 
 XImage *
-file_to_ximage ( Visual *visual, const char *filename)
+file_to_ximage ( const char *filename)
 {
-  XImage *ximage = make_ximage ( visual, filename, 0, 0);
+  XImage *ximage = make_ximage ( filename, 0, 0);
   flip_ximage (ximage);
   return ximage;
 }

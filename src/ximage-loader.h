@@ -15,6 +15,6 @@
 
 #include "precomp.h"
 
-extern XImage *file_to_ximage (Visual *, const char *filename);
+extern XImage *file_to_ximage (const char *filename);
 
 #endif /* _XIMAGE_LOADER_H_ */

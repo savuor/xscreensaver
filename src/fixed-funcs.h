@@ -19,8 +19,7 @@ extern double get_float_resource (char*);
 
 // from xshm.h
 
-extern XImage *create_xshm_image (Visual *visual,
-                                  unsigned int depth,
+extern XImage *create_xshm_image (unsigned int depth,
                                   int format,
                                   unsigned int width, unsigned int height);
 extern Bool put_xshm_image (Drawable d, GC gc, XImage *image,
@@ -33,7 +32,7 @@ Status dummy_XAllocColor (Colormap cmap, XColor *c);
 int dummy_XClearArea (Window win, int x, int y, unsigned int w, unsigned int h, Bool exp);
 int dummy_XClearWindow (Window window);
 GC dummy_XCreateGC(Drawable d, unsigned long mask, XGCValues *gcv);
-XImage * custom_XCreateImage (Visual *v, unsigned int depth,
+XImage * custom_XCreateImage (unsigned int depth,
                     int format, int offset, char *data,
                     unsigned int width, unsigned int height,
                     int bitmap_pad, int bytes_per_line);

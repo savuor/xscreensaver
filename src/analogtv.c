@@ -272,7 +272,7 @@ analogtv_alloc_image(analogtv *it)
   /* Width is in bits. */
   unsigned width = (it->usewidth * bits_per_pixel + align) & ~align;
 
-  it->image=create_xshm_image(it->xgwa.visual, it->xgwa.depth,
+  it->image=create_xshm_image(it->xgwa.depth,
                               ZPixmap,
                               width / bits_per_pixel, it->useheight);
 
