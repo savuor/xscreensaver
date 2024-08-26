@@ -212,7 +212,7 @@ make_pixmap (Display *dpy, Window window,
   unsigned long black = 0;
 # endif
 
-  XGetWindowAttributes (dpy, window, &xgwa);
+  custom_XGetWindowAttributes (dpy, window, &xgwa);
 
   in = make_ximage (dpy, xgwa.visual, filename, image_data, data_size);
   if (!in) return 0;
@@ -277,8 +277,8 @@ make_pixmap (Display *dpy, Window window,
 
   pixmap = dummy_XCreatePixmap (dpy, window, out->width, out->height, xgwa.depth);
   gc = dummy_XCreateGC (dpy, pixmap, 0, &gcv);
-  XPutImage (dpy, pixmap, gc, out, 0, 0, 0, 0, out->width, out->height);
-  XFreeGC (dpy, gc);
+  custom_XPutImage (dpy, pixmap, gc, out, 0, 0, 0, 0, out->width, out->height);
+  dummy_XFreeGC (dpy, gc);
 
   if (mask)
     {
@@ -286,8 +286,8 @@ make_pixmap (Display *dpy, Window window,
       gcv.foreground = 1;
       gcv.background = 0;
       gc = dummy_XCreateGC (dpy, p2, GCForeground|GCBackground, &gcv);
-      XPutImage (dpy, p2, gc, mask, 0, 0, 0, 0, mask->width, mask->height);
-      XFreeGC (dpy, gc);
+      custom_XPutImage (dpy, p2, gc, mask, 0, 0, 0, 0, mask->width, mask->height);
+      dummy_XFreeGC (dpy, gc);
       custom_XDestroyImage (mask);
       mask = 0;
       *mask_ret = p2;

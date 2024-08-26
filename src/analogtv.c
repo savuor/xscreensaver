@@ -489,7 +489,7 @@ analogtv_allocate(Display *dpy, Window window)
 
   it->n_colors=0;
 
-  XGetWindowAttributes (it->dpy, it->window, &it->xgwa);
+  custom_XGetWindowAttributes (it->dpy, it->window, &it->xgwa);
 
   it->screen=it->xgwa.screen;
   it->colormap=it->xgwa.colormap;
@@ -553,7 +553,7 @@ analogtv_allocate(Display *dpy, Window window)
 # ifdef HAVE_JWXYZ
   jwxyz_XSetAntiAliasing (it->dpy, it->gc, False);
 # endif
-  XSetWindowBackground(it->dpy, it->window, gcv.background);
+  dummy_XSetWindowBackground(it->dpy, it->window, gcv.background);
   dummy_XClearWindow(dpy,window);
 
   analogtv_configure(it);
@@ -1922,23 +1922,6 @@ analogtv_draw(analogtv *it, double noiselevel,
                    it->usewidth, overall_bot - overall_top,
                    &it->shm_info);
   }
-
-#ifdef DEBUG
-  if (0) {
-    struct timeval tv;
-    double fps;
-    char buf[256];
-    gettimeofday(&tv,NULL);
-
-    fps=1.0/((tv.tv_sec - it->last_display_time.tv_sec)
-             + 0.000001*(tv.tv_usec - it->last_display_time.tv_usec));
-    sprintf(buf, "FPS=%0.1f",fps);
-    XDrawString(it->dpy, it->window, it->gc, 50, it->useheight*2/3,
-                buf, strlen(buf));
-
-    it->last_display_time=tv;
-  }
-#endif
 }
 
 analogtv_input *
@@ -2007,8 +1990,8 @@ analogtv_load_ximage(analogtv *it, analogtv_input *input,
       else
         mask[x] = 1;
     }
-    XQueryColors(it->dpy, it->colormap, col1, x_length);
-    XQueryColors(it->dpy, it->colormap, col2, x_length);
+    custom_XQueryColors(it->dpy, it->colormap, col1, x_length);
+    custom_XQueryColors(it->dpy, it->colormap, col2, x_length);
     for (i=0; i<7; i++) fyx[i]=fyy[i]=0;
     for (i=0; i<4; i++) fix[i]=fiy[i]=fqx[i]=fqy[i]=0.0;
 

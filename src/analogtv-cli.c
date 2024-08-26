@@ -230,58 +230,20 @@ dummy_XCreatePixmap (Display *dpy, Drawable d, unsigned int width,
   abort();
 }
 
-Pixmap
-XCreatePixmapFromBitmapData (Display *dpy, Drawable d, char *data,
-                             unsigned int w, unsigned int h,
-                             unsigned long fg, unsigned long bg,
-                             unsigned int depth)
+int
+dummy_XFreeGC (Display *dpy, GC gc)
 {
   abort();
 }
 
 int
-XDrawString (Display *dpy, Drawable d, GC gc, int x, int y, const char *s,
-             int len)
-{
-  abort();
-}
-
-int
-XFillRectangle (Display *dpy, Drawable d, GC gc, int x, int y, 
-                unsigned int width, unsigned int height)
-{
-  abort();
-}
-
-int
-XFreeColors (Display *dpy, Colormap cmap, unsigned long *px, int n,
-             unsigned long planes)
-{
-  abort();
-}
-
-int
-XFreeGC (Display *dpy, GC gc)
-{
-  abort();
-}
-
-int
-XFreePixmap (Display *dpy, Pixmap p)
-{
-  abort();
-}
-
-XImage *
-XGetImage (Display *dpy, Drawable d, int x, int y,
-           unsigned int w, unsigned int h,
-           unsigned long pm, int fmt)
+dummy_XFreePixmap (Display *dpy, Pixmap p)
 {
   abort();
 }
 
 Status
-XGetWindowAttributes (Display *dpy, Window w, XWindowAttributes *xgwa)
+custom_XGetWindowAttributes (Display *dpy, Window w, XWindowAttributes *xgwa)
 {
   struct state *st = &global_state;
   memset (xgwa, 0, sizeof(*xgwa));
@@ -296,7 +258,7 @@ static uint32_t *image_ptr(XImage *image, unsigned int x, unsigned int y)
 }
 
 int
-XPutImage (Display *dpy, Drawable d, GC gc, XImage *image, 
+custom_XPutImage (Display *dpy, Drawable d, GC gc, XImage *image, 
            int src_x, int src_y, int dest_x, int dest_y,
            unsigned int w, unsigned int h)
 {
@@ -336,7 +298,7 @@ XPutImage (Display *dpy, Drawable d, GC gc, XImage *image,
 }
 
 int
-XQueryColor (Display *dpy, Colormap cmap, XColor *color)
+custom_XQueryColor (Display *dpy, Colormap cmap, XColor *color)
 {
   uint16_t r = (color->pixel & 0x00FF0000L) >> 16;
   uint16_t g = (color->pixel & 0x0000FF00L) >> 8;
@@ -349,22 +311,16 @@ XQueryColor (Display *dpy, Colormap cmap, XColor *color)
 }
 
 int
-XQueryColors (Display *dpy, Colormap cmap, XColor *c, int n)
+custom_XQueryColors (Display *dpy, Colormap cmap, XColor *c, int n)
 {
   int i;
   for (i = 0; i < n; i++)
-    XQueryColor (dpy, cmap, &c[i]);
+    custom_XQueryColor (dpy, cmap, &c[i]);
   return 0;
 }
 
 int
-XSetForeground (Display *dpy, GC gc, unsigned long fg)
-{
-  abort();
-}
-
-int
-XSetWindowBackground (Display *dpy, Window win, unsigned long bg)
+dummy_XSetWindowBackground (Display *dpy, Window win, unsigned long bg)
 {
   return 0;
 }
@@ -438,7 +394,7 @@ put_xshm_image (Display *dpy, Drawable d, GC gc, XImage *image,
                 unsigned int width, unsigned int height,
                 XShmSegmentInfo *shm_info)
 {
-  return XPutImage (dpy, d, gc, image, src_x, src_y, dest_x, dest_y,
+  return custom_XPutImage (dpy, d, gc, image, src_x, src_y, dest_x, dest_y,
                     width, height);
 }
 
@@ -988,7 +944,7 @@ analogtv_convert (const char **infiles, const char *outfile,
         int h = ximage->height;
         int x = (output_w - w) / 2;
         int y = (output_h - h) / 2;
-        XPutImage (dpy, 0, 0, ximage, 0, 0, x, y, w, h);
+        custom_XPutImage (dpy, 0, 0, ximage, 0, 0, x, y, w, h);
       }
     }
 
