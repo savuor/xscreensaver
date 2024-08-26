@@ -24,7 +24,6 @@
 #include <X11/Xos.h>
 #include <X11/Xresource.h>
 #include <X11/Xutil.h>
-#include <X11/extensions/XShm.h>
 
 /// ffmpeg
 

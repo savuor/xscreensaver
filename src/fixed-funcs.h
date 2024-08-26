@@ -35,14 +35,12 @@ extern void visual_rgb_masks (Screen *screen, Visual *visual,
 
 extern XImage *create_xshm_image (Display *dpy, Visual *visual,
                                   unsigned int depth,
-                                  int format, XShmSegmentInfo *shm_info,
+                                  int format,
                                   unsigned int width, unsigned int height);
 extern Bool put_xshm_image (Display *dpy, Drawable d, GC gc, XImage *image,
                             int src_x, int src_y, int dest_x, int dest_y,
-                            unsigned int width, unsigned int height,
-                            XShmSegmentInfo *shm_info);
-extern void destroy_xshm_image (Display *dpy, XImage *image,
-                                XShmSegmentInfo *shm_info);
+                            unsigned int width, unsigned int height);
+extern void destroy_xshm_image (Display *dpy, XImage *image);
 
 // from analogtv-cli.c
 Status dummy_XAllocColor (Display *dpy, Colormap cmap, XColor *c);

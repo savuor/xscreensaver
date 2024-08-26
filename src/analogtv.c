@@ -257,7 +257,7 @@ static void
 analogtv_free_image(analogtv *it)
 {
   if (it->image) {
-    destroy_xshm_image(it->dpy, it->image, &it->shm_info);
+    destroy_xshm_image(it->dpy, it->image);
     it->image=NULL;
   }
 }
@@ -273,7 +273,7 @@ analogtv_alloc_image(analogtv *it)
   unsigned width = (it->usewidth * bits_per_pixel + align) & ~align;
 
   it->image=create_xshm_image(it->dpy, it->xgwa.visual, it->xgwa.depth,
-                              ZPixmap, &it->shm_info,
+                              ZPixmap,
                               width / bits_per_pixel, it->useheight);
 
   if (it->image) {
@@ -1919,8 +1919,7 @@ analogtv_draw(analogtv *it, double noiselevel,
     put_xshm_image(it->dpy, it->window, it->gc, it->image,
                    0, overall_top,
                    it->screen_xo, it->screen_yo+overall_top,
-                   it->usewidth, overall_bot - overall_top,
-                   &it->shm_info);
+                   it->usewidth, overall_bot - overall_top);
   }
 }
 

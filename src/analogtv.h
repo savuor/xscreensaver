@@ -164,7 +164,6 @@ typedef struct analogtv_s {
   int use_cmap,use_color;
   int bilevel_signal;
 
-  XShmSegmentInfo shm_info;
   int visdepth,visclass,visbits;
   int red_invprec, red_shift;
   int green_invprec, green_shift;

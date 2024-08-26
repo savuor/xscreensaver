@@ -328,7 +328,7 @@ dummy_XSetWindowBackground (Display *dpy, Window win, unsigned long bg)
 XImage *
 create_xshm_image (Display *dpy, Visual *visual,
 		   unsigned int depth,
-		   int format, XShmSegmentInfo *shm_info,
+		   int format,
 		   unsigned int width, unsigned int height)
 {
 # undef BitmapPad
@@ -348,7 +348,7 @@ create_xshm_image (Display *dpy, Visual *visual,
 }
 
 void
-destroy_xshm_image (Display *dpy, XImage *image, XShmSegmentInfo *shm_info)
+destroy_xshm_image (Display *dpy, XImage *image)
 {
   thread_free (image->data);
   image->data = NULL;
@@ -391,8 +391,7 @@ get_pixel_resource (Display *dpy, Colormap cmap, char *name, char *class)
 Bool
 put_xshm_image (Display *dpy, Drawable d, GC gc, XImage *image,
                 int src_x, int src_y, int dest_x, int dest_y,
-                unsigned int width, unsigned int height,
-                XShmSegmentInfo *shm_info)
+                unsigned int width, unsigned int height)
 {
   return custom_XPutImage (dpy, d, gc, image, src_x, src_y, dest_x, dest_y,
                     width, height);
