@@ -122,7 +122,6 @@ struct analogtv_yiq_s {
 
 typedef struct analogtv_s {
 
-  Display *dpy;
   Window window;
   Screen *screen;
   XWindowAttributes xgwa;
@@ -237,7 +236,7 @@ typedef struct analogtv_s {
 } analogtv;
 
 
-analogtv *analogtv_allocate(Display *dpy, Window window);
+analogtv *analogtv_allocate(Window window);
 analogtv_input *analogtv_input_allocate(void);
 
 

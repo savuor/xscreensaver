@@ -72,12 +72,12 @@ implied warranty.
 #include "precomp.h"
 #include "aligned_malloc.h"
 
-int threads_available(Display *dpy);
+int threads_available(void);
 /* > 0: Threads are available. This is normally _POSIX_VERSION.
     -1: Threads are not available.
 */
 
-unsigned hardware_concurrency(Display *dpy);
+unsigned hardware_concurrency(void);
 /* This is supposed to return the number of available CPU cores. This number
    isn't necessarily constant: a system administrator can hotplug or
    enable/disable CPUs on certain systems, or the system can deactivate a
@@ -88,7 +88,7 @@ unsigned hardware_concurrency(Display *dpy);
    This function isn't fast; the result should be cached.
 */
 
-unsigned thread_memory_alignment(Display *dpy);
+unsigned thread_memory_alignment(void);
 
 /* Returns the proper alignment for memory allocated by a thread that is
    shared with other threads.
@@ -138,8 +138,8 @@ unsigned thread_memory_alignment(Display *dpy);
    http://pubs.opengroup.org/onlinepubs/009695399/functions/xsh_chap02_09.html
 */
 
-/* int thread_malloc(void **ptr, Display *dpy, unsigned size); */
-#define thread_malloc(ptr, dpy, size) \
+/* int thread_malloc(void **ptr, unsigned size); */
+#define thread_malloc(ptr, size) \
   (aligned_malloc((ptr), 0, (size)))
 
 /*
@@ -267,7 +267,7 @@ struct threadpool_class
 
 /* Returns 0 on success, on failure can return ENOMEM, or any error code from
    threadpool_class.create. */
-int threadpool_create(struct threadpool *self, const struct threadpool_class *cls, Display *dpy, unsigned count);
+int threadpool_create(struct threadpool *self, const struct threadpool_class *cls, unsigned count);
 void threadpool_destroy(struct threadpool *self);
 
 void threadpool_run(struct threadpool *self, void (*func)(void *));
@@ -338,7 +338,7 @@ struct io_thread
 	pthread_t thread;
 };
 
-void *io_thread_create(struct io_thread *self, void *parent, void *(*start_routine)(void *), Display *dpy, unsigned stacksize);
+void *io_thread_create(struct io_thread *self, void *parent, void *(*start_routine)(void *), unsigned stacksize);
 /*
    Create the thread, returns NULL on failure.  Failure is usually due to
    ENOMEM, or the system doesn't support threads.
@@ -346,7 +346,6 @@ void *io_thread_create(struct io_thread *self, void *parent, void *(*start_routi
    parent:        The parameter to start_routine.  The io_thread should be
                   contained within or be reachable from this.
    start_routine: The start routine for the worker thread.
-   dpy:           The X11 Display, so that '*useThreads' is honored.
    stacksize:     The stack size for the thread. Set to 0 for the system
                   default.
    A note about stacksize: Linux, for example, uses a default of 2 MB of

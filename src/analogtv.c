@@ -257,7 +257,7 @@ static void
 analogtv_free_image(analogtv *it)
 {
   if (it->image) {
-    destroy_xshm_image(it->dpy, it->image);
+    destroy_xshm_image(it->image);
     it->image=NULL;
   }
 }
@@ -268,11 +268,11 @@ analogtv_alloc_image(analogtv *it)
   /* On failure, it->image is NULL. */
 
   unsigned bits_per_pixel = visual_pixmap_depth(it->screen, it->xgwa.visual);
-  unsigned align = thread_memory_alignment(it->dpy) * 8 - 1;
+  unsigned align = thread_memory_alignment() * 8 - 1;
   /* Width is in bits. */
   unsigned width = (it->usewidth * bits_per_pixel + align) & ~align;
 
-  it->image=create_xshm_image(it->dpy, it->xgwa.visual, it->xgwa.depth,
+  it->image=create_xshm_image(it->xgwa.visual, it->xgwa.depth,
                               ZPixmap,
                               width / bits_per_pixel, it->useheight);
 
@@ -427,8 +427,7 @@ static int analogtv_thread_create(void *thread_raw, struct threadpool *threads,
   thread->it = GET_PARENT_OBJ(analogtv, threads, threads);
   thread->thread_id = thread_id;
 
-  align = thread_memory_alignment(thread->it->dpy) /
-            sizeof(thread->it->signal_subtotals[0]);
+  align = thread_memory_alignment() / sizeof(thread->it->signal_subtotals[0]);
   if (!align)
     align = 1;
   align = ~(align * ANALOGTV_SUBTOTAL_LEN - 1);
@@ -446,7 +445,7 @@ static void analogtv_thread_destroy(void *thread_raw)
 }
 
 analogtv *
-analogtv_allocate(Display *dpy, Window window)
+analogtv_allocate(Window window)
 {
   static const struct threadpool_class cls = {
     sizeof(analogtv_thread),
@@ -467,20 +466,19 @@ analogtv_allocate(Display *dpy, Window window)
   it->rx_signal=NULL;
   it->signal_subtotals=NULL;
 
-  it->dpy=dpy;
   it->window=window;
 
-  if (thread_malloc((void **)&it->rx_signal, dpy,
+  if (thread_malloc((void **)&it->rx_signal, 
                     sizeof(it->rx_signal[0]) * rx_signal_len))
     goto fail;
 
   assert(!(ANALOGTV_SIGNAL_LEN % ANALOGTV_SUBTOTAL_LEN));
-  if (thread_malloc((void **)&it->signal_subtotals, dpy,
+  if (thread_malloc((void **)&it->signal_subtotals,
                     sizeof(it->signal_subtotals[0]) *
                      (rx_signal_len / ANALOGTV_SUBTOTAL_LEN)))
     goto fail;
 
-  if (threadpool_create(&it->threads, &cls, dpy, hardware_concurrency(dpy)))
+  if (threadpool_create(&it->threads, &cls, hardware_concurrency()))
     goto fail;
 
   assert(it->threads.count);
@@ -489,7 +487,7 @@ analogtv_allocate(Display *dpy, Window window)
 
   it->n_colors=0;
 
-  custom_XGetWindowAttributes (it->dpy, it->window, &it->xgwa);
+  custom_XGetWindowAttributes (it->window, &it->xgwa);
 
   it->screen=it->xgwa.screen;
   it->colormap=it->xgwa.colormap;
@@ -548,12 +546,10 @@ analogtv_allocate(Display *dpy, Window window)
 
   gcv.background=get_pixel_resource("background");
 
-  it->gc = dummy_XCreateGC(it->dpy, it->window, GCBackground, &gcv);
-# ifdef HAVE_JWXYZ
-  jwxyz_XSetAntiAliasing (it->dpy, it->gc, False);
-# endif
-  dummy_XSetWindowBackground(it->dpy, it->window, gcv.background);
-  dummy_XClearWindow(dpy,window);
+  it->gc = dummy_XCreateGC(it->window, GCBackground, &gcv);
+
+  dummy_XSetWindowBackground(it->window, gcv.background);
+  dummy_XClearWindow(window);
 
   analogtv_configure(it);
 
@@ -647,7 +643,7 @@ analogtv_set_demod(analogtv *it)
             col.green=g;
             col.blue=b;
             col.pixel=0;
-            if (!dummy_XAllocColor(it->dpy, it->colormap, &col)) {
+            if (!dummy_XAllocColor(it->colormap, &col)) {
               if (q_levels > y_levels*4/12)
                 q_levels--;
               else if (i_levels > y_levels*5/12)
@@ -1887,7 +1883,7 @@ analogtv_draw(analogtv *it, double noiselevel,
 #endif
 
   if (it->need_clear) {
-    dummy_XClearWindow(it->dpy, it->window);
+    dummy_XClearWindow(it->window);
     it->need_clear=0;
   }
 
@@ -1904,18 +1900,18 @@ analogtv_draw(analogtv *it, double noiselevel,
   if (overall_bot>it->useheight) overall_bot=it->useheight;
 
   if (overall_top>0) {
-    dummy_XClearArea(it->dpy, it->window,
+    dummy_XClearArea( it->window,
                it->screen_xo, it->screen_yo,
                it->usewidth, overall_top, 0);
   }
   if (it->useheight > overall_bot) {
-    dummy_XClearArea(it->dpy, it->window,
+    dummy_XClearArea( it->window,
                it->screen_xo, it->screen_yo+overall_bot,
                it->usewidth, it->useheight-overall_bot, 0);
   }
 
   if (overall_bot > overall_top) {
-    put_xshm_image(it->dpy, it->window, it->gc, it->image,
+    put_xshm_image( it->window, it->gc, it->image,
                    0, overall_top,
                    it->screen_xo, it->screen_yo+overall_top,
                    it->usewidth, overall_bot - overall_top);
@@ -1988,8 +1984,8 @@ analogtv_load_ximage(analogtv *it, analogtv_input *input,
       else
         mask[x] = 1;
     }
-    custom_XQueryColors(it->dpy, it->colormap, col1, x_length);
-    custom_XQueryColors(it->dpy, it->colormap, col2, x_length);
+    custom_XQueryColors( it->colormap, col1, x_length);
+    custom_XQueryColors( it->colormap, col2, x_length);
     for (i=0; i<7; i++) fyx[i]=fyy[i]=0;
     for (i=0; i<4; i++) fix[i]=fiy[i]=fqx[i]=fqy[i]=0.0;
 

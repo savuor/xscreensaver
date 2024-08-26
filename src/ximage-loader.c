@@ -15,11 +15,11 @@
 #include "screenhackI.h"
 #include "ximage-loader.h"
 
-extern Pixmap file_to_pixmap (Display *, Window, const char *filename,
+extern Pixmap file_to_pixmap (Window, const char *filename,
                               int *width_ret, int *height_ret,
                               Pixmap *mask_ret);
 
-extern Pixmap image_data_to_pixmap (Display *, Window, 
+extern Pixmap image_data_to_pixmap ( Window, 
                                     const unsigned char *image_data,
                                     unsigned long data_size,
                                     int *width_ret, int *height_ret,
@@ -30,7 +30,7 @@ extern Pixmap image_data_to_pixmap (Display *, Window,
    X11 typically expects 0RGB as it has no notion of alpha, only 1-bit masks.
    With X11 code, you should probably use the _pixmap routines instead.
  */
-extern XImage *image_data_to_ximage (Display *, Visual *,
+extern XImage *image_data_to_ximage ( Visual *,
                                      const unsigned char *image_data,
                                      unsigned long data_size);
 
@@ -47,7 +47,7 @@ bigendian (void)
 /* Loads the image to an XImage, RGBA -- GDK Pixbuf version.
  */
 static XImage *
-make_ximage (Display *dpy, Visual *visual, const char *filename,
+make_ximage ( Visual *visual, const char *filename,
              const unsigned char *image_data, unsigned long data_size)
 {
   GdkPixbuf *pb;
@@ -59,11 +59,6 @@ make_ximage (Display *dpy, Visual *visual, const char *filename,
 # if !GLIB_CHECK_VERSION(2, 36 ,0)
       g_type_init ();
 # endif
-      if (dpy)
-        {
-          /* Turns out gdk-pixbuf works even if you don't have display
-             connection, which is good news for analogtv-cli. */
-        }
       initted = 1;
     }
 
@@ -105,7 +100,7 @@ make_ximage (Display *dpy, Visual *visual, const char *filename,
     int chan = gdk_pixbuf_get_n_channels (pb);
     int x, y;
 
-    image = custom_XCreateImage (dpy, visual, 32, ZPixmap, 0, 0, w, h, 32, 0);
+    image = custom_XCreateImage (visual, 32, ZPixmap, 0, 0, w, h, 32, 0);
     image->data = (char *) malloc(h * image->bytes_per_line);
 
     /* Set the bit order in the XImage structure to whatever the
@@ -188,7 +183,7 @@ decode_mask (unsigned long mask, unsigned long *pos_ret,
 /* Loads the image to a Pixmap and optional 1-bit mask.
  */
 static Pixmap
-make_pixmap (Display *dpy, Window window,
+make_pixmap (Window window,
              const char *filename,
              const unsigned char *image_data, unsigned long data_size,
              int *width_ret, int *height_ret, Pixmap *mask_ret)
@@ -205,34 +200,29 @@ make_pixmap (Display *dpy, Window window,
   unsigned long srmsk=0, sgmsk=0, sbmsk=0;
   unsigned long srsiz=0, sgsiz=0, sbsiz=0;
 
-# ifdef HAVE_JWXYZ
-  /* BlackPixel has alpha: 0xFF000000. */
-  unsigned long black = BlackPixelOfScreen (DefaultScreenOfDisplay (dpy));
-#else
   unsigned long black = 0;
-# endif
 
-  custom_XGetWindowAttributes (dpy, window, &xgwa);
+  custom_XGetWindowAttributes (window, &xgwa);
 
-  in = make_ximage (dpy, xgwa.visual, filename, image_data, data_size);
+  in = make_ximage (xgwa.visual, filename, image_data, data_size);
   if (!in) return 0;
 
   /* Create a new image in the depth and bit-order of the server. */
-  out = custom_XCreateImage (dpy, xgwa.visual, xgwa.depth, ZPixmap, 0, 0,
+  out = custom_XCreateImage (xgwa.visual, xgwa.depth, ZPixmap, 0, 0,
                       in->width, in->height, 8, 0);
 
   out->bitmap_bit_order = in->bitmap_bit_order;
   out->byte_order = in->byte_order;
 
-  out->bitmap_bit_order = BitmapBitOrder (dpy);
-  out->byte_order = ImageByteOrder (dpy);
+  out->bitmap_bit_order = BitmapBitOrder (0);
+  out->byte_order = ImageByteOrder (0);
 
   out->data = (char *) malloc (out->height * out->bytes_per_line);
   if (!out->data) abort();
 
   if (mask_ret)
     {
-      mask = custom_XCreateImage (dpy, xgwa.visual, 1, XYPixmap, 0, 0,
+      mask = custom_XCreateImage (xgwa.visual, 1, XYPixmap, 0, 0,
                            in->width, in->height, 8, 0);
       mask->byte_order = in->byte_order;
       mask->data = (char *) malloc (mask->height * mask->bytes_per_line);
@@ -275,19 +265,19 @@ make_pixmap (Display *dpy, Window window,
   custom_XDestroyImage (in);
   in = 0;
 
-  pixmap = dummy_XCreatePixmap (dpy, window, out->width, out->height, xgwa.depth);
-  gc = dummy_XCreateGC (dpy, pixmap, 0, &gcv);
-  custom_XPutImage (dpy, pixmap, gc, out, 0, 0, 0, 0, out->width, out->height);
-  dummy_XFreeGC (dpy, gc);
+  pixmap = dummy_XCreatePixmap ( window, out->width, out->height, xgwa.depth);
+  gc = dummy_XCreateGC ( pixmap, 0, &gcv);
+  custom_XPutImage ( pixmap, gc, out, 0, 0, 0, 0, out->width, out->height);
+  dummy_XFreeGC (gc);
 
   if (mask)
     {
-      Pixmap p2 = dummy_XCreatePixmap (dpy, window, mask->width, mask->height, 1);
+      Pixmap p2 = dummy_XCreatePixmap ( window, mask->width, mask->height, 1);
       gcv.foreground = 1;
       gcv.background = 0;
-      gc = dummy_XCreateGC (dpy, p2, GCForeground|GCBackground, &gcv);
-      custom_XPutImage (dpy, p2, gc, mask, 0, 0, 0, 0, mask->width, mask->height);
-      dummy_XFreeGC (dpy, gc);
+      gc = dummy_XCreateGC ( p2, GCForeground|GCBackground, &gcv);
+      custom_XPutImage ( p2, gc, mask, 0, 0, 0, 0, mask->width, mask->height);
+      dummy_XFreeGC ( gc);
       custom_XDestroyImage (mask);
       mask = 0;
       *mask_ret = p2;
@@ -327,21 +317,21 @@ flip_ximage (XImage *ximage)
 
 
 Pixmap
-image_data_to_pixmap (Display *dpy, Window window, 
+image_data_to_pixmap (Window window, 
                       const unsigned char *image_data, unsigned long data_size,
                       int *width_ret, int *height_ret,
                       Pixmap *mask_ret)
 {
-  return make_pixmap (dpy, window, 0, image_data, data_size,
+  return make_pixmap (window, 0, image_data, data_size,
                       width_ret, height_ret, mask_ret);
 }
 
 Pixmap
-file_to_pixmap (Display *dpy, Window window, const char *filename,
+file_to_pixmap (Window window, const char *filename,
                 int *width_ret, int *height_ret,
                 Pixmap *mask_ret)
 {
-  return make_pixmap (dpy, window, filename, 0, 0,
+  return make_pixmap (window, filename, 0, 0,
                       width_ret, height_ret, mask_ret);
 }
 
@@ -352,19 +342,19 @@ file_to_pixmap (Display *dpy, Window window, const char *filename,
    With X11 code, you should probably use the _pixmap routines instead.
  */
 XImage *
-image_data_to_ximage (Display *dpy, Visual *visual,
+image_data_to_ximage ( Visual *visual,
                       const unsigned char *image_data,
                       unsigned long data_size)
 {
-  XImage *ximage = make_ximage (dpy, visual, 0, image_data, data_size);
+  XImage *ximage = make_ximage ( visual, 0, image_data, data_size);
   flip_ximage (ximage);
   return ximage;
 }
 
 XImage *
-file_to_ximage (Display *dpy, Visual *visual, const char *filename)
+file_to_ximage ( Visual *visual, const char *filename)
 {
-  XImage *ximage = make_ximage (dpy, visual, filename, 0, 0);
+  XImage *ximage = make_ximage ( visual, filename, 0, 0);
   flip_ximage (ximage);
   return ximage;
 }

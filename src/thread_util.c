@@ -34,25 +34,18 @@ static int _has_pthread = 0; /* Initialize when needed. */
 static int _cache_line_size = sizeof(void *);
 
 /* This is actually the init function for various things in here. */
-int threads_available(Display *dpy)
+int threads_available(void)
 {
 /*	This is maybe not thread-safe, but: this should -- and generally will --
 	be called before the program launches its second thread. */
 
 	if(!_has_pthread)
 	{
-#	if _POSIX_THREADS
 		_has_pthread = _POSIX_THREADS;
-#	else
-		_has_pthread = sysconf(_SC_THREADS);
-#	endif
 
 		if(_has_pthread >= 0)
 		{
-			if(get_boolean_resource("useThreads"))
-				_cache_line_size = get_cache_line_size();
-			else
-				_has_pthread = -1;
+			_cache_line_size = get_cache_line_size();
 		}
 	}
 
@@ -125,18 +118,18 @@ static unsigned _hardware_concurrency(void)
 #	endif
 
 
-unsigned hardware_concurrency(Display *dpy)
+unsigned hardware_concurrency(void)
 {
-	if(threads_available(dpy) >= 0)
+	if(threads_available() >= 0)
 		return _hardware_concurrency();
 	return 1;
 }
 
 /* thread_memory_alignment() - */
 
-unsigned thread_memory_alignment(Display *dpy)
+unsigned thread_memory_alignment(void)
 {
-	(void)threads_available(dpy);
+	(void)threads_available();
 	return _cache_line_size;
 }
 
@@ -236,7 +229,7 @@ static void *_start_routine(void *startup_raw)
 	configuration, ensures that the thread object is using memory from the right node. */
 	thread = alloca(parent->thread_size);
 #	else
-	startup->last_errno = thread_malloc(&thread, NULL, parent->thread_size);
+	startup->last_errno = thread_malloc(&thread, parent->thread_size);
 	if(startup->last_errno)
 	{
 		_parallel_abort(parent);
@@ -349,9 +342,9 @@ static void _unlock_and_destroy(struct threadpool *self)
 }
 
 
-int threadpool_create(struct threadpool *self, const struct threadpool_class *cls, Display *dpy, unsigned count)
+int threadpool_create(struct threadpool *self, const struct threadpool_class *cls, unsigned count)
 {
-	(void)threads_available(dpy);
+	(void)threads_available();
 
 	self->count = count;
 
@@ -577,9 +570,9 @@ static enum _io_thread_status _status_exchange(enum _io_thread_status *obj, enum
 
 #	endif
 
-void *io_thread_create(struct io_thread *self, void *parent, void *(*start_routine)(void *), Display *dpy, unsigned stacksize)
+void *io_thread_create(struct io_thread *self, void *parent, void *(*start_routine)(void *), unsigned stacksize)
 {
-	if(threads_available(dpy) >= 0)
+	if(threads_available() >= 0)
 	{
 		int error;
 		pthread_attr_t attr;

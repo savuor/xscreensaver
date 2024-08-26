@@ -99,7 +99,6 @@ screenhack_record_anim_time (time_t *o)
 record_anim_state *
 screenhack_record_anim_init (Screen *screen, Window window, int target_frames)
 {
-  Display *dpy = 0;
   record_anim_state *st;
 
   XGCValues gcv;
@@ -119,25 +118,16 @@ screenhack_record_anim_init (Screen *screen, Window window, int target_frames)
   if (st->fade_frames >= (st->target_frames / 2) - st->fps)
     st->fade_frames = 0;
 
-  custom_XGetWindowAttributes (dpy, st->window, &st->xgwa);
+  custom_XGetWindowAttributes (st->window, &st->xgwa);
 
-  st->gc = dummy_XCreateGC (dpy, st->window, 0, &gcv);
-  st->p = dummy_XCreatePixmap (dpy, st->window,
+  st->gc = dummy_XCreateGC (st->window, 0, &gcv);
+  st->p = dummy_XCreatePixmap (st->window,
                          st->xgwa.width, st->xgwa.height, st->xgwa.depth);
-  st->img = custom_XCreateImage (dpy, st->xgwa.visual, st->xgwa.depth,
+  st->img = custom_XCreateImage (st->xgwa.visual, st->xgwa.depth,
                           ZPixmap, 0, 0, st->xgwa.width, st->xgwa.height,
                           8, 0);
 
   st->img->data = (char *) calloc (st->img->height, st->img->bytes_per_line);
-
-
-# ifndef HAVE_JWXYZ
-  XFetchName (dpy, st->window, &st->title);
-  {
-    char *s = strchr(st->title, ':');
-    if (s) *s = 0;
-  }
-# endif /* !HAVE_JWXYZ */
 
   {
     char fn[1024];
@@ -188,16 +178,14 @@ screenhack_record_anim (record_anim_state *st)
   int obpl    = st->img->bytes_per_line;
   char *odata = st->img->data;
 
-  Display *dpy = 0;
-
   /* Under XQuartz we can't just do XGetImage on the Window, we have to
      go through an intermediate Pixmap first.  I don't understand why.
      Also, the fucking resize handle shows up as black.  God dammit.
      A workaround for that is to temporarily remove /opt/X11/bin/quartz-wm
    */
-  XCopyArea (dpy, st->window, st->p, st->gc, 0, 0,
+  XCopyArea (0, st->window, st->p, st->gc, 0, 0,
              st->xgwa.width, st->xgwa.height, 0, 0);
-  XGetSubImage (dpy, st->p, 0, 0, st->xgwa.width, st->xgwa.height,
+  XGetSubImage (0, st->p, 0, 0, st->xgwa.width, st->xgwa.height,
                 ~0L, ZPixmap, st->img, 0, 0);
 
   /* Convert BGRA to BGR */
@@ -249,7 +237,6 @@ screenhack_record_anim (record_anim_state *st)
 
     if (st->title && st->secs_elapsed != (int) elapsed)
       {
-        Display *dpy = 0;
         char *t2 = (char *) malloc (strlen(st->title) + 100);
         sprintf (t2,
                  "%s: encoded"
@@ -278,8 +265,8 @@ screenhack_record_anim (record_anim_state *st)
                  (((int) remain) / 60) % 60,
                  ((int)  remain) % 60
                  );
-        XStoreName (dpy, st->window, t2);
-        XSync (dpy, 0);
+        XStoreName (0, st->window, t2);
+        XSync (0, 0);
         free (t2);
         st->secs_elapsed = elapsed;
       }
@@ -296,7 +283,6 @@ screenhack_record_anim (record_anim_state *st)
 void
 screenhack_record_anim_free (record_anim_state *st)
 {
-  Display *dpy = 0;
   struct stat s;
 
   fprintf (stderr, "%s: wrote %d frames\n", progname, st->frame_count);
@@ -304,8 +290,8 @@ screenhack_record_anim_free (record_anim_state *st)
   free (st->img->data);
   st->img->data = 0;
   custom_XDestroyImage (st->img);
-  dummy_XFreeGC (dpy, st->gc);
-  dummy_XFreePixmap (dpy, st->p);
+  dummy_XFreeGC (st->gc);
+  dummy_XFreePixmap (st->p);
 
   ffmpeg_out_close (st->ffst);
 

@@ -56,7 +56,6 @@ typedef struct chansetting_s {
 
 struct state {
   XImage *output_frame;
-  Display *dpy;
   Window window;
   analogtv *tv;
 
@@ -79,26 +78,26 @@ static struct state global_state;
  */
 
 Status
-dummy_XAllocColor (Display *dpy, Colormap cmap, XColor *c)
+dummy_XAllocColor ( Colormap cmap, XColor *c)
 {
   abort();
 }
 
 int
-dummy_XClearArea (Display *dpy, Window win, int x, int y,
+dummy_XClearArea ( Window win, int x, int y,
             unsigned int w, unsigned int h, Bool exp)
 {
   return 0;
 }
 
 int
-dummy_XClearWindow (Display *dpy, Window window)
+dummy_XClearWindow ( Window window)
 {
   return 0;
 }
 
 GC
-dummy_XCreateGC(Display *dpy, Drawable d, unsigned long mask, XGCValues *gcv)
+dummy_XCreateGC( Drawable d, unsigned long mask, XGCValues *gcv)
 {
   return 0;
 }
@@ -184,7 +183,7 @@ custom_XInitImage (XImage *ximage)
 }
 
 XImage *
-custom_XCreateImage (Display *dpy, Visual *v, unsigned int depth,
+custom_XCreateImage (Visual *v, unsigned int depth,
                     int format, int offset, char *data,
                     unsigned int width, unsigned int height,
                     int bitmap_pad, int bytes_per_line)
@@ -224,26 +223,26 @@ custom_XDestroyImage (XImage *ximage)
 }
 
 Pixmap
-dummy_XCreatePixmap (Display *dpy, Drawable d, unsigned int width,
+dummy_XCreatePixmap (Drawable d, unsigned int width,
                unsigned int height, unsigned int depth)
 {
   abort();
 }
 
 int
-dummy_XFreeGC (Display *dpy, GC gc)
+dummy_XFreeGC (GC gc)
 {
   abort();
 }
 
 int
-dummy_XFreePixmap (Display *dpy, Pixmap p)
+dummy_XFreePixmap (Pixmap p)
 {
   abort();
 }
 
 Status
-custom_XGetWindowAttributes (Display *dpy, Window w, XWindowAttributes *xgwa)
+custom_XGetWindowAttributes (Window w, XWindowAttributes *xgwa)
 {
   struct state *st = &global_state;
   memset (xgwa, 0, sizeof(*xgwa));
@@ -258,7 +257,7 @@ static uint32_t *image_ptr(XImage *image, unsigned int x, unsigned int y)
 }
 
 int
-custom_XPutImage (Display *dpy, Drawable d, GC gc, XImage *image, 
+custom_XPutImage (Drawable d, GC gc, XImage *image, 
            int src_x, int src_y, int dest_x, int dest_y,
            unsigned int w, unsigned int h)
 {
@@ -298,7 +297,7 @@ custom_XPutImage (Display *dpy, Drawable d, GC gc, XImage *image,
 }
 
 int
-custom_XQueryColor (Display *dpy, Colormap cmap, XColor *color)
+custom_XQueryColor (Colormap cmap, XColor *color)
 {
   uint16_t r = (color->pixel & 0x00FF0000L) >> 16;
   uint16_t g = (color->pixel & 0x0000FF00L) >> 8;
@@ -311,32 +310,31 @@ custom_XQueryColor (Display *dpy, Colormap cmap, XColor *color)
 }
 
 int
-custom_XQueryColors (Display *dpy, Colormap cmap, XColor *c, int n)
+custom_XQueryColors (Colormap cmap, XColor *c, int n)
 {
   int i;
   for (i = 0; i < n; i++)
-    custom_XQueryColor (dpy, cmap, &c[i]);
+    custom_XQueryColor (cmap, &c[i]);
   return 0;
 }
 
 int
-dummy_XSetWindowBackground (Display *dpy, Window win, unsigned long bg)
+dummy_XSetWindowBackground (Window win, unsigned long bg)
 {
   return 0;
 }
 
 XImage *
-create_xshm_image (Display *dpy, Visual *visual,
+create_xshm_image (Visual *visual,
 		   unsigned int depth,
 		   int format,
 		   unsigned int width, unsigned int height)
 {
 # undef BitmapPad
-# define BitmapPad(dpy) 8
-  XImage *image = custom_XCreateImage (dpy, visual, depth, format, 0, NULL,
-                                width, height, BitmapPad(dpy), 0);
-  int error = thread_malloc ((void **)&image->data, dpy,
-                             image->height * image->bytes_per_line);
+# define BitmapPad 8
+  XImage *image = custom_XCreateImage (visual, depth, format, 0, NULL,
+                                width, height, BitmapPad, 0);
+  int error = thread_malloc ((void **)&image->data, image->height * image->bytes_per_line);
   if (error) {
     custom_XDestroyImage (image);
     image = NULL;
@@ -348,18 +346,11 @@ create_xshm_image (Display *dpy, Visual *visual,
 }
 
 void
-destroy_xshm_image (Display *dpy, XImage *image)
+destroy_xshm_image (XImage *image)
 {
   thread_free (image->data);
   image->data = NULL;
   custom_XDestroyImage (image);
-}
-
-Bool
-get_boolean_resource (char *name)
-{
-  if (!strcmp(name, "useThreads")) return True;
-  abort();
 }
 
 static int darkp = 0;
@@ -389,11 +380,11 @@ get_pixel_resource (char *name)
 }
 
 Bool
-put_xshm_image (Display *dpy, Drawable d, GC gc, XImage *image,
+put_xshm_image (Drawable d, GC gc, XImage *image,
                 int src_x, int src_y, int dest_x, int dest_y,
                 unsigned int width, unsigned int height)
 {
-  return custom_XPutImage (dpy, d, gc, image, src_x, src_y, dest_x, dest_y,
+  return custom_XPutImage ( d, gc, image, src_x, src_y, dest_x, dest_y,
                     width, height);
 }
 
@@ -545,12 +536,11 @@ static Bool
 scale_ximage (Screen *screen, Visual *visual,
               XImage *ximage, int new_width, int new_height)
 {
-  Display *dpy = 0;
   int depth = visual_depth (screen, visual);
   int x, y;
   double xscale, yscale;
 
-  XImage *ximage2 = custom_XCreateImage (dpy, visual, depth,
+  XImage *ximage2 = custom_XCreateImage (visual, depth,
                                   ZPixmap, 0, 0,
                                   new_width, new_height, 8, 0);
   ximage2->data = (char *) calloc (ximage2->height, ximage2->bytes_per_line);
@@ -597,7 +587,6 @@ analogtv_convert (const char **infiles, const char *outfile,
 {
   unsigned long start_time = time((time_t *)0);
   struct state *st = &global_state;
-  Display *dpy = 0;
   Window window = 0;
   Screen *screen = 0;
   Visual *visual = 0;
@@ -624,7 +613,7 @@ analogtv_convert (const char **infiles, const char *outfile,
     int maxw = 0, maxh = 0;
     for (i = 0; i < nfiles; i++)
       {
-        XImage *ximage = file_to_ximage (0, 0, infiles[i]);
+        XImage *ximage = file_to_ximage (0, infiles[i]);
         ximages[i] = ximage;
         if (verbose_p > 1)
           fprintf (stderr, "%s: loaded %s %dx%d\n", progname, infiles[i],
@@ -669,10 +658,9 @@ analogtv_convert (const char **infiles, const char *outfile,
     }
 
   memset (st, 0, sizeof(*st));
-  st->dpy = dpy;
   st->window = window;
 
-  st->output_frame = custom_XCreateImage (dpy, 0, ximages[0]->depth,
+  st->output_frame = custom_XCreateImage ( 0, ximages[0]->depth,
                                    ximages[0]->format, 0, NULL,
                                    output_w, output_h,
                                    ximages[0]->bitmap_pad, 0);
@@ -681,13 +669,13 @@ analogtv_convert (const char **infiles, const char *outfile,
 
   if (logofile) {
     int x, y;
-    st->logo = file_to_ximage (0, 0, logofile);
+    st->logo = file_to_ximage ( 0, logofile);
     if (verbose_p)
       fprintf (stderr, "%s: loaded %s %dx%d\n", 
                progname, logofile, st->logo->width, st->logo->height);
     flip_ximage (st->logo);
     /* Pull the alpha out of the logo and make a separate mask ximage. */
-    st->logo_mask = custom_XCreateImage (dpy, 0, st->logo->depth, st->logo->format, 0,
+    st->logo_mask = custom_XCreateImage (0, st->logo->depth, st->logo->format, 0,
                                   NULL, st->logo->width, st->logo->height,
                                   st->logo->bitmap_pad, 0);
     st->logo_mask->data = (char *)
@@ -702,7 +690,7 @@ analogtv_convert (const char **infiles, const char *outfile,
       }
   }
 
-  st->tv=analogtv_allocate(dpy, window);
+  st->tv=analogtv_allocate(window);
 
   st->stations = (analogtv_input **)
     calloc (MAX_STATIONS, sizeof(*st->stations));
@@ -943,7 +931,7 @@ analogtv_convert (const char **infiles, const char *outfile,
         int h = ximage->height;
         int x = (output_w - w) / 2;
         int y = (output_h - h) / 2;
-        custom_XPutImage (dpy, 0, 0, ximage, 0, 0, x, y, w, h);
+        custom_XPutImage ( 0, 0, ximage, 0, 0, x, y, w, h);
       }
     }
 
