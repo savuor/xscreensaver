@@ -99,7 +99,7 @@ screenhack_record_anim_time (time_t *o)
 record_anim_state *
 screenhack_record_anim_init (Screen *screen, Window window, int target_frames)
 {
-  Display *dpy = DisplayOfScreen (screen);
+  Display *dpy = 0;
   record_anim_state *st;
 
   XGCValues gcv;
@@ -121,10 +121,10 @@ screenhack_record_anim_init (Screen *screen, Window window, int target_frames)
 
   XGetWindowAttributes (dpy, st->window, &st->xgwa);
 
-  st->gc = XCreateGC (dpy, st->window, 0, &gcv);
+  st->gc = dummy_XCreateGC (dpy, st->window, 0, &gcv);
   st->p = XCreatePixmap (dpy, st->window,
                          st->xgwa.width, st->xgwa.height, st->xgwa.depth);
-  st->img = XCreateImage (dpy, st->xgwa.visual, st->xgwa.depth,
+  st->img = custom_XCreateImage (dpy, st->xgwa.visual, st->xgwa.depth,
                           ZPixmap, 0, 0, st->xgwa.width, st->xgwa.height,
                           8, 0);
 
@@ -188,7 +188,7 @@ screenhack_record_anim (record_anim_state *st)
   int obpl    = st->img->bytes_per_line;
   char *odata = st->img->data;
 
-  Display *dpy = DisplayOfScreen (st->screen);
+  Display *dpy = 0;
 
   /* Under XQuartz we can't just do XGetImage on the Window, we have to
      go through an intermediate Pixmap first.  I don't understand why.
@@ -249,7 +249,7 @@ screenhack_record_anim (record_anim_state *st)
 
     if (st->title && st->secs_elapsed != (int) elapsed)
       {
-        Display *dpy = DisplayOfScreen (st->screen);
+        Display *dpy = 0;
         char *t2 = (char *) malloc (strlen(st->title) + 100);
         sprintf (t2,
                  "%s: encoded"
@@ -296,7 +296,7 @@ screenhack_record_anim (record_anim_state *st)
 void
 screenhack_record_anim_free (record_anim_state *st)
 {
-  Display *dpy = DisplayOfScreen (st->screen);
+  Display *dpy = 0;
   struct stat s;
 
   fprintf (stderr, "%s: wrote %d frames\n", progname, st->frame_count);

@@ -105,7 +105,7 @@ make_ximage (Display *dpy, Visual *visual, const char *filename,
     int chan = gdk_pixbuf_get_n_channels (pb);
     int x, y;
 
-    image = XCreateImage (dpy, visual, 32, ZPixmap, 0, 0, w, h, 32, 0);
+    image = custom_XCreateImage (dpy, visual, 32, ZPixmap, 0, 0, w, h, 32, 0);
     image->data = (char *) malloc(h * image->bytes_per_line);
 
     /* Set the bit order in the XImage structure to whatever the
@@ -218,7 +218,7 @@ make_pixmap (Display *dpy, Window window,
   if (!in) return 0;
 
   /* Create a new image in the depth and bit-order of the server. */
-  out = XCreateImage (dpy, xgwa.visual, xgwa.depth, ZPixmap, 0, 0,
+  out = custom_XCreateImage (dpy, xgwa.visual, xgwa.depth, ZPixmap, 0, 0,
                       in->width, in->height, 8, 0);
 
   out->bitmap_bit_order = in->bitmap_bit_order;
@@ -232,7 +232,7 @@ make_pixmap (Display *dpy, Window window,
 
   if (mask_ret)
     {
-      mask = XCreateImage (dpy, xgwa.visual, 1, XYPixmap, 0, 0,
+      mask = custom_XCreateImage (dpy, xgwa.visual, 1, XYPixmap, 0, 0,
                            in->width, in->height, 8, 0);
       mask->byte_order = in->byte_order;
       mask->data = (char *) malloc (mask->height * mask->bytes_per_line);
@@ -276,7 +276,7 @@ make_pixmap (Display *dpy, Window window,
   in = 0;
 
   pixmap = XCreatePixmap (dpy, window, out->width, out->height, xgwa.depth);
-  gc = XCreateGC (dpy, pixmap, 0, &gcv);
+  gc = dummy_XCreateGC (dpy, pixmap, 0, &gcv);
   XPutImage (dpy, pixmap, gc, out, 0, 0, 0, 0, out->width, out->height);
   XFreeGC (dpy, gc);
 
@@ -285,7 +285,7 @@ make_pixmap (Display *dpy, Window window,
       Pixmap p2 = XCreatePixmap (dpy, window, mask->width, mask->height, 1);
       gcv.foreground = 1;
       gcv.background = 0;
-      gc = XCreateGC (dpy, p2, GCForeground|GCBackground, &gcv);
+      gc = dummy_XCreateGC (dpy, p2, GCForeground|GCBackground, &gcv);
       XPutImage (dpy, p2, gc, mask, 0, 0, 0, 0, mask->width, mask->height);
       XFreeGC (dpy, gc);
       XDestroyImage (mask);

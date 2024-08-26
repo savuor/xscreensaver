@@ -549,12 +549,12 @@ analogtv_allocate(Display *dpy, Window window)
   gcv.background=get_pixel_resource(it->dpy, it->colormap,
                                     "background", "Background");
 
-  it->gc = XCreateGC(it->dpy, it->window, GCBackground, &gcv);
+  it->gc = dummy_XCreateGC(it->dpy, it->window, GCBackground, &gcv);
 # ifdef HAVE_JWXYZ
   jwxyz_XSetAntiAliasing (it->dpy, it->gc, False);
 # endif
   XSetWindowBackground(it->dpy, it->window, gcv.background);
-  XClearWindow(dpy,window);
+  dummy_XClearWindow(dpy,window);
 
   analogtv_configure(it);
 
@@ -648,7 +648,7 @@ analogtv_set_demod(analogtv *it)
             col.green=g;
             col.blue=b;
             col.pixel=0;
-            if (!XAllocColor(it->dpy, it->colormap, &col)) {
+            if (!dummy_XAllocColor(it->dpy, it->colormap, &col)) {
               if (q_levels > y_levels*4/12)
                 q_levels--;
               else if (i_levels > y_levels*5/12)
@@ -1888,7 +1888,7 @@ analogtv_draw(analogtv *it, double noiselevel,
 #endif
 
   if (it->need_clear) {
-    XClearWindow(it->dpy, it->window);
+    dummy_XClearWindow(it->dpy, it->window);
     it->need_clear=0;
   }
 
@@ -1905,12 +1905,12 @@ analogtv_draw(analogtv *it, double noiselevel,
   if (overall_bot>it->useheight) overall_bot=it->useheight;
 
   if (overall_top>0) {
-    XClearArea(it->dpy, it->window,
+    dummy_XClearArea(it->dpy, it->window,
                it->screen_xo, it->screen_yo,
                it->usewidth, overall_top, 0);
   }
   if (it->useheight > overall_bot) {
-    XClearArea(it->dpy, it->window,
+    dummy_XClearArea(it->dpy, it->window,
                it->screen_xo, it->screen_yo+overall_bot,
                it->usewidth, it->useheight-overall_bot, 0);
   }

@@ -25,7 +25,6 @@ extern int visual_depth (Screen *, Visual *);
 extern int visual_pixmap_depth (Screen *, Visual *);
 extern int visual_class (Screen *, Visual *);
 extern int visual_cells (Screen *, Visual *);
-extern int screen_number (Screen *);
 
 extern void visual_rgb_masks (Screen *screen, Visual *visual,
                               unsigned long *red_mask,
@@ -44,5 +43,20 @@ extern Bool put_xshm_image (Display *dpy, Drawable d, GC gc, XImage *image,
                             XShmSegmentInfo *shm_info);
 extern void destroy_xshm_image (Display *dpy, XImage *image,
                                 XShmSegmentInfo *shm_info);
+
+// from analogtv-cli.c
+Status dummy_XAllocColor (Display *dpy, Colormap cmap, XColor *c);
+int dummy_XClearArea (Display *dpy, Window win, int x, int y, unsigned int w, unsigned int h, Bool exp);
+
+int dummy_XClearWindow (Display *dpy, Window window);
+
+GC dummy_XCreateGC(Display *dpy, Drawable d, unsigned long mask, XGCValues *gcv);
+
+XImage *
+custom_XCreateImage (Display *dpy, Visual *v, unsigned int depth,
+                    int format, int offset, char *data,
+                    unsigned int width, unsigned int height,
+                    int bitmap_pad, int bytes_per_line);
+
 
 #endif /* __FIXED_FUNCS_H__ */

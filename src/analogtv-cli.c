@@ -79,40 +79,115 @@ static struct state global_state;
  */
 
 Status
-XAllocColor (Display *dpy, Colormap cmap, XColor *c)
+dummy_XAllocColor (Display *dpy, Colormap cmap, XColor *c)
 {
   abort();
 }
 
 int
-XClearArea (Display *dpy, Window win, int x, int y,
+dummy_XClearArea (Display *dpy, Window win, int x, int y,
             unsigned int w, unsigned int h, Bool exp)
 {
   return 0;
 }
 
 int
-XClearWindow (Display *dpy, Window window)
+dummy_XClearWindow (Display *dpy, Window window)
 {
   return 0;
 }
 
 GC
-XCreateGC(Display *dpy, Drawable d, unsigned long mask, XGCValues *gcv)
+dummy_XCreateGC(Display *dpy, Drawable d, unsigned long mask, XGCValues *gcv)
 {
   return 0;
 }
 
-int screen_number (Screen *screen) { return 0; }
 
-#undef DisplayOfScreen
-#define DisplayOfScreen(s) 0
+static unsigned long
+ximage_getpixel_1 (XImage *ximage, int x, int y)
+{
+  return ((ximage->data [y * ximage->bytes_per_line + (x>>3)] >> (x & 7)) & 1);
+}
+
+static int
+ximage_putpixel_1 (XImage *ximage, int x, int y, unsigned long pixel)
+{
+  if (pixel)
+    ximage->data [y * ximage->bytes_per_line + (x>>3)] |=  (1 << (x & 7));
+  else
+    ximage->data [y * ximage->bytes_per_line + (x>>3)] &= ~(1 << (x & 7));
+
+  return 0;
+}
+
+static unsigned long
+ximage_getpixel_8 (XImage *ximage, int x, int y)
+{
+  return ((unsigned long)
+          *((uint8_t *) ximage->data +
+            (y * ximage->bytes_per_line) +
+            x));
+}
+
+static int
+ximage_putpixel_8 (XImage *ximage, int x, int y, unsigned long pixel)
+{
+  *((uint8_t *) ximage->data +
+    (y * ximage->bytes_per_line) +
+    x) = (uint8_t) pixel;
+  return 0;
+}
+
+
+static unsigned long
+ximage_getpixel_32 (XImage *ximage, int x, int y)
+{
+  return ((unsigned long)
+          *((uint32_t *) ximage->data +
+            (y * (ximage->bytes_per_line >> 2)) +
+            x));
+}
+
+static int
+ximage_putpixel_32 (XImage *ximage, int x, int y, unsigned long pixel)
+{
+  *((uint32_t *) ximage->data +
+    (y * (ximage->bytes_per_line >> 2)) +
+    x) = (uint32_t) pixel;
+  return 0;
+}
+
+
+static Status
+custom_XInitImage (XImage *ximage)
+{
+  if (!ximage->bytes_per_line)
+    ximage->bytes_per_line = (ximage->depth == 1 ? (ximage->width + 7) / 8 :
+                              ximage->depth == 8 ? ximage->width :
+                              ximage->width * 4);
+
+  if (ximage->depth == 1) {
+    ximage->f.put_pixel = ximage_putpixel_1;
+    ximage->f.get_pixel = ximage_getpixel_1;
+  } else if (ximage->depth == 32 || ximage->depth == 24) {
+    ximage->f.put_pixel = ximage_putpixel_32;
+    ximage->f.get_pixel = ximage_getpixel_32;
+  } else if (ximage->depth == 8) {
+    ximage->f.put_pixel = ximage_putpixel_8;
+    ximage->f.get_pixel = ximage_getpixel_8;
+  } else {
+    printf("unknown depth\n");
+    assert(0); // "unknown depth"
+  }
+  return 1;
+}
 
 XImage *
-XCreateImage (Display *dpy, Visual *v, unsigned int depth,
-              int format, int offset, char *data,
-              unsigned int width, unsigned int height,
-              int bitmap_pad, int bytes_per_line)
+custom_XCreateImage (Display *dpy, Visual *v, unsigned int depth,
+                    int format, int offset, char *data,
+                    unsigned int width, unsigned int height,
+                    int bitmap_pad, int bytes_per_line)
 {
   XImage *ximage = (XImage *) calloc (1, sizeof(*ximage));
   unsigned long r, g, b;
@@ -294,7 +369,7 @@ create_xshm_image (Display *dpy, Visual *visual,
 {
 # undef BitmapPad
 # define BitmapPad(dpy) 8
-  XImage *image = XCreateImage (dpy, visual, depth, format, 0, NULL,
+  XImage *image = custom_XCreateImage (dpy, visual, depth, format, 0, NULL,
                                 width, height, BitmapPad(dpy), 0);
   int error = thread_malloc ((void **)&image->data, dpy,
                              image->height * image->bytes_per_line);
@@ -507,12 +582,12 @@ static Bool
 scale_ximage (Screen *screen, Visual *visual,
               XImage *ximage, int new_width, int new_height)
 {
-  Display *dpy = DisplayOfScreen (screen);
+  Display *dpy = 0;
   int depth = visual_depth (screen, visual);
   int x, y;
   double xscale, yscale;
 
-  XImage *ximage2 = XCreateImage (dpy, visual, depth,
+  XImage *ximage2 = custom_XCreateImage (dpy, visual, depth,
                                   ZPixmap, 0, 0,
                                   new_width, new_height, 8, 0);
   ximage2->data = (char *) calloc (ximage2->height, ximage2->bytes_per_line);
@@ -634,7 +709,7 @@ analogtv_convert (const char **infiles, const char *outfile,
   st->dpy = dpy;
   st->window = window;
 
-  st->output_frame = XCreateImage (dpy, 0, ximages[0]->depth,
+  st->output_frame = custom_XCreateImage (dpy, 0, ximages[0]->depth,
                                    ximages[0]->format, 0, NULL,
                                    output_w, output_h,
                                    ximages[0]->bitmap_pad, 0);
@@ -649,7 +724,7 @@ analogtv_convert (const char **infiles, const char *outfile,
                progname, logofile, st->logo->width, st->logo->height);
     flip_ximage (st->logo);
     /* Pull the alpha out of the logo and make a separate mask ximage. */
-    st->logo_mask = XCreateImage (dpy, 0, st->logo->depth, st->logo->format, 0,
+    st->logo_mask = custom_XCreateImage (dpy, 0, st->logo->depth, st->logo->format, 0,
                                   NULL, st->logo->width, st->logo->height,
                                   st->logo->bitmap_pad, 0);
     st->logo_mask->data = (char *)
