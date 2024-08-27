@@ -15,15 +15,6 @@
 #include "screenhackI.h"
 #include "ximage-loader.h"
 
-/* This XImage has RGBA data, which is what OpenGL code typically expects.
-   Also it is upside down: the origin is at the bottom left of the image.
-   X11 typically expects 0RGB as it has no notion of alpha, only 1-bit masks.
-   With X11 code, you should probably use the _pixmap routines instead.
- */
-extern XImage *image_data_to_ximage (const unsigned char *image_data,
-                                     unsigned long data_size);
-
-
 static Bool
 bigendian (void)
 {
@@ -51,32 +42,14 @@ make_ximage (const char *filename,
       initted = 1;
     }
 
-  if (filename)
-    {
-      pb = gdk_pixbuf_new_from_file (filename, &gerr);
-      if (!pb)
-        {
-          fprintf (stderr, "%s: %s\n", progname, gerr->message);
-          return 0;
-        }
-    }
-  else
-    {
-      GInputStream *s =
-        g_memory_input_stream_new_from_data (image_data, data_size, 0);
-      pb = gdk_pixbuf_new_from_stream (s, 0, &gerr);
+  assert(filename);
 
-      g_input_stream_close (s, NULL, NULL);
-      /* #### valgrind on xflame says there's a small leak in s? */
-      g_object_unref (s);
-
-      if (! pb)
-        {
-          /* fprintf (stderr, "%s: GDK unable to parse image data: %s\n",
-                   progname, (gerr ? gerr->message : "?")); */
-          return 0;
-        }
-    }
+  pb = gdk_pixbuf_new_from_file (filename, &gerr);
+  if (!pb)
+  {
+    fprintf (stderr, "%s: %s\n", progname, gerr->message);
+    return 0;
+  }
 
   if (!pb) abort();
 
@@ -170,20 +143,6 @@ flip_ximage (XImage *ximage)
     }
   free (ximage->data);
   ximage->data = data2;
-}
-
-/* This XImage has RGBA data, which is what OpenGL code typically expects.
-   Also it is upside down: the origin is at the bottom left of the image.
-   X11 typically expects 0RGB as it has no notion of alpha, only 1-bit masks.
-   With X11 code, you should probably use the _pixmap routines instead.
- */
-XImage *
-image_data_to_ximage (const unsigned char *image_data,
-                      unsigned long data_size)
-{
-  XImage *ximage = make_ximage ( 0, image_data, data_size);
-  flip_ximage (ximage);
-  return ximage;
 }
 
 XImage *
