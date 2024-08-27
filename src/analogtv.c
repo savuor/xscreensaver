@@ -485,7 +485,6 @@ analogtv * analogtv_allocate(void)
 
   custom_XGetWindowAttributes (&it->xgwa);
 
-  it->screen=it->xgwa.screen;
   it->visclass=TrueColor;
   it->visdepth=it->xgwa.depth;
   it->use_color=!mono_p;

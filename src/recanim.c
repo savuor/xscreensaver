@@ -18,8 +18,7 @@
 
 typedef struct record_anim_state record_anim_state;
 
-extern record_anim_state *screenhack_record_anim_init (Screen *,
-                                                       int frames);
+extern record_anim_state *screenhack_record_anim_init (int frames);
 extern void screenhack_record_anim (record_anim_state *);
 extern void screenhack_record_anim_free (record_anim_state *);
 
@@ -36,7 +35,6 @@ extern void screenhack_record_anim_gettimeofday (struct timeval *
 #undef time
 
 struct record_anim_state {
-  Screen *screen;
   int frame_count;
   int target_frames;
   int fps;
@@ -94,7 +92,7 @@ screenhack_record_anim_time (time_t *o)
 
 
 record_anim_state *
-screenhack_record_anim_init (Screen *screen, int target_frames)
+screenhack_record_anim_init (int target_frames)
 {
   record_anim_state *st;
 
@@ -103,7 +101,6 @@ screenhack_record_anim_init (Screen *screen, int target_frames)
   st = (record_anim_state *) calloc (1, sizeof(*st));
 
   st->fps = 30;
-  st->screen = screen;
   st->target_frames = target_frames;
   st->start_time = double_time();
   st->frame_count = 0;

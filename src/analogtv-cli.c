@@ -438,8 +438,7 @@ flip_ximage (XImage *ximage)
    destroyed and freed.
  */
 static Bool
-scale_ximage (Screen *screen,
-              XImage *ximage, int new_width, int new_height)
+scale_ximage (XImage *ximage, int new_width, int new_height)
 {
   int depth = 32;
   int x, y;
@@ -492,7 +491,6 @@ analogtv_convert (const char **infiles, const char *outfile,
 {
   unsigned long start_time = time((time_t *)0);
   struct state *st = &global_state;
-  Screen *screen = 0;
   int i;
   int nfiles;
   unsigned long curticks = 0, curticks_sub = 0;
@@ -555,7 +553,7 @@ analogtv_convert (const char **infiles, const char *outfile,
               w2 = output_w;
               h2 = output_w / r2;
             }
-          if (! scale_ximage (screen, ximage, w2, h2))
+          if (! scale_ximage (ximage, w2, h2))
             abort();
         }
     }
