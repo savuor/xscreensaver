@@ -25,7 +25,6 @@ link_libraries(
 add_executable(analogtv-cli
     "./src/analogtv-cli.cpp"
     "./src/analogtv.cpp"
-    "./src/recanim.cpp"
     "./src/ffmpeg-out.cpp"
     "./src/yarandom.cpp"
     "./src/aligned_malloc.cpp"
