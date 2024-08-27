@@ -157,7 +157,6 @@ typedef struct analogtv_s {
   int fakeit_scroll;
   int redraw_all;
 
-  int use_color;
   int bilevel_signal;
 
   int visdepth,visclass,visbits;

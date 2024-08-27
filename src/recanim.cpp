@@ -30,8 +30,7 @@ extern void screenhack_record_anim_gettimeofday (struct timeval *
 #include "ffmpeg-out.hpp"
 
 
-#undef gettimeofday  /* wrapped by recanim.h */
-#undef time
+
 
 struct record_anim_state {
   int frame_count;

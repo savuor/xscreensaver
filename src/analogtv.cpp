@@ -211,8 +211,7 @@ analogtv_set_defaults(analogtv *it, const char *prefix)
 
 #ifdef DEBUG
   printf("analogtv: prefix=%s\n",prefix);
-  printf("  use: color=%d\n",
-         it->use_color);
+  printf("  use: color=1\n");
   printf("  controls: tint=%g color=%g brightness=%g contrast=%g\n",
          it->tint_control, it->color_control, it->brightness_control,
          it->contrast_control);
@@ -250,8 +249,6 @@ analogtv_set_defaults(analogtv *it, const char *prefix)
 
 }
 
-extern Bool mono_p; /* shoot me */
-
 static void
 analogtv_free_image(analogtv *it)
 {
@@ -274,6 +271,17 @@ analogtv_alloc_image(analogtv *it)
   it->image=create_xshm_image(it->xgwa.depth,
                               ZPixmap,
                               width / bits_per_pixel, it->useheight);
+
+  // XImage *image = custom_XCreateImage (it->xgwa.depth, ZPixmap, 0, NULL,
+  //                                      width / bits_per_pixel, it->useheight, 8, 0);
+  // int error = thread_malloc ((void **)&image->data, image->height * image->bytes_per_line);
+  // if (error) {
+  //   custom_XDestroyImage (image);
+  //   image = NULL;
+  // } else {
+  //   memset (image->data, 0, image->height * image->bytes_per_line);
+  // }
+  // it->image = image;
 
   if (it->image) {
     memset (it->image->data, 0, it->image->height * it->image->bytes_per_line);
@@ -486,7 +494,6 @@ analogtv * analogtv_allocate(void)
 
   it->visclass=TrueColor;
   it->visdepth=it->xgwa.depth;
-  it->use_color=!mono_p;
 
   it->red_mask   = 0x00FF0000L;
   it->green_mask = 0x0000FF00L;

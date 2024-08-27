@@ -15,6 +15,8 @@
 
 #include "precomp.hpp"
 
+#undef gettimeofday  /* wrapped by recanim.h */
+#undef time
 #define time screenhack_record_anim_time
 #define gettimeofday screenhack_record_anim_gettimeofday
 

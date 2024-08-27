@@ -43,7 +43,6 @@
 
 const char *progname;
 const char *progclass;
-int mono_p = 0;
 static Bool verbose_p = 0;
 
 #define MAX_MULTICHAN 2
