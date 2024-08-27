@@ -1,18 +1,10 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(analogtv-xscr C)
+project(analogtv-xscr C CXX)
 
-add_compile_options(
-    "-std=gnu99"
-    "-pedantic"
-    "-Wall"
-    "-Wnested-externs"
-    "-Wstrict-prototypes"
-    "-Wmissing-prototypes"
-    "-Wno-overlength-strings"
-    "-pthread"
-    "-O2"
-)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wall -Wno-overlength-strings -pthread -O2")
+
+find_package(OpenCV)
 
 include_directories(
     "."
@@ -21,6 +13,7 @@ include_directories(
     "/usr/include/gio-unix-2.0"
     "/usr/include/glib-2.0"
     "/usr/lib/x86_64-linux-gnu/glib-2.0/include"
+    ${OpenCV_INCLUDE_DIRS}
 )
 
 link_libraries(
@@ -47,3 +40,5 @@ add_executable(analogtv-cli
     "./src/aligned_malloc.cpp"
     "./src/thread_util.cpp"
 )
+
+target_link_libraries(analogtv-cli ${OpenCV_LIBS})

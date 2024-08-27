@@ -59,6 +59,12 @@ extern double get_float_resource (char*);
 
 // from xshm.h
 
+extern unsigned long
+XGetPixel (XImage *ximage, int x, int y);
+
+extern int
+XPutPixel (XImage *ximage, int x, int y, unsigned long pixel);
+
 extern XImage *create_xshm_image (unsigned int depth,
                                   int format,
                                   unsigned int width, unsigned int height);

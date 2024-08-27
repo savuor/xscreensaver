@@ -31,9 +31,11 @@
   /* No "diagnostic pop" because some macrose use c99 features. */
 #endif
 
+extern "C" {
 #include <libavformat/avformat.h>
 #include <libswscale/swscale.h>
 #include <libswresample/swresample.h>
+}
 
 #if (LIBAVUTIL_VERSION_INT >= ((57<<16) | (28<<8) | 100))
 # define HAVE_CH_LAYOUT

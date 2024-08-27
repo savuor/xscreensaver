@@ -36,6 +36,13 @@
 #include "analogtv.hpp"
 #include "ffmpeg-out.hpp"
 
+#include <iostream>
+
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/imgcodecs.hpp>
+
+
 const char *progname;
 const char *progclass;
 int mono_p = 0;
@@ -74,6 +81,18 @@ static struct state global_state;
    with Xlib, we need stubs for the few X11 routines that analogtv.c calls.
    Most are unused. It seems like I am forever implementing subsets of X11.
  */
+
+unsigned long
+XGetPixel (XImage *ximage, int x, int y)
+{
+  return ximage->f.get_pixel (ximage, x, y);
+}
+
+int
+XPutPixel (XImage *ximage, int x, int y, unsigned long pixel)
+{
+  return ximage->f.put_pixel (ximage, x, y, pixel);
+}
 
 static unsigned long
 ximage_getpixel_1 (XImage *ximage, int x, int y)
@@ -430,6 +449,106 @@ flip_ximage (XImage *ximage)
   ximage->data = data2;
 }
 
+
+static Bool
+bigendian (void)
+{
+  union { int i; char c[sizeof(int)]; } u;
+  u.i = 1;
+  return !u.c[0];
+}
+
+/* Loads the image to an XImage, RGBA -- GDK Pixbuf version.
+ */
+static XImage *
+make_ximage (const char *filename,
+             const unsigned char *image_data, unsigned long data_size)
+{
+  assert(filename);
+
+  cv::Mat img = cv::imread(filename);
+  //TODO: BGR to RGB?
+
+  if (img.empty())
+  {
+    std::cout << "Failed to load image " << filename << std::endl;
+    return 0;
+  }
+
+  {
+    XImage *image;
+    int w = img.cols;
+    int h = img.rows;
+    uchar *row = img.data;
+    int stride = img.step;
+    int chan = img.channels();
+    int x, y;
+
+    image = custom_XCreateImage (32, ZPixmap, 0, 0, w, h, 32, 0);
+    image->data = (char *) malloc(h * image->bytes_per_line);
+
+    /* Set the bit order in the XImage structure to whatever the
+       local host's native bit order is.
+    */
+    image->bitmap_bit_order =
+      image->byte_order =
+      (bigendian() ? MSBFirst : LSBFirst);
+
+    if (!image->data)
+      {
+        fprintf (stderr, "%s: out of memory (%d x %d)\n", progname, w, h);
+        return 0;
+      }
+
+    for (y = 0; y < h; y++)
+      {
+        uchar *i = row;
+        for (x = 0; x < w; x++)
+          {
+            unsigned long rgba = 0;
+            switch (chan) {
+            case 1:
+              rgba = ((0xFF << 24) |
+                      (*i   << 16) |
+                      (*i   <<  8) |
+                       *i);
+              i++;
+              break;
+            case 3:
+              rgba = ((0xFF << 24) |
+                      (i[2] << 16) |
+                      (i[1] <<  8) |
+                      i[0]);
+              i += 3;
+              break;
+            case 4:
+              rgba = ((i[3] << 24) |
+                      (i[2] << 16) |
+                      (i[1] <<  8) |
+                      i[0]);
+              i += 4;
+              break;
+            default:
+              abort();
+              break;
+            }
+            XPutPixel (image, x, y, rgba);
+          }
+        row += stride;
+      }
+
+    /* #### valgrind on xflame says there's a small leak in pb? */
+    return image;
+  }
+}
+
+XImage *
+file_to_ximage ( const char *filename)
+{
+  XImage *ximage = make_ximage ( filename, 0, 0);
+  flip_ximage (ximage);
+  return ximage;
+}
 
 /* Scales an XImage, modifying it in place.
    This doesn't do dithering or smoothing, so it might have artifacts.
