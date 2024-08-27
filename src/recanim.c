@@ -47,7 +47,6 @@ struct record_anim_state {
   int fade_frames;
   double start_time;
   XImage *img;
-  Pixmap p;
 
   char *outfile;
   ffmpeg_out_state *ffst;
@@ -117,8 +116,6 @@ screenhack_record_anim_init (Screen *screen, Window window, int target_frames)
 
   custom_XGetWindowAttributes (st->window, &st->xgwa);
 
-  st->p = dummy_XCreatePixmap (st->window,
-                         st->xgwa.width, st->xgwa.height, st->xgwa.depth);
   st->img = custom_XCreateImage (st->xgwa.depth,
                           ZPixmap, 0, 0, st->xgwa.width, st->xgwa.height,
                           8, 0);
@@ -179,9 +176,9 @@ screenhack_record_anim (record_anim_state *st)
      Also, the fucking resize handle shows up as black.  God dammit.
      A workaround for that is to temporarily remove /opt/X11/bin/quartz-wm
    */
-  XCopyArea (0, st->window, st->p, 0, 0, 0,
+  XCopyArea (0, st->window, 0, 0, 0, 0,
              st->xgwa.width, st->xgwa.height, 0, 0);
-  XGetSubImage (0, st->p, 0, 0, st->xgwa.width, st->xgwa.height,
+  XGetSubImage (0, 0, 0, 0, st->xgwa.width, st->xgwa.height,
                 ~0L, ZPixmap, st->img, 0, 0);
 
   /* Convert BGRA to BGR */
@@ -286,7 +283,6 @@ screenhack_record_anim_free (record_anim_state *st)
   free (st->img->data);
   st->img->data = 0;
   custom_XDestroyImage (st->img);
-  dummy_XFreePixmap (st->p);
 
   ffmpeg_out_close (st->ffst);
 

@@ -15,16 +15,6 @@
 #include "screenhackI.h"
 #include "ximage-loader.h"
 
-extern Pixmap file_to_pixmap (Window, const char *filename,
-                              int *width_ret, int *height_ret,
-                              Pixmap *mask_ret);
-
-extern Pixmap image_data_to_pixmap ( Window, 
-                                    const unsigned char *image_data,
-                                    unsigned long data_size,
-                                    int *width_ret, int *height_ret,
-                                    Pixmap *mask_ret);
-
 /* This XImage has RGBA data, which is what OpenGL code typically expects.
    Also it is upside down: the origin is at the bottom left of the image.
    X11 typically expects 0RGB as it has no notion of alpha, only 1-bit masks.
@@ -158,131 +148,6 @@ make_ximage (const char *filename,
   }
 }
 
-/* Given a bitmask, returns the position and width of the field.
- */
-static void
-decode_mask (unsigned long mask, unsigned long *pos_ret,
-             unsigned long *size_ret)
-{
-  int i;
-  for (i = 0; i < 32; i++)
-    if (mask & (1L << i))
-      {
-        int j = 0;
-        *pos_ret = i;
-        for (; i < 32; i++, j++)
-          if (! (mask & (1L << i)))
-            break;
-        *size_ret = j;
-        return;
-      }
-}
-
-
-/* Loads the image to a Pixmap and optional 1-bit mask.
- */
-static Pixmap
-make_pixmap (Window window,
-             const char *filename,
-             const unsigned char *image_data, unsigned long data_size,
-             int *width_ret, int *height_ret, Pixmap *mask_ret)
-{
-  XWindowAttributes xgwa;
-  XImage *in, *out, *mask = 0;
-  Pixmap pixmap;
-  int x, y;
-
-  unsigned long crpos=0, cgpos=0, cbpos=0, capos=0; /* bitfield positions */
-  unsigned long srpos=0, sgpos=0, sbpos=0;
-  unsigned long srmsk=0, sgmsk=0, sbmsk=0;
-  unsigned long srsiz=0, sgsiz=0, sbsiz=0;
-
-  unsigned long black = 0;
-
-  custom_XGetWindowAttributes (window, &xgwa);
-
-  in = make_ximage (filename, image_data, data_size);
-  if (!in) return 0;
-
-  /* Create a new image in the depth and bit-order of the server. */
-  out = custom_XCreateImage (xgwa.depth, ZPixmap, 0, 0,
-                      in->width, in->height, 8, 0);
-
-  out->bitmap_bit_order = in->bitmap_bit_order;
-  out->byte_order = in->byte_order;
-
-  out->bitmap_bit_order = BitmapBitOrder (0);
-  out->byte_order = ImageByteOrder (0);
-
-  out->data = (char *) malloc (out->height * out->bytes_per_line);
-  if (!out->data) abort();
-
-  if (mask_ret)
-    {
-      mask = custom_XCreateImage (1, XYPixmap, 0, 0,
-                           in->width, in->height, 8, 0);
-      mask->byte_order = in->byte_order;
-      mask->data = (char *) malloc (mask->height * mask->bytes_per_line);
-    }
-
-  /* Find the server's color masks.
-   */
-  srmsk = out->red_mask;
-  sgmsk = out->green_mask;
-  sbmsk = out->blue_mask;
-
-  if (!(srmsk && sgmsk && sbmsk)) abort();  /* No server color masks? */
-
-  decode_mask (srmsk, &srpos, &srsiz);
-  decode_mask (sgmsk, &sgpos, &sgsiz);
-  decode_mask (sbmsk, &sbpos, &sbsiz);
-
-  /* 'in' is RGBA in client endianness.  Convert to what the server wants. */
-  if (bigendian())
-    crpos = 24, cgpos = 16, cbpos =  8, capos =  0;
-  else
-    crpos =  0, cgpos =  8, cbpos = 16, capos = 24;
-
-  for (y = 0; y < in->height; y++)
-    for (x = 0; x < in->width; x++)
-      {
-        unsigned long p = XGetPixel (in, x, y);
-        unsigned char a = (p >> capos) & 0xFF;
-        unsigned char b = (p >> cbpos) & 0xFF;
-        unsigned char g = (p >> cgpos) & 0xFF;
-        unsigned char r = (p >> crpos) & 0xFF;
-        XPutPixel (out, x, y, ((r << srpos) |
-                               (g << sgpos) |
-                               (b << sbpos) |
-                               black));
-        if (mask)
-          XPutPixel (mask, x, y, (a ? 1 : 0));
-      }
-
-  custom_XDestroyImage (in);
-  in = 0;
-
-  pixmap = dummy_XCreatePixmap ( window, out->width, out->height, xgwa.depth);
-
-  custom_XPutImage ( pixmap, out, 0, 0, 0, 0, out->width, out->height);
-
-  if (mask)
-    {
-      Pixmap p2 = dummy_XCreatePixmap ( window, mask->width, mask->height, 1);
-      custom_XPutImage ( p2, mask, 0, 0, 0, 0, mask->width, mask->height);
-      custom_XDestroyImage (mask);
-      mask = 0;
-      *mask_ret = p2;
-    }
-
-  if (width_ret)  *width_ret  = out->width;
-  if (height_ret) *height_ret = out->height;
-
-  custom_XDestroyImage (out);
-
-  return pixmap;
-}
-
 
 /* Textures are upside down, so invert XImages before returning them.
  */
@@ -306,27 +171,6 @@ flip_ximage (XImage *ximage)
   free (ximage->data);
   ximage->data = data2;
 }
-
-
-Pixmap
-image_data_to_pixmap (Window window, 
-                      const unsigned char *image_data, unsigned long data_size,
-                      int *width_ret, int *height_ret,
-                      Pixmap *mask_ret)
-{
-  return make_pixmap (window, 0, image_data, data_size,
-                      width_ret, height_ret, mask_ret);
-}
-
-Pixmap
-file_to_pixmap (Window window, const char *filename,
-                int *width_ret, int *height_ret,
-                Pixmap *mask_ret)
-{
-  return make_pixmap (window, filename, 0, 0,
-                      width_ret, height_ret, mask_ret);
-}
-
 
 /* This XImage has RGBA data, which is what OpenGL code typically expects.
    Also it is upside down: the origin is at the bottom left of the image.

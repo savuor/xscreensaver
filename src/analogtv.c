@@ -1894,7 +1894,7 @@ analogtv_draw(analogtv *it, double noiselevel,
   }
 
   if (overall_bot > overall_top) {
-    put_xshm_image( it->window, it->image,
+    put_xshm_image(it->image,
                    0, overall_top,
                    it->screen_xo, it->screen_yo+overall_top,
                    it->usewidth, overall_bot - overall_top);

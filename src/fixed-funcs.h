@@ -22,7 +22,7 @@ extern double get_float_resource (char*);
 extern XImage *create_xshm_image (unsigned int depth,
                                   int format,
                                   unsigned int width, unsigned int height);
-extern Bool put_xshm_image (Drawable d, XImage *image,
+extern Bool put_xshm_image (XImage *image,
                             int src_x, int src_y, int dest_x, int dest_y,
                             unsigned int width, unsigned int height);
 extern void destroy_xshm_image (XImage *image);
@@ -36,11 +36,8 @@ XImage * custom_XCreateImage (unsigned int depth,
                     unsigned int width, unsigned int height,
                     int bitmap_pad, int bytes_per_line);
 int custom_XDestroyImage (XImage *ximage);
-Pixmap dummy_XCreatePixmap (Drawable d, unsigned int width,
-               unsigned int height, unsigned int depth);
-int dummy_XFreePixmap (Pixmap p);
 Status custom_XGetWindowAttributes (Window w, XWindowAttributes *xgwa);
-int custom_XPutImage (Drawable d, XImage *image, 
+int custom_XPutImage (XImage *image,
                         int src_x, int src_y, int dest_x, int dest_y,
                         unsigned int w, unsigned int h);
 int custom_XQueryColor (Colormap cmap, XColor *color);
