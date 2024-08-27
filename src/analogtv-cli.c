@@ -56,7 +56,6 @@ typedef struct chansetting_s {
 
 struct state {
   XImage *output_frame;
-  Window window;
   analogtv *tv;
 
   int n_stations;
@@ -76,19 +75,6 @@ static struct state global_state;
    with Xlib, we need stubs for the few X11 routines that analogtv.c calls.
    Most are unused. It seems like I am forever implementing subsets of X11.
  */
-
-int
-dummy_XClearArea ( Window win, int x, int y,
-            unsigned int w, unsigned int h, Bool exp)
-{
-  return 0;
-}
-
-int
-dummy_XClearWindow ( Window window)
-{
-  return 0;
-}
 
 static unsigned long
 ximage_getpixel_1 (XImage *ximage, int x, int y)
@@ -213,7 +199,7 @@ custom_XDestroyImage (XImage *ximage)
 }
 
 Status
-custom_XGetWindowAttributes (Window w, XWindowAttributes *xgwa)
+custom_XGetWindowAttributes (XWindowAttributes *xgwa)
 {
   struct state *st = &global_state;
   memset (xgwa, 0, sizeof(*xgwa));
@@ -268,7 +254,7 @@ custom_XPutImage (XImage *image,
 }
 
 int
-custom_XQueryColor (Colormap cmap, XColor *color)
+custom_XQueryColor (XColor *color)
 {
   uint16_t r = (color->pixel & 0x00FF0000L) >> 16;
   uint16_t g = (color->pixel & 0x0000FF00L) >> 8;
@@ -281,17 +267,11 @@ custom_XQueryColor (Colormap cmap, XColor *color)
 }
 
 int
-custom_XQueryColors (Colormap cmap, XColor *c, int n)
+custom_XQueryColors (XColor *c, int n)
 {
   int i;
   for (i = 0; i < n; i++)
-    custom_XQueryColor (cmap, &c[i]);
-  return 0;
-}
-
-int
-dummy_XSetWindowBackground (Window win, unsigned long bg)
-{
+    custom_XQueryColor (&c[i]);
   return 0;
 }
 
@@ -512,7 +492,6 @@ analogtv_convert (const char **infiles, const char *outfile,
 {
   unsigned long start_time = time((time_t *)0);
   struct state *st = &global_state;
-  Window window = 0;
   Screen *screen = 0;
   int i;
   int nfiles;
@@ -582,7 +561,6 @@ analogtv_convert (const char **infiles, const char *outfile,
     }
 
   memset (st, 0, sizeof(*st));
-  st->window = window;
 
   st->output_frame = custom_XCreateImage ( ximages[0]->depth,
                                    ximages[0]->format, 0, NULL,
@@ -614,7 +592,7 @@ analogtv_convert (const char **infiles, const char *outfile,
       }
   }
 
-  st->tv=analogtv_allocate(window);
+  st->tv=analogtv_allocate();
 
   st->stations = (analogtv_input **)
     calloc (MAX_STATIONS, sizeof(*st->stations));

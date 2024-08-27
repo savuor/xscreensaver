@@ -122,7 +122,6 @@ struct analogtv_yiq_s {
 
 typedef struct analogtv_s {
 
-  Window window;
   Screen *screen;
   XWindowAttributes xgwa;
 
@@ -169,7 +168,6 @@ typedef struct analogtv_s {
   int blue_invprec, blue_shift;
   unsigned long red_mask, green_mask, blue_mask;
 
-  Colormap colormap;
   int usewidth,useheight,xrepl,subwidth;
   XImage *image; /* usewidth * useheight */
   int screen_xo,screen_yo; /* centers image in window */
@@ -235,7 +233,7 @@ typedef struct analogtv_s {
 } analogtv;
 
 
-analogtv *analogtv_allocate(Window window);
+analogtv *analogtv_allocate(void);
 analogtv_input *analogtv_input_allocate(void);
 
 

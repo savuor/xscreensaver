@@ -18,7 +18,7 @@
 
 typedef struct record_anim_state record_anim_state;
 
-extern record_anim_state *screenhack_record_anim_init (Screen *, Window,
+extern record_anim_state *screenhack_record_anim_init (Screen *,
                                                        int frames);
 extern void screenhack_record_anim (record_anim_state *);
 extern void screenhack_record_anim_free (record_anim_state *);
@@ -37,7 +37,6 @@ extern void screenhack_record_anim_gettimeofday (struct timeval *
 
 struct record_anim_state {
   Screen *screen;
-  Window window;
   int frame_count;
   int target_frames;
   int fps;
@@ -95,7 +94,7 @@ screenhack_record_anim_time (time_t *o)
 
 
 record_anim_state *
-screenhack_record_anim_init (Screen *screen, Window window, int target_frames)
+screenhack_record_anim_init (Screen *screen, int target_frames)
 {
   record_anim_state *st;
 
@@ -105,7 +104,6 @@ screenhack_record_anim_init (Screen *screen, Window window, int target_frames)
 
   st->fps = 30;
   st->screen = screen;
-  st->window = window;
   st->target_frames = target_frames;
   st->start_time = double_time();
   st->frame_count = 0;
@@ -114,7 +112,7 @@ screenhack_record_anim_init (Screen *screen, Window window, int target_frames)
   if (st->fade_frames >= (st->target_frames / 2) - st->fps)
     st->fade_frames = 0;
 
-  custom_XGetWindowAttributes (st->window, &st->xgwa);
+  custom_XGetWindowAttributes ( &st->xgwa);
 
   st->img = custom_XCreateImage (st->xgwa.depth,
                           ZPixmap, 0, 0, st->xgwa.width, st->xgwa.height,
@@ -176,7 +174,7 @@ screenhack_record_anim (record_anim_state *st)
      Also, the fucking resize handle shows up as black.  God dammit.
      A workaround for that is to temporarily remove /opt/X11/bin/quartz-wm
    */
-  XCopyArea (0, st->window, 0, 0, 0, 0,
+  XCopyArea (0, 0, 0, 0, 0, 0,
              st->xgwa.width, st->xgwa.height, 0, 0);
   XGetSubImage (0, 0, 0, 0, st->xgwa.width, st->xgwa.height,
                 ~0L, ZPixmap, st->img, 0, 0);
@@ -258,7 +256,7 @@ screenhack_record_anim (record_anim_state *st)
                  (((int) remain) / 60) % 60,
                  ((int)  remain) % 60
                  );
-        XStoreName (0, st->window, t2);
+        XStoreName (0, 0, t2);
         XSync (0, 0);
         free (t2);
         st->secs_elapsed = elapsed;

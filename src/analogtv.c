@@ -444,8 +444,7 @@ static void analogtv_thread_destroy(void *thread_raw)
 {
 }
 
-analogtv *
-analogtv_allocate(Window window)
+analogtv * analogtv_allocate(void)
 {
   static const struct threadpool_class cls = {
     sizeof(analogtv_thread),
@@ -464,8 +463,6 @@ analogtv_allocate(Window window)
   it->threads.count=0;
   it->rx_signal=NULL;
   it->signal_subtotals=NULL;
-
-  it->window=window;
 
   if (thread_malloc((void **)&it->rx_signal, 
                     sizeof(it->rx_signal[0]) * rx_signal_len))
@@ -486,10 +483,9 @@ analogtv_allocate(Window window)
 
   it->n_colors=0;
 
-  custom_XGetWindowAttributes (it->window, &it->xgwa);
+  custom_XGetWindowAttributes (&it->xgwa);
 
   it->screen=it->xgwa.screen;
-  it->colormap=it->xgwa.colormap;
   it->visclass=TrueColor;
   it->visdepth=it->xgwa.depth;
   it->use_color=!mono_p;
@@ -533,9 +529,6 @@ analogtv_allocate(Window window)
     it->green_values[i] = ((intensity >> it->green_invprec) << it->green_shift);
     it->blue_values[i] = ((intensity >> it->blue_invprec) << it->blue_shift);
   }
-
-  dummy_XSetWindowBackground(it->window, 0);
-  dummy_XClearWindow(window);
 
   analogtv_configure(it);
 
@@ -1721,10 +1714,7 @@ analogtv_draw(analogtv *it, double noiselevel,
   }
 #endif
 
-  if (it->need_clear) {
-    dummy_XClearWindow(it->window);
-    it->need_clear=0;
-  }
+  it->need_clear=0;
 
   /*
     Subtle change: overall_bot was the bottom of the last scan line. Now it's
@@ -1737,17 +1727,6 @@ analogtv_draw(analogtv *it, double noiselevel,
 
   if (overall_top<0) overall_top=0;
   if (overall_bot>it->useheight) overall_bot=it->useheight;
-
-  if (overall_top>0) {
-    dummy_XClearArea( it->window,
-               it->screen_xo, it->screen_yo,
-               it->usewidth, overall_top, 0);
-  }
-  if (it->useheight > overall_bot) {
-    dummy_XClearArea( it->window,
-               it->screen_xo, it->screen_yo+overall_bot,
-               it->usewidth, it->useheight-overall_bot, 0);
-  }
 
   if (overall_bot > overall_top) {
     put_xshm_image(it->image,
@@ -1823,8 +1802,8 @@ analogtv_load_ximage(analogtv *it, analogtv_input *input,
       else
         mask[x] = 1;
     }
-    custom_XQueryColors( it->colormap, col1, x_length);
-    custom_XQueryColors( it->colormap, col2, x_length);
+    custom_XQueryColors( col1, x_length);
+    custom_XQueryColors( col2, x_length);
     for (i=0; i<7; i++) fyx[i]=fyy[i]=0;
     for (i=0; i<4; i++) fix[i]=fiy[i]=fqx[i]=fqy[i]=0.0;
 
