@@ -17,7 +17,6 @@
 
 typedef struct record_anim_state record_anim_state;
 
-extern record_anim_state *screenhack_record_anim_init (int frames);
 extern void screenhack_record_anim (record_anim_state *);
 extern void screenhack_record_anim_free (record_anim_state *);
 
@@ -86,58 +85,6 @@ screenhack_record_anim_time (time_t *o)
   screenhack_record_anim_gettimeofday (&tv, &tz);
   if (o) *o = tv.tv_sec;
   return tv.tv_sec;
-}
-
-
-record_anim_state *
-screenhack_record_anim_init (int target_frames)
-{
-  record_anim_state *st;
-
-  if (target_frames <= 0) return 0;
-
-  st = (record_anim_state *) calloc (1, sizeof(*st));
-
-  st->fps = 30;
-  st->target_frames = target_frames;
-  st->start_time = double_time();
-  st->frame_count = 0;
-  st->fade_frames = st->fps * 1.5;
-
-  if (st->fade_frames >= (st->target_frames / 2) - st->fps)
-    st->fade_frames = 0;
-
-  custom_XGetWindowAttributes ( &st->xgwa);
-
-  st->img = custom_XCreateImage (st->xgwa.depth,
-                          ZPixmap, 0, 0, st->xgwa.width, st->xgwa.height,
-                          8, 0);
-
-  st->img->data = (char *) calloc (st->img->height, st->img->bytes_per_line);
-
-  {
-    char fn[1024];
-    struct stat s;
-
-    const char *soundtrack = 0;
-#   define ST "images/drives-200.mp3"
-    soundtrack = ST;
-    if (stat (soundtrack, &s)) soundtrack = 0;
-    if (! soundtrack) soundtrack = "../" ST;
-    if (stat (soundtrack, &s)) soundtrack = 0;
-    if (! soundtrack) soundtrack = "../../" ST;
-    if (stat (soundtrack, &s)) soundtrack = 0;
-
-    sprintf (fn, "%s.%s", progname, "mp4");
-    unlink (fn);
-
-    st->outfile = strdup (fn);
-    st->ffst = ffmpeg_out_init (st->outfile, soundtrack,
-                                st->xgwa.width, st->xgwa.height,
-                                3, False);
-  }
-
-  return st;
 }
 
 

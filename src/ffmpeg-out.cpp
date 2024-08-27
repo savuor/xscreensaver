@@ -26,7 +26,6 @@ struct av_stream {
 
 struct ffmpeg_out_state {
   const char *outfile;
-  const char *audiofile;
   struct av_stream video_ost;
   struct av_stream audio_ost;
   struct av_stream audio_ist;
@@ -255,7 +254,7 @@ close_stream (struct av_stream *ost)
 
 
 ffmpeg_out_state *
-ffmpeg_out_init (const char *outfile, const char *audiofile,
+ffmpeg_out_init (const char *outfile,
                  int output_width, int output_height, int bpp,
                  Bool fast_p)
 {
@@ -270,7 +269,6 @@ ffmpeg_out_init (const char *outfile, const char *audiofile,
   const char *video_crf =    (fast_p ? "24" : "18");
 
   ffst->outfile   = strdup (outfile);
-  ffst->audiofile = audiofile ? strdup (audiofile) : NULL;
 
   av_check (avformat_alloc_output_context2 (&ffst->oc, NULL, "mp4", outfile));
 
@@ -288,181 +286,6 @@ ffmpeg_out_init (const char *outfile, const char *audiofile,
 
   av_log_set_level (AV_LOG_ERROR);  /* Before open_stream */
 
-  if (audiofile)
-    {
-      int audio_stream_idx;
-      av_check (avformat_open_input (&ffst->audio_fmt_ctx, audiofile,
-                                     NULL, NULL));
-      av_check (avformat_find_stream_info (ffst->audio_fmt_ctx, NULL));
-      audio_stream_idx = av_check (av_find_best_stream (ffst->audio_fmt_ctx,
-                                                        AVMEDIA_TYPE_AUDIO,
-                                                        -1, -1, NULL, 0));
-      ffst->audio_ist.st = ffst->audio_fmt_ctx->streams[audio_stream_idx];
-
-      ffst->audio_ist.codec =
-        avcodec_find_decoder (ffst->audio_ist.st->codecpar->codec_id);
-      if (! ffst->audio_ist.codec)
-        {
-          fprintf (stderr, "%s: failed to find audio codec\n", progname);
-          exit (1);
-        }
-
-      ffst->audio_ist.ctx = avcodec_alloc_context3 (ffst->audio_ist.codec);
-      if (! ffst->audio_ist.ctx)
-        {
-          fprintf (stderr, "%s: failed to allocate the audio codec context\n",
-                   progname);
-          exit (1);
-        }
-
-      av_check (avcodec_parameters_to_context (ffst->audio_ist.ctx,
-                                               ffst->audio_ist.st->codecpar));
-
-      /* Makes "Could not update timestamps for skipped samples." go away.
-         Apparently not otherwise needed.
-         Not mentioned in the example code. :)
-      */
-      ffst->audio_ist.ctx->pkt_timebase = ffst->audio_ist.st->time_base;
-
-      av_check (avcodec_open2 (ffst->audio_ist.ctx, ffst->audio_ist.codec,
-                               NULL));
-
-      add_stream (&ffst->audio_ost, ffst->oc, audio_codec);
-      ffst->audio_ost.ctx->sample_fmt =
-        (ffst->audio_ost.codec->sample_fmts
-         ? ffst->audio_ost.codec->sample_fmts[0]
-         : AV_SAMPLE_FMT_FLTP);
-      ffst->audio_ost.ctx->bit_rate = audio_bitrate;
-
-      if (! ffst->audio_ost.codec->supported_samplerates)
-        {
-          ffst->audio_ost.ctx->sample_rate = ffst->audio_ist.ctx->sample_rate;
-        }
-      else
-        {
-          const int *r = ffst->audio_ost.codec->supported_samplerates;
-          int best = *r;
-          ++r;
-
-          while (*r)
-            {
-              if ((*r >= ffst->audio_ist.ctx->sample_rate)
-                  ? *r < best
-                  : *r > best)
-                best = *r;
-              ++r;
-            }
-          ffst->audio_ost.ctx->sample_rate = best;
-        }
-
-# ifdef HAVE_CH_LAYOUT
-      if (! ffst->audio_ost.codec->ch_layouts)
-        {
-          if (! av_channel_layout_check(&ffst->audio_ist.ctx->ch_layout))
-            {
-              ffst->audio_ost.ctx->ch_layout =
-                guess_channel_layout (ffst->audio_ost.ctx->ch_layout.nb_channels);
-            }
-          else
-            {
-              av_channel_layout_copy(&ffst->audio_ost.ctx->ch_layout,
-                &ffst->audio_ist.ctx->ch_layout);
-            }
-        }
-      else
-        {
-          /* XXX: This may or may not work. With AAC, it doesn't matter. */
-          const AVChannelLayout *c = ffst->audio_ost.codec->ch_layouts;
-          uint64_t best_lost =
-            av_popcount64 (ffst->audio_ost.ctx->ch_layout.u.mask);
-          uint64_t best_added = 0;
-          uint64_t best = 0;
-          while (av_channel_layout_check(c))
-            {
-              if (c->u.mask == ffst->audio_ist.ctx->ch_layout.u.mask)
-                {
-                  uint64_t lost =
-                    av_popcount64 (ffst->audio_ist.ctx->ch_layout.u.mask & ~c->u.mask);
-                  uint64_t added =
-                    av_popcount64 (c->u.mask & ~ffst->audio_ist.ctx->ch_layout.u.mask);
-                  if (lost < best_lost ||
-                      (lost == best_lost &&
-                       added < best_added)) {
-                    best = c->u.mask;
-                    best_lost = lost;
-                    best_added = added;
-                  }
-                }
-              ++c;
-            }
-          av_channel_layout_uninit (&ffst->audio_ost.ctx->ch_layout);
-          av_channel_layout_from_mask (&ffst->audio_ost.ctx->ch_layout, best);
-        }
-# else   /* !HAVE_CH_LAYOUT */
-      if (! ffst->audio_ost.codec->channel_layouts)
-        {
-          if (! ffst->audio_ist.ctx->channel_layout)
-            {
-              ffst->audio_ost.ctx->channel_layout =
-                guess_channel_layout (ffst->audio_ost.ctx->channels);
-            }
-          else
-            {
-              ffst->audio_ost.ctx->channel_layout =
-                ffst->audio_ist.ctx->channel_layout;
-            }
-        }
-      else
-        {
-          /* XXX: This may or may not work. With AAC, it doesn't matter. */
-          const uint64_t *c = ffst->audio_ost.codec->channel_layouts;
-          unsigned int best_lost =
-            av_popcount64 (ffst->audio_ost.ctx->channel_layout);
-          unsigned int best_added = 0;
-          uint64_t best = 0;
-          while (*c)
-            {
-              if (*c == ffst->audio_ist.ctx->channel_layout)
-                {
-                  unsigned int lost =
-                    av_popcount64 (ffst->audio_ist.ctx->channel_layout & ~*c);
-                  unsigned int added =
-                    av_popcount64 (*c & ~ffst->audio_ist.ctx->channel_layout);
-                  if (lost < best_lost ||
-                      (lost == best_lost &&
-                       added < best_added)) {
-                    best = *c;
-                    best_lost = lost;
-                    best_added = added;
-                  }
-                }
-              ++c;
-            }
-
-          ffst->audio_ost.ctx->channel_layout = best;
-        }
-
-      ffst->audio_ost.ctx->channels =
-        av_get_channel_layout_nb_channels (ffst->audio_ost.ctx->channel_layout);
-# endif  /* !HAVE_CH_LAYOUT */
-
-      ffst->audio_ost.st->time_base.num = 1;
-      ffst->audio_ost.st->time_base.den = ffst->audio_ost.ctx->sample_rate;
-
-      ffst->audio_ist.frame = av_frame_alloc();
-      if (! ffst->audio_ist.frame)
-        {
-          fprintf (stderr, "%s: could not allocate frame\n", progname);
-          exit (1);
-        }
-
-      ffst->audio_pkt = av_packet_alloc();
-      if (! ffst->audio_pkt)
-        {
-          fprintf (stderr, "%s: could not allocate packet\n", progname);
-          exit (1);
-        }
-    }
 
   {
     AVDictionary *opt = NULL;
@@ -476,38 +299,6 @@ ffmpeg_out_init (const char *outfile, const char *audiofile,
     av_check (av_frame_get_buffer (ffst->video_ost.frame, 0));
   }
 
-  if (audiofile)
-    {
-      open_stream (&ffst->audio_ost, NULL);
-
-      ffst->audio_ost.frame->format = ffst->audio_ost.ctx->sample_fmt;
-#ifdef HAVE_CH_LAYOUT
-      av_channel_layout_copy(&ffst->audio_ost.frame->ch_layout,
-        &ffst->audio_ost.ctx->ch_layout);
-#else   /* !HAVE_CH_LAYOUT */
-      ffst->audio_ost.frame->channel_layout =
-        ffst->audio_ost.ctx->channel_layout;
-#endif  /* !HAVE_CH_LAYOUT */
-        ffst->audio_ost.frame->sample_rate = ffst->audio_ost.ctx->sample_rate;
-      ffst->audio_ost.frame->nb_samples =
-        (ffst->audio_ost.ctx->codec->capabilities &
-         AV_CODEC_CAP_VARIABLE_FRAME_SIZE
-         ? ((av_rescale (ffst->audio_ist.ctx->frame_size,
-                         ffst->audio_ost.ctx->sample_rate,
-                         ffst->audio_ist.ctx->sample_rate) + 15)
-            & ~(int64_t) 15)
-         : ffst->audio_ost.ctx->frame_size);
-
-      av_check (av_frame_get_buffer (ffst->audio_ost.frame, 0));
-
-      ffst->swr_ctx = swr_alloc();
-      if (! ffst->swr_ctx)
-        {
-          fprintf (stderr, "%s: could not allocate resampler context\n",
-                   progname);
-          exit (1);
-        }
-    }
 
   /* assert (!(ffst->oc->oformat->flags & AVFMT_NOFILE)); */
   av_check (avio_open (&ffst->oc->pb, outfile, AVIO_FLAG_WRITE));
@@ -540,23 +331,6 @@ ffmpeg_out_add_frame (ffmpeg_out_state *ffst, XImage *img)
 {
   const uint8_t *img_data = (const uint8_t *) img->data;
 
-  if (ffst->audiofile)
-    {
-      while (av_compare_ts (ffst->frames_written, 
-                            ffst->video_ost.ctx->time_base,
-                            ffst->samples_written,
-                            ffst->audio_ost.ctx->time_base) > 0)
-        {
-          av_check (av_frame_make_writable (ffst->audio_ost.frame));
-          get_audio_frame (ffst->audio_fmt_ctx, &ffst->audio_ist,
-                           ffst->audio_pkt, ffst->swr_ctx, &ffst->audio_ost);
-          ffst->audio_ost.frame->pts = ffst->samples_written;
-          ffst->samples_written += ffst->audio_ost.frame->nb_samples;
-
-          write_frame (ffst->oc, &ffst->audio_ost);
-        }
-    }
-
   av_check (av_frame_make_writable (ffst->video_ost.frame));
 
   sws_scale (ffst->sws_ctx, &img_data, &img->bytes_per_line, 0,
@@ -577,25 +351,9 @@ ffmpeg_out_close (ffmpeg_out_state *ffst)
   av_check (avcodec_send_frame (ffst->video_ost.ctx, NULL));
   flush_packets (ffst->oc, &ffst->video_ost);
 
-  if (ffst->audiofile) {
-    av_check (avcodec_send_frame (ffst->audio_ost.ctx, NULL));
-    flush_packets (ffst->oc, &ffst->audio_ost);
-  }
-
   av_check (av_write_trailer (ffst->oc));
 
   close_stream (&ffst->video_ost);
-  /* Not present in 1.1.100 */
-  /* sws_freeContext (ffst->sws_ctx); */
-  if (ffst->audiofile)
-    {
-      close_stream (&ffst->audio_ost);
-      swr_free (&ffst->swr_ctx);
-
-      close_stream (&ffst->audio_ist);
-      avformat_close_input (&ffst->audio_fmt_ctx);
-      av_packet_free(&ffst->audio_pkt);
-    }
 
   avio_closep (&ffst->oc->pb);
   avformat_free_context (ffst->oc);
