@@ -28,10 +28,8 @@
 
 #include "precomp.hpp"
 
-#include "screenhackI.hpp"
 #include "fixed-funcs.hpp"
 #include "yarandom.hpp"
-#include "ximage-loader.hpp"
 #include "thread_util.hpp"
 #include "analogtv.hpp"
 #include "ffmpeg-out.hpp"
@@ -468,6 +466,7 @@ make_ximage (const char *filename,
 
   cv::Mat img = cv::imread(filename);
   //TODO: BGR to RGB?
+  cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
 
   if (img.empty())
   {
@@ -725,14 +724,14 @@ analogtv_convert (const char **infiles, const char *outfile,
     st->tv->tint_control += pow(frand(2.0)-1.0, 7) * 180.0;
   }
   if (1) {
-    st->tv->color_control += frand(0.3) * RANDSIGN();
+    st->tv->color_control += frand(0.3) * ((random() & 1) ? 1 : -1);
   }
   if (darkp) {
     if (random()%4==0) {
       st->tv->brightness_control += frand(0.15);
     }
     if (random()%4==0) {
-      st->tv->contrast_control += frand(0.2) * RANDSIGN();
+      st->tv->contrast_control += frand(0.2) * ((random() & 1) ? 1 : -1);
     }
   }
 
@@ -900,17 +899,17 @@ analogtv_convert (const char **infiles, const char *outfile,
       /* Turn the knobs every now and then */
       if (! (random() % 5)) {
         if (random()%4==0) {
-          st->tv->tint_control += pow(frand(2.0)-1.0, 7) * 180.0 * RANDSIGN();
+          st->tv->tint_control += pow(frand(2.0)-1.0, 7) * 180.0 * ((random() & 1) ? 1 : -1);
         }
         if (1) {
-          st->tv->color_control += frand(0.3) * RANDSIGN();
+          st->tv->color_control += frand(0.3) * ((random() & 1) ? 1 : -1);
         }
         if (darkp) {
           if (random()%4==0) {
             st->tv->brightness_control += frand(0.15);
           }
           if (random()%4==0) {
-            st->tv->contrast_control += frand(0.2) * RANDSIGN();
+            st->tv->contrast_control += frand(0.2) * ((random() & 1) ? 1 : -1);
           }
         }
       }
@@ -1087,7 +1086,7 @@ main (int argc, char **argv)
          powerp = False;
       else if (argv[i][0] == '-')
         usage(argv[i]);
-      else if (nfiles >= (int)countof(infiles)-1)
+      else if (nfiles >= (int)(sizeof(infiles)/sizeof(*infiles))-1)
         usage("too many files");
       else
         infiles[nfiles++] = argv[i];

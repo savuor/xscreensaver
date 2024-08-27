@@ -14,7 +14,7 @@
 
 #include "precomp.hpp"
 
-#include "screenhackI.hpp"
+#include "fixed-funcs.hpp"
 #include "ffmpeg-out.hpp"
 
 struct av_stream {

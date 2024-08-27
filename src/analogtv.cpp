@@ -74,7 +74,6 @@
 #include "fixed-funcs.hpp"
 #include "analogtv.hpp"
 #include "yarandom.hpp"
-#include "ximage-loader.hpp"
 
 /* #define DEBUG 1 */
 
@@ -1092,7 +1091,7 @@ static void analogtv_add_signal(const analogtv *it, const analogtv_reception *re
   const float noise_decay = 0.99995f;
   float noise_ampl = 1.3f * powf(noise_decay, start);
 
-  if (ec > end)
+  if (ec > (int)end)
     ec = end;
 
   /* assert((se-ss)%4==0 && (se-s)%4==0); */
@@ -1533,7 +1532,7 @@ analogtv_draw(analogtv *it, double noiselevel,
     return;
 
   it->rx_signal_level = noiselevel;
-  for (i = 0; i != rec_count; ++i) {
+  for (i = 0; i != (int)rec_count; ++i) {
     const analogtv_reception *rec = recs[i];
     double level = rec->level;
     analogtv_input *inp=rec->input;
@@ -1664,20 +1663,20 @@ analogtv_draw(analogtv *it, double noiselevel,
 
       frac = signal_offset & (ANALOGTV_SUBTOTAL_LEN - 1);
       p = it->rx_signal + (signal_offset & ~(ANALOGTV_SUBTOTAL_LEN - 1));
-      for (i=0; i != frac; i++) {
+      for (i=0; i != (int)frac; i++) {
         totsignal -= p[i];
       }
 
       end0 = (signal_offset + ANALOGTV_PIC_LEN);
 
       end1 = end0 / ANALOGTV_SUBTOTAL_LEN;
-      for (i=signal_offset / ANALOGTV_SUBTOTAL_LEN; i<end1; i++) {
+      for (i=signal_offset / ANALOGTV_SUBTOTAL_LEN; i<(int)end1; i++) {
         totsignal += it->signal_subtotals[i];
       }
 
       frac = end0 & (ANALOGTV_SUBTOTAL_LEN - 1);
       p = it->rx_signal + (end0 & ~(ANALOGTV_SUBTOTAL_LEN - 1));
-      for (i=0; i != frac; i++) {
+      for (i=0; i != (int)frac; i++) {
         totsignal += p[i];
       }
 

@@ -86,4 +86,10 @@ int custom_XPutImage (XImage *image,
 int custom_XQueryColor (XColor *color);
 int custom_XQueryColors (XColor *c, int n);
 
+// from screenhackI.h
+
+extern Bool mono_p;
+
+extern const char *progname;
+
 #endif /* __FIXED_FUNCS_H__ */

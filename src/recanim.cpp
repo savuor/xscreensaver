@@ -12,8 +12,7 @@
 
 #include "precomp.hpp"
 
-#include "screenhackI.hpp"
-
+#include "fixed-funcs.hpp"
 #include "recanim.hpp"
 
 typedef struct record_anim_state record_anim_state;
