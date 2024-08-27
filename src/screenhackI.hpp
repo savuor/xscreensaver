@@ -53,10 +53,10 @@
 #ifndef __SCREENHACK_I_H__
 #define __SCREENHACK_I_H__
 
-#include "precomp.h"
+#include "precomp.hpp"
 
-#include "yarandom.h"
-#include "fixed-funcs.h"
+#include "yarandom.hpp"
+#include "fixed-funcs.hpp"
 
 #undef countof
 #define countof(x) (sizeof((x))/sizeof((*x)))

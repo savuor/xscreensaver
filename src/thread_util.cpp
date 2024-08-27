@@ -13,12 +13,12 @@ software for any purpose.  It is provided "as is" without express or
 implied warranty.
 */
 
-#include "precomp.h"
+#include "precomp.hpp"
 
-#include "thread_util.h"
+#include "thread_util.hpp"
 
-#include "aligned_malloc.h"
-#include "fixed-funcs.h"
+#include "aligned_malloc.hpp"
+#include "fixed-funcs.hpp"
 
 const pthread_mutex_t mutex_initializer =
 #	if defined _GNU_SOURCE && !defined NDEBUG
@@ -402,7 +402,7 @@ int threadpool_create(struct threadpool *self, const struct threadpool_class *cl
 			return 0;
 		}
 
-		self->parallel_threads = malloc(sizeof(pthread_t) * count_parallel);
+		self->parallel_threads = (pthread_t*) malloc(sizeof(pthread_t) * count_parallel);
 		if(!self->parallel_threads)
 			return ENOMEM;
 

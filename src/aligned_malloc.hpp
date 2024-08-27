@@ -16,7 +16,7 @@ implied warranty.
 #ifndef __ALIGNED_MALLOC_H__
 #define __ALIGNED_MALLOC_H__
 
-#include "precomp.h"
+#include "precomp.hpp"
 
 extern unsigned int aligned_malloc_default_alignment;
 

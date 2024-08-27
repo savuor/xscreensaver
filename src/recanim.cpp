@@ -10,11 +10,11 @@
  * implied warranty.
  */
 
-#include "precomp.h"
+#include "precomp.hpp"
 
-#include "screenhackI.h"
+#include "screenhackI.hpp"
 
-#include "recanim.h"
+#include "recanim.hpp"
 
 typedef struct record_anim_state record_anim_state;
 
@@ -28,7 +28,7 @@ extern void screenhack_record_anim_gettimeofday (struct timeval *
                                                  );
 
 
-#include "ffmpeg-out.h"
+#include "ffmpeg-out.hpp"
 
 
 #undef gettimeofday  /* wrapped by recanim.h */

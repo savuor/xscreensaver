@@ -50,9 +50,9 @@
    Irix 6.2; Indy r5k; SGI cc version 6; gcc version 2.7.2.1.
  */
 
-#include "precomp.h"
+#include "precomp.hpp"
 
-#include "yarandom.h"
+#include "yarandom.hpp"
 # undef ya_rand_init
 
 

@@ -10,10 +10,10 @@
  * implied warranty.
  */
 
-#include "precomp.h"
+#include "precomp.hpp"
 
-#include "screenhackI.h"
-#include "ximage-loader.h"
+#include "screenhackI.hpp"
+#include "ximage-loader.hpp"
 
 static Bool
 bigendian (void)
@@ -131,7 +131,7 @@ flip_ximage (XImage *ximage)
   int y;
 
   if (!ximage) return;
-  data2 = malloc (ximage->bytes_per_line * ximage->height);
+  data2 = (char*) malloc (ximage->bytes_per_line * ximage->height);
   if (!data2) abort();
   in = ximage->data;
   out = data2 + ximage->bytes_per_line * (ximage->height - 1);

@@ -12,10 +12,10 @@
 #ifndef _XSCREENSAVER_ANALOGTV_H
 #define _XSCREENSAVER_ANALOGTV_H
 
-#include "precomp.h"
+#include "precomp.hpp"
 
-#include "thread_util.h"
-#include "fixed-funcs.h"
+#include "thread_util.hpp"
+#include "fixed-funcs.hpp"
 
 /* To simulate an NTSC CRT monitor with way more scanlines, and thus
    apply an ahistorical tv-like effect to a larger image, increase
@@ -235,7 +235,7 @@ analogtv *analogtv_allocate(void);
 analogtv_input *analogtv_input_allocate(void);
 
 
-void analogtv_set_defaults(analogtv *it, char *prefix);
+void analogtv_set_defaults(analogtv *it, const char *prefix);
 void analogtv_setup_frame(analogtv *it);
 void analogtv_setup_sync(analogtv_input *input, int do_cb, int do_ssavi);
 void analogtv_draw(analogtv *it, double noiselevel,

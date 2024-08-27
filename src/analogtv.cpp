@@ -69,12 +69,12 @@
   Updated for new xshm.c.
 */
 
-#include "precomp.h"
+#include "precomp.hpp"
 
-#include "fixed-funcs.h"
-#include "analogtv.h"
-#include "yarandom.h"
-#include "ximage-loader.h"
+#include "fixed-funcs.hpp"
+#include "analogtv.hpp"
+#include "yarandom.hpp"
+#include "ximage-loader.hpp"
 
 /* #define DEBUG 1 */
 
@@ -186,7 +186,7 @@ analogtv_init(void)
 }
 
 void
-analogtv_set_defaults(analogtv *it, char *prefix)
+analogtv_set_defaults(analogtv *it, const char *prefix)
 {
   char buf[256];
 

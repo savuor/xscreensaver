@@ -69,8 +69,8 @@ implied warranty.
       performance gains may be slim to non-existant.
  */
 
-#include "precomp.h"
-#include "aligned_malloc.h"
+#include "precomp.hpp"
+#include "aligned_malloc.hpp"
 
 unsigned hardware_concurrency(void);
 /* This is supposed to return the number of available CPU cores. This number

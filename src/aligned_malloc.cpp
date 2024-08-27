@@ -13,8 +13,8 @@ software for any purpose.  It is provided "as is" without express or
 implied warranty.
 */
 
-#include "precomp.h"
-#include "aligned_malloc.h"
+#include "precomp.hpp"
+#include "aligned_malloc.hpp"
 
 /* Might be changed by thread_util.c:threads_available()
  */

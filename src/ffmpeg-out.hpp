@@ -14,7 +14,7 @@
 #ifndef __FFMPEG_OUT_H__
 # define __FFMPEG_OUT_H__
 
-#include "precomp.h"
+#include "precomp.hpp"
 
 typedef struct ffmpeg_out_state ffmpeg_out_state;
 extern ffmpeg_out_state *ffmpeg_out_init (const char *outfile,

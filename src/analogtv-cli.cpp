@@ -27,15 +27,15 @@
  *  Created: 10-Dec-2018 by jwz.
  */
 
-#include "precomp.h"
+#include "precomp.hpp"
 
-#include "screenhackI.h"
-#include "fixed-funcs.h"
-#include "yarandom.h"
-#include "ximage-loader.h"
-#include "thread_util.h"
-#include "analogtv.h"
-#include "ffmpeg-out.h"
+#include "screenhackI.hpp"
+#include "fixed-funcs.hpp"
+#include "yarandom.hpp"
+#include "ximage-loader.hpp"
+#include "thread_util.hpp"
+#include "analogtv.hpp"
+#include "ffmpeg-out.hpp"
 
 const char *progname;
 const char *progclass;
@@ -234,12 +234,12 @@ custom_XPutImage (XImage *image,
       src_x -= dest_x;
       dest_x = 0;
     }
-  if (src_x + w > image->width)
+  if (src_x + (int)w > image->width)
     w = image->width - src_x;
-  if (dest_x + w > out->width)
+  if (dest_x + (int)w > out->width)
     w = out->width - dest_x;
 
-  for (y = 0; y < h; y++) {
+  for (y = 0; y < (int)h; y++) {
     int iy = src_y + y;
     int oy = dest_y + y;
     if (iy >= 0 &&
@@ -417,7 +417,7 @@ flip_ximage (XImage *ximage)
   int y;
 
   if (!ximage) return;
-  data2 = malloc (ximage->bytes_per_line * ximage->height);
+  data2 = (char*) malloc (ximage->bytes_per_line * ximage->height);
   if (!data2) abort();
   in = ximage->data;
   out = data2 + ximage->bytes_per_line * (ximage->height - 1);
@@ -508,7 +508,7 @@ analogtv_convert (const char **infiles, const char *outfile,
   stats = (int *) calloc(N_CHANNELS, sizeof(*stats));
   for (nfiles = 0; infiles[nfiles]; nfiles++)
     ;
-  ximages = calloc (nfiles, sizeof(*ximages));
+  ximages = (XImage **) calloc (nfiles, sizeof(*ximages));
 
   {
     int maxw = 0, maxh = 0;
@@ -618,7 +618,7 @@ analogtv_convert (const char **infiles, const char *outfile,
     }
   }
 
-  st->chansettings = calloc (N_CHANNELS, sizeof (*st->chansettings));
+  st->chansettings = (chansetting *)calloc (N_CHANNELS, sizeof (*st->chansettings));
   for (i = 0; i < N_CHANNELS; i++) {
     st->chansettings[i].noise_level = 0.06;
     {
@@ -838,7 +838,7 @@ analogtv_convert (const char **infiles, const char *outfile,
     ffmpeg_out_add_frame (ffst, st->output_frame);
 
     if (powerp &&
-        curticks > (duration*1000) - (POWERDOWN_DURATION*1000)) {
+        curticks > (unsigned int)((duration*1000) - (POWERDOWN_DURATION*1000))) {
       /* Fade out, as there is no power-down animation. */
       double r = ((duration*1000 - curticks) /
                   (double) (POWERDOWN_DURATION*1000));
@@ -858,7 +858,7 @@ analogtv_convert (const char **infiles, const char *outfile,
 
     if (verbose_p) {
       unsigned long now = time((time_t *)0);
-      if (now > (verbose_p == 1 ? lastlog : lastlog + 10)) {
+      if (now > (unsigned int)(verbose_p == 1 ? lastlog : lastlog + 10)) {
         unsigned long elapsed = now - start_time;
         double ratio = curtime / (double) duration;
         int remaining = (ratio ? (elapsed / ratio) - elapsed : 0);
@@ -972,7 +972,7 @@ main (int argc, char **argv)
          powerp = False;
       else if (argv[i][0] == '-')
         usage(argv[i]);
-      else if (nfiles >= countof(infiles)-1)
+      else if (nfiles >= (int)countof(infiles)-1)
         usage("too many files");
       else
         infiles[nfiles++] = argv[i];

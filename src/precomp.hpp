@@ -20,7 +20,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <X11/Xlib.h>
+//#include <X11/Xlib.h>
 
 /// ffmpeg
 

@@ -12,12 +12,10 @@
  * Created: 28 Apr 2023 by dmo2118@gmail.com
  */
 
-#include "precomp.h"
+#include "precomp.hpp"
 
-#include "screenhackI.h"
-#include "ffmpeg-out.h"
-
-
+#include "screenhackI.hpp"
+#include "ffmpeg-out.hpp"
 
 struct av_stream {
   AVCodec *codec;
@@ -45,7 +43,8 @@ struct ffmpeg_out_state {
 static void
 av_fail (int averror)
 {
-  fprintf (stderr, "%s: %s\n", progname, av_err2str (averror));
+  char errbuf[64] = { 0 };
+  fprintf (stderr, "%s: %s\n", progname, av_make_error_string(errbuf, 64, averror));
   exit (1);
 }
 
@@ -177,7 +176,7 @@ get_audio_frame (AVFormatContext *audio_fmt_ctx,
 # else   /* !HAVE_CH_LAYOUT */
                                               audio_ost->frame->channels,
 # endif  /* !HAVE_CH_LAYOUT */
-                                              audio_ost->frame->format);
+                                              (AVSampleFormat)audio_ost->frame->format);
                       audio_ost->frame->nb_samples = nb_samples;
                       return;
                     }

@@ -1,5 +1,5 @@
-/* recanim, Copyright (c) 2014-2021 Jamie Zawinski <jwz@jwz.org>
- * Record animation frames of the running screenhack.
+/* ximage-loader.h --- converts XPM data to Pixmaps.
+ * xscreensaver, Copyright (c) 1998-2018 Jamie Zawinski <jwz@jwz.org>
  *
  * Permission to use, copy, modify, distribute, and sell this software and its
  * documentation for any purpose is hereby granted without fee, provided that
@@ -10,12 +10,11 @@
  * implied warranty.
  */
 
-#ifndef __XSCREENSAVER_RECORD_ANIM_H__
-# define __XSCREENSAVER_RECORD_ANIM_H__
+#ifndef _XIMAGE_LOADER_H_
+#define _XIMAGE_LOADER_H_
 
-#include "precomp.h"
+#include "precomp.hpp"
 
-#define time screenhack_record_anim_time
-#define gettimeofday screenhack_record_anim_gettimeofday
+extern XImage *file_to_ximage (const char *filename);
 
-#endif /* __XSCREENSAVER_RECORD_ANIM_H__ */
+#endif /* _XIMAGE_LOADER_H_ */

@@ -12,7 +12,7 @@
 #ifndef __YARANDOM_H__
 #define __YARANDOM_H__
 
-#include "precomp.h"
+#include "precomp.hpp"
 
 #undef random
 #undef rand

@@ -38,12 +38,12 @@ link_libraries(
 )
 
 add_executable(analogtv-cli
-    "./src/analogtv-cli.c"
-    "./src/analogtv.c"
-    "./src/ximage-loader.c"
-    "./src/recanim.c"
-    "./src/ffmpeg-out.c"
-    "./src/yarandom.c"
-    "./src/aligned_malloc.c"
-    "./src/thread_util.c"
+    "./src/analogtv-cli.cpp"
+    "./src/analogtv.cpp"
+    "./src/ximage-loader.cpp"
+    "./src/recanim.cpp"
+    "./src/ffmpeg-out.cpp"
+    "./src/yarandom.cpp"
+    "./src/aligned_malloc.cpp"
+    "./src/thread_util.cpp"
 )
