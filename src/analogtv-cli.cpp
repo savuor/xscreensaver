@@ -32,13 +32,13 @@
 #include "yarandom.hpp"
 #include "thread_util.hpp"
 #include "analogtv.hpp"
-#include "ffmpeg-out.hpp"
 
 #include <iostream>
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/videoio.hpp>
 
 
 const char *progname;
@@ -617,7 +617,7 @@ analogtv_convert (const char **infiles, const char *outfile,
   XImage **ximages;
   XImage *base_image = 0;
   int *stats;
-  ffmpeg_out_state *ffst = 0;
+  cv::Ptr<cv::VideoWriter> writer;
 
   /* Load all of the input images.
    */
@@ -772,7 +772,17 @@ analogtv_convert (const char **infiles, const char *outfile,
   st->curinputi=0;
   st->cs = &st->chansettings[st->curinputi];
 
-  ffst = ffmpeg_out_init (outfile, st->output_frame->width, st->output_frame->height);
+  // used with ffmpeg:
+  //const enum AVCodecID video_codec = AV_CODEC_ID_H264;
+  //const enum AVPixelFormat pix_fmt = AV_PIX_FMT_YUV420P;
+
+  writer = cv::makePtr<cv::VideoWriter>(outfile + std::string("_ocv.avi"), cv::VideoWriter::fourcc('M', 'J', 'P', 'G'),
+                                        30, cv::Size(st->output_frame->width, st->output_frame->height));
+  if (!writer->isOpened())
+  {
+    printf("VideoWriter is not opened!\n");
+    abort();
+  }
 
  INIT_CHANNELS:
 
@@ -949,7 +959,11 @@ analogtv_convert (const char **infiles, const char *outfile,
       }
     }
 
-    ffmpeg_out_add_frame (ffst, st->output_frame);
+    cv::Mat m(st->output_frame->height, st->output_frame->width, CV_8UC4,
+              (void*)st->output_frame->data, st->output_frame->bytes_per_line);
+    cv::Mat m3;
+    cvtColor(m, m3, cv::COLOR_BGRA2BGR);
+    writer->write(m3);
 
     if (powerp &&
         curticks > (unsigned int)((duration*1000) - (POWERDOWN_DURATION*1000))) {
@@ -1007,7 +1021,7 @@ analogtv_convert (const char **infiles, const char *outfile,
   }
 
   free (stats);
-  ffmpeg_out_close (ffst);
+  writer->release();
 }
 
 
