@@ -772,7 +772,7 @@ analogtv_convert (const char **infiles, const char *outfile,
   st->curinputi=0;
   st->cs = &st->chansettings[st->curinputi];
 
-  ffst = ffmpeg_out_init (outfile, st->output_frame->width, st->output_frame->height, 4, True);
+  ffst = ffmpeg_out_init (outfile, st->output_frame->width, st->output_frame->height);
 
  INIT_CHANNELS:
 

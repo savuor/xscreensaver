@@ -13,11 +13,6 @@ include_directories(
 
 link_libraries(
     "pthread"
-    "avutil"
-    "avcodec"
-    "avformat"
-    "swscale"
-    "swresample"
     "X11"
     "m"
 )
