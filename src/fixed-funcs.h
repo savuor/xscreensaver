@@ -28,7 +28,6 @@ extern Bool put_xshm_image (XImage *image,
 extern void destroy_xshm_image (XImage *image);
 
 // from analogtv-cli.c
-Status dummy_XAllocColor (Colormap cmap, XColor *c);
 int dummy_XClearArea (Window win, int x, int y, unsigned int w, unsigned int h, Bool exp);
 int dummy_XClearWindow (Window window);
 XImage * custom_XCreateImage (unsigned int depth,

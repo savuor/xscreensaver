@@ -160,7 +160,7 @@ typedef struct analogtv_s {
   int fakeit_scroll;
   int redraw_all;
 
-  int use_cmap,use_color;
+  int use_color;
   int bilevel_signal;
 
   int visdepth,visclass,visbits;
@@ -240,7 +240,6 @@ analogtv_input *analogtv_input_allocate(void);
 
 
 void analogtv_set_defaults(analogtv *it, char *prefix);
-int analogtv_set_demod(analogtv *it);
 void analogtv_setup_frame(analogtv *it);
 void analogtv_setup_sync(analogtv_input *input, int do_cb, int do_ssavi);
 void analogtv_draw(analogtv *it, double noiselevel,
@@ -285,7 +284,6 @@ void analogtv_draw_solid_rel_lcp(analogtv_input *input,
   "*TVBrightness:     2",  \
   "*TVContrast:     150", \
   "*Background:      Black", \
-  "*use_cmap:        0",  \
   "*geometry:	     800x600", \
   "*fpsSolid:	     True", \
   "*lowrez:	     True", \
@@ -295,7 +293,6 @@ void analogtv_draw_solid_rel_lcp(analogtv_input *input,
 #define ANALOGTV_OPTIONS \
   {"-threads",    ".useThreads", XrmoptionNoArg, "True"},      \
   {"-no-threads", ".useThreads", XrmoptionNoArg, "False"},     \
-  { "-use-cmap",        ".use_cmap",     XrmoptionSepArg, 0 }, \
   { "-tv-color",        ".TVColor",      XrmoptionSepArg, 0 }, \
   { "-tv-tint",         ".TVTint",       XrmoptionSepArg, 0 }, \
   { "-tv-brightness",   ".TVBrightness", XrmoptionSepArg, 0 }, \

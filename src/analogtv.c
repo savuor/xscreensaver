@@ -212,8 +212,8 @@ analogtv_set_defaults(analogtv *it, char *prefix)
 
 #ifdef DEBUG
   printf("analogtv: prefix=%s\n",prefix);
-  printf("  use: cmap=%d color=%d\n",
-         it->use_cmap,it->use_color);
+  printf("  use: color=%d\n",
+         it->use_color);
   printf("  controls: tint=%g color=%g brightness=%g contrast=%g\n",
          it->tint_control, it->color_control, it->brightness_control,
          it->contrast_control);
@@ -492,7 +492,6 @@ analogtv_allocate(Window window)
   it->colormap=it->xgwa.colormap;
   it->visclass=TrueColor;
   it->visdepth=it->xgwa.depth;
-  it->use_cmap=0;
   it->use_color=!mono_p;
 
   it->red_mask   = 0x00FF0000L;
@@ -502,33 +501,37 @@ analogtv_allocate(Window window)
   it->red_shift=it->red_invprec=-1;
   it->green_shift=it->green_invprec=-1;
   it->blue_shift=it->blue_invprec=-1;
-  if (!it->use_cmap) {
-    /* Is there a standard way to do this? Does this handle all cases? */
-    int shift, prec;
-    for (shift=0; shift<32; shift++) {
-      for (prec=1; prec<16 && prec<40-shift; prec++) {
-        unsigned long mask=(0xffffUL>>(16-prec)) << shift;
-        if (it->red_shift<0 && mask==it->red_mask)
-          it->red_shift=shift, it->red_invprec=16-prec;
-        if (it->green_shift<0 && mask==it->green_mask)
-          it->green_shift=shift, it->green_invprec=16-prec;
-        if (it->blue_shift<0 && mask==it->blue_mask)
-          it->blue_shift=shift, it->blue_invprec=16-prec;
-      }
-    }
-    if (it->red_shift<0 || it->green_shift<0 || it->blue_shift<0) {
-      if (0) fprintf(stderr,"Can't figure out color space\n");
-      goto fail;
-    }
 
-    for (i=0; i<ANALOGTV_CV_MAX; i++) {
-      int intensity=pow(i/256.0, 0.8)*65535.0; /* gamma correction */
-      if (intensity>65535) intensity=65535;
-      it->red_values[i]=((intensity>>it->red_invprec)<<it->red_shift);
-      it->green_values[i]=((intensity>>it->green_invprec)<<it->green_shift);
-      it->blue_values[i]=((intensity>>it->blue_invprec)<<it->blue_shift);
+  /* Is there a standard way to do this? Does this handle all cases? */
+  int shift, prec;
+  for (shift = 0; shift < 32; shift++)
+  {
+    for (prec = 1; prec < 16 && prec < 40 - shift; prec++)
+    {
+      unsigned long mask = (0xffffUL >> (16 - prec)) << shift;
+      if (it->red_shift < 0 && mask == it->red_mask)
+        it->red_shift = shift, it->red_invprec = 16 - prec;
+      if (it->green_shift < 0 && mask == it->green_mask)
+        it->green_shift = shift, it->green_invprec = 16 - prec;
+      if (it->blue_shift < 0 && mask == it->blue_mask)
+        it->blue_shift = shift, it->blue_invprec = 16 - prec;
     }
+  }
+  if (it->red_shift < 0 || it->green_shift < 0 || it->blue_shift < 0)
+  {
+    if (0)
+      fprintf(stderr, "Can't figure out color space\n");
+    goto fail;
+  }
 
+  for (i = 0; i < ANALOGTV_CV_MAX; i++)
+  {
+    int intensity = pow(i / 256.0, 0.8) * 65535.0; /* gamma correction */
+    if (intensity > 65535)
+      intensity = 65535;
+    it->red_values[i] = ((intensity >> it->red_invprec) << it->red_shift);
+    it->green_values[i] = ((intensity >> it->green_invprec) << it->green_shift);
+    it->blue_values[i] = ((intensity >> it->blue_invprec) << it->blue_shift);
   }
 
   dummy_XSetWindowBackground(it->window, 0);
@@ -574,83 +577,7 @@ analogtv_allocate(Window window)
 
   If we're using a colormap, set it up.
 */
-int
-analogtv_set_demod(analogtv *it)
-{
-  int y_levels=10,i_levels=5,q_levels=5;
-
-  /*
-    In principle, we might be able to figure out how to adjust the
-    color map frame-by-frame to get some nice color bummage. But I'm
-    terrified of changing the color map because we'll get flashing.
-
-    I can hardly believe we still have to deal with colormaps. They're
-    like having NEAR PTRs: an enormous hassle for the programmer just
-    to save on memory. They should have been deprecated by 1995 or
-    so. */
-
- cmap_again:
-  if (it->use_cmap && !it->n_colors) {
-
-    {
-      int yli,qli,ili;
-      for (yli=0; yli<y_levels; yli++) {
-        for (ili=0; ili<i_levels; ili++) {
-          for (qli=0; qli<q_levels; qli++) {
-            double interpy,interpi,interpq;
-            double levelmult=700.0;
-            int r,g,b;
-            XColor col;
-
-            interpy=100.0 * ((double)yli/y_levels);
-            interpi=50.0 * (((double)ili-(0.5*i_levels))/(double)i_levels);
-            interpq=50.0 * (((double)qli-(0.5*q_levels))/(double)q_levels);
-
-            r=(int)((interpy + 1.04*interpi + 0.624*interpq)*levelmult);
-            g=(int)((interpy - 0.276*interpi - 0.639*interpq)*levelmult);
-            b=(int)((interpy - 1.105*interpi + 1.729*interpq)*levelmult);
-            if (r<0) r=0;
-            if (r>65535) r=65535;
-            if (g<0) g=0;
-            if (g>65535) g=65535;
-            if (b<0) b=0;
-            if (b>65535) b=65535;
-
-#ifdef DEBUG
-            printf("%0.2f %0.2f %0.2f => %02x%02x%02x\n",
-                   interpy, interpi, interpq,
-                   r/256,g/256,b/256);
-#endif
-
-            col.red=r;
-            col.green=g;
-            col.blue=b;
-            col.pixel=0;
-            if (!dummy_XAllocColor(it->colormap, &col)) {
-              if (q_levels > y_levels*4/12)
-                q_levels--;
-              else if (i_levels > y_levels*5/12)
-                i_levels--;
-              else
-                y_levels--;
-
-              if (y_levels<2)
-                return -1;
-              goto cmap_again;
-            }
-            it->colors[it->n_colors++]=col.pixel;
-          }
-        }
-      }
-
-      it->cmap_y_levels=y_levels;
-      it->cmap_i_levels=i_levels;
-      it->cmap_q_levels=q_levels;
-    }
-  }
-
-  return 0;
-}
+// analogtv_set_demod(analogtv *it) was removed
 
 #if 0
 unsigned int
@@ -1037,35 +964,35 @@ analogtv_sync(analogtv *it)
   it->cur_vsync = cur_vsync;
 }
 
-static double
-analogtv_levelmult(const analogtv *it, int level)
-{
-  static const double levelfac[3]={-7.5, 5.5, 24.5};
-  return (40.0 + levelfac[level]*puramp(it, 3.0, 6.0, 1.0))/256.0;
-}
+// static double
+// analogtv_levelmult(const analogtv *it, int level)
+// {
+//   static const double levelfac[3]={-7.5, 5.5, 24.5};
+//   return (40.0 + levelfac[level]*puramp(it, 3.0, 6.0, 1.0))/256.0;
+// }
 
-static int
-analogtv_level(const analogtv *it, int y, int ytop, int ybot)
-{
-  int level;
-  if (ybot-ytop>=7) {
-    if (y==ytop || y==ybot-1) level=0;
-    else if (y==ytop+1 || y==ybot-2) level=1;
-    else level=2;
-  }
-  else if (ybot-ytop>=5) {
-    if (y==ytop || y==ybot-1) level=0;
-    else level=2;
-  }
-  else if (ybot-ytop>=3) {
-    if (y==ytop) level=0;
-    else level=2;
-  }
-  else {
-    level=2;
-  }
-  return level;
-}
+// static int
+// analogtv_level(const analogtv *it, int y, int ytop, int ybot)
+// {
+//   int level;
+//   if (ybot-ytop>=7) {
+//     if (y==ytop || y==ybot-1) level=0;
+//     else if (y==ytop+1 || y==ybot-2) level=1;
+//     else level=2;
+//   }
+//   else if (ybot-ytop>=5) {
+//     if (y==ytop || y==ybot-1) level=0;
+//     else level=2;
+//   }
+//   else if (ybot-ytop>=3) {
+//     if (y==ytop) level=0;
+//     else level=2;
+//   }
+//   else {
+//     level=2;
+//   }
+//   return level;
+// }
 
 /*
   The point of this stuff is to ensure that when useheight is not a
@@ -1460,7 +1387,7 @@ static void analogtv_thread_draw_lines(void *thread_raw)
   for (lineno=ANALOGTV_TOP + thread->thread_id;
        lineno<ANALOGTV_BOT;
        lineno += it->threads.count) {
-    int i,j,x,y;
+    int i;
 
     int slineno, ytop, ybot;
     unsigned signal_offset;
@@ -1531,77 +1458,7 @@ static void analogtv_thread_draw_lines(void *thread_raw)
 #endif
     }
 
-    if (it->use_cmap) {
-      for (y=ytop; y<ybot; y++) {
-        int level=analogtv_level(it, y, ytop, ybot);
-        float levelmult=analogtv_levelmult(it, level);
-        float levelmult_y = levelmult * it->contrast_control
-          * puramp(it, 1.0f, 0.0f, 1.0f) / (0.5f+0.5f*it->puheight) * 0.070f;
-        float levelmult_iq = levelmult * 0.090f;
-
-        analogtv_ntsc_to_yiq(it, lineno, signal,
-                             (scanstart_i>>16)-10, (scanend_i>>16)+10, yiq);
-        pixmultinc=pixrate;
-
-        x=0;
-        i=scanstart_i;
-        while (i<0 && x<it->usewidth) {
-          XPutPixel(it->image, x, y, it->colors[0]);
-          i+=pixmultinc;
-          x++;
-        }
-
-        while (i<scanend_i && x<it->usewidth) {
-          float pixfrac=(i&0xffff)/65536.0f;
-          float invpixfrac=(1.0f-pixfrac);
-          int pati=i>>16;
-          int yli,ili,qli,cmi;
-
-          float interpy=(yiq[pati].y*invpixfrac
-                         + yiq[pati+1].y*pixfrac) * levelmult_y;
-          float interpi=(yiq[pati].i*invpixfrac
-                         + yiq[pati+1].i*pixfrac) * levelmult_iq;
-          float interpq=(yiq[pati].q*invpixfrac
-                         + yiq[pati+1].q*pixfrac) * levelmult_iq;
-
-          yli = (int)(interpy * it->cmap_y_levels);
-          ili = (int)((interpi+0.5f) * it->cmap_i_levels);
-          qli = (int)((interpq+0.5f) * it->cmap_q_levels);
-          if (yli<0) yli=0;
-          if (yli>=it->cmap_y_levels) yli=it->cmap_y_levels-1;
-          if (ili<0) ili=0;
-          if (ili>=it->cmap_i_levels) ili=it->cmap_i_levels-1;
-          if (qli<0) qli=0;
-          if (qli>=it->cmap_q_levels) qli=it->cmap_q_levels-1;
-
-          cmi=qli + it->cmap_i_levels*(ili + it->cmap_q_levels*yli);
-
-#ifdef DEBUG
-          if ((random()%65536)==0) {
-            printf("%0.3f %0.3f %0.3f => %d %d %d => %d\n",
-                   interpy, interpi, interpq,
-                   yli, ili, qli,
-                   cmi);
-          }
-#endif
-
-          for (j=0; j<it->xrepl; j++) {
-            XPutPixel(it->image, x, y,
-                      it->colors[cmi]);
-            x++;
-          }
-          if (i >= squishright_i) {
-            pixmultinc += pixmultinc/squishdiv;
-          }
-          i+=pixmultinc;
-        }
-        while (x<it->usewidth) {
-          XPutPixel(it->image, x, y, it->colors[0]);
-          x++;
-        }
-      }
-    }
-    else {
+    {
       analogtv_ntsc_to_yiq(it, lineno, signal,
                            (scanstart_i>>16)-10, (scanend_i>>16)+10, yiq);
 
@@ -1700,7 +1557,6 @@ analogtv_draw(analogtv *it, double noiselevel,
   }
 
   analogtv_setup_frame(it);
-  analogtv_set_demod(it);
 
   it->random0 = random();
   it->random1 = random();

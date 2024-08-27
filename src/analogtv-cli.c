@@ -77,12 +77,6 @@ static struct state global_state;
    Most are unused. It seems like I am forever implementing subsets of X11.
  */
 
-Status
-dummy_XAllocColor ( Colormap cmap, XColor *c)
-{
-  abort();
-}
-
 int
 dummy_XClearArea ( Window win, int x, int y,
             unsigned int w, unsigned int h, Bool exp)
