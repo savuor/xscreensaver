@@ -22,7 +22,6 @@
  *    --powerup      Do the power-on animation at the beginning, and
  *                   fade to black at the end.
  *    --logo FILE    Small image overlayed onto the colorbars image.
- *    --audio FILE   Add a soundtrack.
  *
  *  Created: 10-Dec-2018 by jwz.
  */
@@ -485,7 +484,7 @@ scale_ximage (XImage *ximage, int new_width, int new_height)
 
 static void
 analogtv_convert (const char **infiles, const char *outfile,
-                  const char *audiofile, const char *logofile,
+                  const char *logofile,
                   int output_w, int output_h,
                   int duration, int slideshow, Bool powerp)
 {
@@ -656,7 +655,7 @@ analogtv_convert (const char **infiles, const char *outfile,
   st->curinputi=0;
   st->cs = &st->chansettings[st->curinputi];
 
-  ffst = ffmpeg_out_init (outfile, audiofile,
+  ffst = ffmpeg_out_init (outfile, 0,
                           st->output_frame->width, st->output_frame->height,
                           4, True);
 
@@ -902,7 +901,7 @@ usage(const char *err)
 {
   if (err) fprintf (stderr, "%s: %s unknown\n", progname, err);
   fprintf (stderr, "usage: %s [--verbose] [--duration secs] [--slideshow secs]"
-           " [--audio mp3-file] [--powerup] [--size WxH]"
+           " [--powerup] [--size WxH]"
            " infile.png ... outfile.mp4\n",
            progname);
   exit (1);
@@ -916,7 +915,6 @@ main (int argc, char **argv)
   const char *outfile = 0;
   int duration = 30;
   Bool powerp = False;
-  char *audio = 0;
   char *logo = 0;
   int w = 0, h = 0;
   int nfiles = 0;
@@ -953,8 +951,6 @@ main (int argc, char **argv)
            if (1 != sscanf (argv[i], " %d %c", &slideshow, &dummy))
              usage(argv[i]);
          }
-       else if (!strcmp(argv[i], "-audio") && argv[i+1])
-         audio = argv[++i];
        else if (!strcmp(argv[i], "-size") && argv[i+1])
          {
            char dummy;
@@ -1002,7 +998,7 @@ main (int argc, char **argv)
 
 # undef ya_rand_init
   ya_rand_init (0);
-  analogtv_convert (infiles, outfile, audio, logo,
+  analogtv_convert (infiles, outfile, logo,
                     w, h, duration, slideshow, powerp);
   exit (0);
 }
