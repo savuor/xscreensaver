@@ -95,104 +95,8 @@ guess_channel_layout (int channels)
 
 #else   /* !HAVE_CH_LAYOUT */
 
-static uint64_t
-guess_channel_layout (int channels)
-{
-  return (channels <= 1 ? AV_CH_LAYOUT_MONO : AV_CH_LAYOUT_STEREO);
-}
 
 #endif  /* !HAVE_CH_LAYOUT */
-
-
-static void
-get_audio_frame (AVFormatContext *audio_fmt_ctx,
-                 struct av_stream *audio_ist, AVPacket *audio_pkt,
-                 struct SwrContext *swr_ctx,
-                 struct av_stream *audio_ost)
-{
-  int ret;
-  for (;;)
-    {
-      if (swr_is_initialized (swr_ctx) &&
-          swr_get_delay (swr_ctx, audio_ost->ctx->sample_rate) >
-          audio_ost->frame->nb_samples)
-        {
-          av_check (swr_convert_frame (swr_ctx, audio_ost->frame, NULL));
-          break;
-        }
-      else
-        {
-          ret = avcodec_receive_frame (audio_ist->ctx, audio_ist->frame);
-
-          if (ret >= 0)
-            {
-# ifdef HAVE_CH_LAYOUT
-              if (!av_channel_layout_check(&audio_ist->frame->ch_layout))
-                {
-                  audio_ist->frame->ch_layout =
-                    guess_channel_layout (audio_ist->frame->ch_layout.nb_channels);
-                }
-# else   /* !HAVE_CH_LAYOUT */
-              if (!audio_ist->frame->channel_layout)
-                {
-                  audio_ist->frame->channel_layout =
-                    guess_channel_layout (audio_ist->frame->channels);
-                }
-# endif  /* !HAVE_CH_LAYOUT */
-
-              if (!swr_is_initialized (swr_ctx))
-                {
-                  av_check (swr_config_frame (swr_ctx, audio_ost->frame,
-                                              audio_ist->frame));
-                  av_check (swr_init (swr_ctx));
-                }
-
-              av_check (swr_convert_frame (swr_ctx, NULL, audio_ist->frame));
-
-              av_frame_unref (audio_ist->frame);
-            }
-          else if (ret == AVERROR_EOF || ret == AVERROR(EAGAIN))
-            {
-              av_frame_unref (audio_ist->frame);
-
-              for (;;)
-                {
-                  av_packet_unref (audio_pkt);
-
-                  /* This reads a packet, which can be many frames. */
-                  ret = av_read_frame (audio_fmt_ctx, audio_pkt);
-                  if (ret < 0)
-                    {
-                      unsigned long nb_samples = audio_ost->frame->nb_samples;
-                      av_check (swr_convert_frame (swr_ctx, audio_ost->frame,
-                                                   NULL));
-                      av_samples_set_silence (audio_ost->frame->data,
-                                              audio_ost->frame->nb_samples,
-                                              nb_samples -
-                                              audio_ost->frame->nb_samples,
-# ifdef HAVE_CH_LAYOUT
-                                              audio_ost->frame->ch_layout.nb_channels,
-# else   /* !HAVE_CH_LAYOUT */
-                                              audio_ost->frame->channels,
-# endif  /* !HAVE_CH_LAYOUT */
-                                              (AVSampleFormat)audio_ost->frame->format);
-                      audio_ost->frame->nb_samples = nb_samples;
-                      return;
-                    }
-
-                  if (audio_pkt->stream_index == audio_ist->st->index)
-                    break;
-                }
-
-              av_check (avcodec_send_packet (audio_ist->ctx, audio_pkt));
-            }
-          else
-            {
-              av_fail (ret);
-            }
-        }
-    }
-}
 
 
 static void
@@ -261,10 +165,8 @@ ffmpeg_out_init (const char *outfile,
   ffmpeg_out_state *ffst = (ffmpeg_out_state *) calloc (1, sizeof(*ffst));
 
   const enum AVCodecID video_codec = AV_CODEC_ID_H264;
-  const enum AVCodecID audio_codec = AV_CODEC_ID_AAC;
   const enum AVPixelFormat pix_fmt = AV_PIX_FMT_YUV420P;
   const unsigned framerate = 30;
-  int audio_bitrate = 96000;
   const char *video_preset = (fast_p ? "ultrafast" : "veryslow");
   const char *video_crf =    (fast_p ? "24" : "18");
 

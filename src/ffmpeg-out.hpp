@@ -18,7 +18,6 @@
 
 typedef struct ffmpeg_out_state ffmpeg_out_state;
 extern ffmpeg_out_state *ffmpeg_out_init (const char *outfile,
-                                          const char *audiofile,
                                           int w, int h, int bpp,
                                           Bool fast_p);
 extern void ffmpeg_out_add_frame (ffmpeg_out_state *, XImage *);
