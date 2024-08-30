@@ -173,8 +173,8 @@ custom_XInitImage (XImage *ximage)
 
 XImage *
 custom_XCreateImage (unsigned int depth, int offset, char *data,
-                    unsigned int width, unsigned int height,
-                    int bitmap_pad, int bytes_per_line)
+                     unsigned int width, unsigned int height,
+                     int bytes_per_line)
 {
   XImage *ximage = (XImage *) calloc (1, sizeof(*ximage));
   unsigned long r, g, b;
@@ -186,7 +186,6 @@ custom_XCreateImage (unsigned int depth, int offset, char *data,
   ximage->data = data;
   ximage->byte_order = LSBFirst;
   ximage->bitmap_bit_order = ximage->byte_order;
-  ximage->bitmap_pad = bitmap_pad;
   ximage->depth = depth;
   r = 0x00FF0000L;
   g = 0x0000FF00L;
@@ -444,7 +443,7 @@ make_ximage (const char *filename,
     int chan = img.channels();
     int x, y;
 
-    image = custom_XCreateImage (32, 0, 0, w, h, 32, 0);
+    image = custom_XCreateImage (32, 0, 0, w, h, 0);
     image->data = (char *) malloc(h * image->bytes_per_line);
 
     /* Set the bit order in the XImage structure to whatever the
@@ -524,7 +523,7 @@ scale_ximage (XImage *ximage, int new_width, int new_height)
 
   XImage *ximage2 = custom_XCreateImage (depth,
                                   0, 0,
-                                  new_width, new_height, 8, 0);
+                                  new_width, new_height, 0);
   ximage2->data = (char *) calloc (ximage2->height, ximage2->bytes_per_line);
 
   if (!ximage2->data)
@@ -641,7 +640,7 @@ analogtv_convert (const char **infiles, const char *outfile,
   st->output_frame = custom_XCreateImage ( ximages[0]->depth,
                                    0, NULL,
                                    output_w, output_h,
-                                   ximages[0]->bitmap_pad, 0);
+                                   0);
   st->output_frame->data = (char *)
     calloc (st->output_frame->height, st->output_frame->bytes_per_line);
 
@@ -655,7 +654,7 @@ analogtv_convert (const char **infiles, const char *outfile,
     /* Pull the alpha out of the logo and make a separate mask ximage. */
     st->logo_mask = custom_XCreateImage (st->logo->depth, 0,
                                   NULL, st->logo->width, st->logo->height,
-                                  st->logo->bitmap_pad, 0);
+                                  0);
     st->logo_mask->data = (char *)
     calloc (st->logo_mask->height, st->logo_mask->bytes_per_line);
 

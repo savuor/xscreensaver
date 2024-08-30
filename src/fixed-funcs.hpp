@@ -45,7 +45,6 @@ struct XImage
     char *data;			/* pointer to image data */
     int byte_order;		/* data byte order, LSBFirst, MSBFirst */
     int bitmap_bit_order;	/* LSBFirst, MSBFirst */
-    int bitmap_pad;		/* 8, 16, 32 either XY or ZPixmap */
     int depth;			/* depth of image */
     int bytes_per_line;		/* accelarator to next line */
     int bits_per_pixel;		/* bits per pixel (ZPixmap) */
@@ -79,7 +78,7 @@ XPutPixel (XImage *ximage, int x, int y, unsigned long pixel);
 // from analogtv-cli.c
 XImage * custom_XCreateImage (unsigned int depth, int offset, char *data,
                     unsigned int width, unsigned int height,
-                    int bitmap_pad, int bytes_per_line);
+                    int bytes_per_line);
 int custom_XDestroyImage (XImage *ximage);
 int custom_XGetWindowAttributes (XWindowAttributes *xgwa);
 int custom_XPutImage (XImage *image,
