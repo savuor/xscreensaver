@@ -65,14 +65,6 @@ XGetPixel (XImage *ximage, int x, int y);
 extern int
 XPutPixel (XImage *ximage, int x, int y, unsigned long pixel);
 
-extern XImage *create_xshm_image (unsigned int depth,
-                                  int format,
-                                  unsigned int width, unsigned int height);
-extern Bool put_xshm_image (XImage *image,
-                            int src_x, int src_y, int dest_x, int dest_y,
-                            unsigned int width, unsigned int height);
-extern void destroy_xshm_image (XImage *image);
-
 // from analogtv-cli.c
 XImage * custom_XCreateImage (unsigned int depth,
                     int format, int offset, char *data,

@@ -252,8 +252,11 @@ analogtv_set_defaults(analogtv *it, const char *prefix)
 static void
 analogtv_free_image(analogtv *it)
 {
-  if (it->image) {
-    destroy_xshm_image(it->image);
+  if (it->image)
+  {
+    thread_free (it->image->data);
+    it->image->data = NULL;
+    custom_XDestroyImage (it->image);
     it->image=NULL;
   }
 }
@@ -268,20 +271,19 @@ analogtv_alloc_image(analogtv *it)
   /* Width is in bits. */
   unsigned width = (it->usewidth * bits_per_pixel + align) & ~align;
 
-  it->image=create_xshm_image(it->xgwa.depth,
-                              ZPixmap,
-                              width / bits_per_pixel, it->useheight);
-
-  // XImage *image = custom_XCreateImage (it->xgwa.depth, ZPixmap, 0, NULL,
-  //                                      width / bits_per_pixel, it->useheight, 8, 0);
-  // int error = thread_malloc ((void **)&image->data, image->height * image->bytes_per_line);
-  // if (error) {
-  //   custom_XDestroyImage (image);
-  //   image = NULL;
-  // } else {
-  //   memset (image->data, 0, image->height * image->bytes_per_line);
-  // }
-  // it->image = image;
+  XImage *image = custom_XCreateImage (it->xgwa.depth, ZPixmap, 0, NULL,
+                                       width / bits_per_pixel, it->useheight, 8, 0);
+  int error = thread_malloc ((void **)&image->data, image->height * image->bytes_per_line);
+  if (error)
+  {
+    custom_XDestroyImage (image);
+    image = NULL;
+  }
+  else
+  {
+    memset (image->data, 0, image->height * image->bytes_per_line);
+  }
+  it->image = image;
 
   if (it->image) {
     memset (it->image->data, 0, it->image->height * it->image->bytes_per_line);
@@ -1734,7 +1736,7 @@ analogtv_draw(analogtv *it, double noiselevel,
   if (overall_bot>it->useheight) overall_bot=it->useheight;
 
   if (overall_bot > overall_top) {
-    put_xshm_image(it->image,
+      custom_XPutImage (it->image,
                    0, overall_top,
                    it->screen_xo, it->screen_yo+overall_top,
                    it->usewidth, overall_bot - overall_top);

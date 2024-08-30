@@ -290,32 +290,6 @@ custom_XQueryColors (XColor *c, int n)
   return 0;
 }
 
-XImage *
-create_xshm_image (unsigned int depth, int format, unsigned int width, unsigned int height)
-{
-# undef BitmapPad
-# define BitmapPad 8
-  XImage *image = custom_XCreateImage (depth, format, 0, NULL,
-                                width, height, BitmapPad, 0);
-  int error = thread_malloc ((void **)&image->data, image->height * image->bytes_per_line);
-  if (error) {
-    custom_XDestroyImage (image);
-    image = NULL;
-  } else {
-    memset (image->data, 0, image->height * image->bytes_per_line);
-  }
-
-  return image;
-}
-
-void
-destroy_xshm_image (XImage *image)
-{
-  thread_free (image->data);
-  image->data = NULL;
-  custom_XDestroyImage (image);
-}
-
 static int darkp = 0;
 double
 get_float_resource (char *name)
@@ -327,16 +301,6 @@ get_float_resource (char *name)
   if (!strcmp(name, "TVContrast")) return 150;		/* default 150 */
   abort();
 }
-
-Bool
-put_xshm_image (XImage *image,
-                int src_x, int src_y, int dest_x, int dest_y,
-                unsigned int width, unsigned int height)
-{
-  return custom_XPutImage ( image, src_x, src_y, dest_x, dest_y,
-                    width, height);
-}
-
 
 static void
 update_smpte_colorbars(analogtv_input *input)
