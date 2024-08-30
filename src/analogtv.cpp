@@ -278,18 +278,12 @@ analogtv_alloc_image(analogtv *it)
   {
     custom_XDestroyImage (it->image);
     it->image = NULL;
+    /* Not enough memory. Maybe try a smaller window. */
+    fprintf(stderr, "analogtv: %s\n", strerror(ENOMEM));
   }
   else
   {
     memset (it->image->data, 0, it->image->height * it->image->bytes_per_line);
-  }
-
-  if (it->image)
-  {
-    memset (it->image->data, 0, it->image->height * it->image->bytes_per_line);
-  } else {
-    /* Not enough memory. Maybe try a smaller window. */
-    fprintf(stderr, "analogtv: %s\n", strerror(ENOMEM));
   }
 }
 
