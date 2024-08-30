@@ -23,7 +23,9 @@
 				"type": "cppdbg",
 				"request": "launch",
 				"program": "${command:cmake.buildDirectory}/analogtv-cli",
-				"args": ["~/Pictures/90s/*", "~/Videos/90s.mp4", "--duration", "60", "--verbose", "--powerup"],
+				"args": ["~/Pictures/90s/*", "~/Videos/90s.mp4", "--duration", "60", "--verbose", "--powerup",
+				        "--logo", "/home/savuor/code/xscreensaver/hacks/images/amiga.png"
+						],
 				"stopAtEntry": false,
 				"cwd": "${fileDirname}",
 				"environment": [],
