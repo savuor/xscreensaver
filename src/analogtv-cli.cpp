@@ -44,7 +44,7 @@
 
 const char *progname;
 const char *progclass;
-static bool verbose_p = 0;
+static int verbose_p = 0;
 
 #define MAX_MULTICHAN 2
 static int N_CHANNELS=12;
@@ -147,7 +147,7 @@ ximage_putpixel_32 (XImage *ximage, int x, int y, unsigned long pixel)
 }
 
 
-static Status
+static int
 custom_XInitImage (XImage *ximage)
 {
   if (!ximage->bytes_per_line)
@@ -214,14 +214,14 @@ custom_XDestroyImage (XImage *ximage)
   return 0;
 }
 
-Status
+int
 custom_XGetWindowAttributes (XWindowAttributes *xgwa)
 {
   struct state *st = &global_state;
   memset (xgwa, 0, sizeof(*xgwa));
   xgwa->width = st->output_frame->width;
   xgwa->height = st->output_frame->height;
-  return True;
+  return true;
 }
 
 static uint32_t *image_ptr(XImage *image, unsigned int x, unsigned int y)
@@ -542,7 +542,7 @@ scale_ximage (XImage *ximage, int new_width, int new_height)
       ximage2->data = 0;
       custom_XDestroyImage (ximage);
       custom_XDestroyImage (ximage2);
-      return False;
+      return false;
     }
 
   /* Brute force scaling... */
@@ -560,7 +560,7 @@ scale_ximage (XImage *ximage, int new_width, int new_height)
   ximage2->data = 0;
   custom_XDestroyImage (ximage2);
 
-  return True;
+  return true;
 }
 
 
@@ -1013,7 +1013,7 @@ main (int argc, char **argv)
   const char *infiles[1000];
   const char *outfile = 0;
   int duration = 30;
-  bool powerp = False;
+  bool powerp = false;
   char *logo = 0;
   int w = 0, h = 0;
   int nfiles = 0;
@@ -1061,10 +1061,10 @@ main (int argc, char **argv)
          logo = argv[++i];
        else if (!strcmp(argv[i], "-powerup") ||
                 !strcmp(argv[i], "-power"))
-         powerp = True;
+         powerp = true;
        else if (!strcmp(argv[i], "-no-powerup") ||
                 !strcmp(argv[i], "-no-power"))
-         powerp = False;
+         powerp = false;
       else if (argv[i][0] == '-')
         usage(argv[i]);
       else if (nfiles >= (int)(sizeof(infiles)/sizeof(*infiles))-1)

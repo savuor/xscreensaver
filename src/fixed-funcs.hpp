@@ -71,7 +71,7 @@ XImage * custom_XCreateImage (unsigned int depth,
                     unsigned int width, unsigned int height,
                     int bitmap_pad, int bytes_per_line);
 int custom_XDestroyImage (XImage *ximage);
-Status custom_XGetWindowAttributes (XWindowAttributes *xgwa);
+int custom_XGetWindowAttributes (XWindowAttributes *xgwa);
 int custom_XPutImage (XImage *image,
                         int src_x, int src_y, int dest_x, int dest_y,
                         unsigned int w, unsigned int h);
@@ -80,7 +80,7 @@ int custom_XQueryColors (XColor *c, int n);
 
 // from screenhackI.h
 
-extern Bool mono_p;
+extern bool mono_p;
 
 extern const char *progname;
 
