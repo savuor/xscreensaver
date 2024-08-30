@@ -206,8 +206,8 @@ analogtv_set_defaults(analogtv *it, const char *prefix)
   it->hashnoise_on=0;
   it->hashnoise_enable=1;
 
-  it->horiz_desync=frand(10.0)-5.0;
-  it->squeezebottom=frand(5.0)-1.0;
+  it->horiz_desync=ya_frand(10.0)-5.0;
+  it->squeezebottom=ya_frand(5.0)-1.0;
 
 #ifdef DEBUG
   printf("analogtv: prefix=%s\n",prefix);
@@ -753,7 +753,7 @@ analogtv_setup_teletext(analogtv_input *input)
   for (y=19; y<22; y++) {
     for (x=ANALOGTV_PIC_START; x<ANALOGTV_PIC_END; x++) {
       if ((x&7)==0) {
-        teletext=(random()&1) ? ANALOGTV_WHITE_LEVEL : ANALOGTV_BLACK_LEVEL;
+        teletext=(ya_random()&1) ? ANALOGTV_WHITE_LEVEL : ANALOGTV_BLACK_LEVEL;
       }
       input->signal[y][x]=teletext;
     }
@@ -770,9 +770,9 @@ analogtv_setup_frame(analogtv *it)
   if (it->flutter_horiz_desync) {
     /* Horizontal sync during vertical sync instability. */
     it->horiz_desync += -0.10*(it->horiz_desync-3.0) +
-      ((int)(random()&0xff)-0x80) *
-      ((int)(random()&0xff)-0x80) *
-      ((int)(random()&0xff)-0x80) * 0.000001;
+      ((int)(ya_random()&0xff)-0x80) *
+      ((int)(ya_random()&0xff)-0x80) *
+      ((int)(ya_random()&0xff)-0x80) * 0.000001;
   }
 
   /* it wasn't used
@@ -783,19 +783,19 @@ analogtv_setup_frame(analogtv *it)
 
   /* let's leave it to process shrinkpulse */
   if (it->hashnoise_enable && !it->hashnoise_on) {
-    if (random()%10000==0) {
+    if (ya_random()%10000==0) {
       it->hashnoise_on=1;
-      it->shrinkpulse=random()%ANALOGTV_V;
+      it->shrinkpulse=ya_random()%ANALOGTV_V;
     }
   }
-  if (random()%1000==0) {
+  if (ya_random()%1000==0) {
     it->hashnoise_on=0;
   }
 
 #if 0  /* never used */
   if (it->hashnoise_on) {
     it->hashnoise_rpm += (15000.0 - it->hashnoise_rpm)*0.05 +
-      ((int)(random()%2000)-1000)*0.1;
+      ((int)(ya_random()%2000)-1000)*0.1;
   } else {
     it->hashnoise_rpm -= 100 + 0.01*it->hashnoise_rpm;
     if (it->hashnoise_rpm<0.0) it->hashnoise_rpm=0.0;
@@ -817,9 +817,9 @@ analogtv_setup_frame(analogtv *it)
       if (x>0 && x<ANALOGTV_H - ANALOGTV_HASHNOISE_LEN) {
         it->hashnoise_times[y]=x;
       }
-      /* hnc += hni + (int)(random()%65536)-32768; */
+      /* hnc += hni + (int)(ya_random()%65536)-32768; */
       {
-        hnc += (int)(random()%65536)-32768;
+        hnc += (int)(ya_random()%65536)-32768;
         if ((hnc >= 0) && (INT_MAX - hnc < hni)) break;
         hnc += hni;
       }
@@ -957,7 +957,7 @@ analogtv_sync(analogtv *it)
                   it->cb_phase[2], it->cb_phase[3]);
 #endif
 
-    /* if (random()%2000==0) cur_hsync=random()%ANALOGTV_H; */
+    /* if (ya_random()%2000==0) cur_hsync=ya_random()%ANALOGTV_H; */
   }
 
   it->cur_hsync = cur_hsync;
@@ -1558,8 +1558,8 @@ analogtv_draw(analogtv *it, double noiselevel,
 
   analogtv_setup_frame(it);
 
-  it->random0 = random();
-  it->random1 = random();
+  it->random0 = ya_random();
+  it->random1 = ya_random();
   it->noiselevel = noiselevel;
   it->recs = recs;
   it->rec_count = rec_count;
@@ -1622,7 +1622,7 @@ analogtv_draw(analogtv *it, double noiselevel,
           (slineno<20 && it->flutter_horiz_desync) ||
           it->gaussiannoise_level>30 ||
           ((it->gaussiannoise_level>2.0 ||
-            it->multipath) && random()%4) ||
+            it->multipath) && ya_random()%4) ||
           linesig != it->onscreen_signature[lineno])) {
       continue;
     }
@@ -1884,10 +1884,10 @@ analogtv_load_ximage(analogtv *it, analogtv_input *input,
 void analogtv_channel_noise(analogtv_input *it, analogtv_input *s2)
 {
   int x,y,newsig;
-  int change=random()%ANALOGTV_V;
-  unsigned int fastrnd=random();
-  double hso=(int)(random()%1000)-500;
-  int yofs=random()%ANALOGTV_V;
+  int change=ya_random()%ANALOGTV_V;
+  unsigned int fastrnd=ya_random();
+  double hso=(int)(ya_random()%1000)-500;
+  int yofs=ya_random()%ANALOGTV_V;
   int noise;
 
   for (y=change; y<ANALOGTV_V; y++) {
@@ -1919,14 +1919,14 @@ void analogtv_channel_noise(analogtv_input *it, analogtv_input *s2)
 
     if (hnt>=0 && hnt<ANALOGTV_PIC_LEN) {
       double maxampl=1.0;
-      double cur=frand(150.0)-20.0;
-      int len=random()%15+3;
+      double cur=ya_frand(150.0)-20.0;
+      int len=ya_random()%15+3;
       if (len > ANALOGTV_PIC_LEN-hnt) len=ANALOGTV_PIC_LEN-hnt;
       for (i=0; i<len; i++) {
         double sig=signal[hnt];
 
         sig += cur*maxampl;
-        cur += frand(5.0)-5.0;
+        cur += ya_frand(5.0)-5.0;
         maxampl = maxampl*0.9;
 
         signal[hnt]=sig;
@@ -1945,18 +1945,18 @@ analogtv_reception_update(analogtv_reception *rec)
   if (rec->multipath > 0.0) {
     for (i=0; i<ANALOGTV_GHOSTFIR_LEN; i++) {
       rec->ghostfir2[i] +=
-        -(rec->ghostfir2[i]/16.0) + rec->multipath * (frand(0.02)-0.01);
+        -(rec->ghostfir2[i]/16.0) + rec->multipath * (ya_frand(0.02)-0.01);
     }
-    if (random()%20==0) {
-      rec->ghostfir2[random()%(ANALOGTV_GHOSTFIR_LEN)]
-        = rec->multipath * (frand(0.08)-0.04);
+    if (ya_random()%20==0) {
+      rec->ghostfir2[ya_random()%(ANALOGTV_GHOSTFIR_LEN)]
+        = rec->multipath * (ya_frand(0.08)-0.04);
     }
     for (i=0; i<ANALOGTV_GHOSTFIR_LEN; i++) {
       rec->ghostfir[i] = 0.8*rec->ghostfir[i] + 0.2*rec->ghostfir2[i];
     }
 
     if (0) {
-      rec->hfloss2 += -(rec->hfloss2/16.0) + rec->multipath * (frand(0.08)-0.04);
+      rec->hfloss2 += -(rec->hfloss2/16.0) + rec->multipath * (ya_frand(0.08)-0.04);
       rec->hfloss = 0.5*rec->hfloss + 0.5*rec->hfloss2;
     }
 

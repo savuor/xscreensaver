@@ -683,18 +683,18 @@ analogtv_convert (const char **infiles, const char *outfile,
   analogtv_set_defaults(st->tv, "");
   st->tv->need_clear=1;
 
-  if (random()%4==0) {
-    st->tv->tint_control += pow(frand(2.0)-1.0, 7) * 180.0;
+  if (ya_random()%4==0) {
+    st->tv->tint_control += pow(ya_frand(2.0)-1.0, 7) * 180.0;
   }
   if (1) {
-    st->tv->color_control += frand(0.3) * ((random() & 1) ? 1 : -1);
+    st->tv->color_control += ya_frand(0.3) * ((ya_random() & 1) ? 1 : -1);
   }
   if (darkp) {
-    if (random()%4==0) {
-      st->tv->brightness_control += frand(0.15);
+    if (ya_random()%4==0) {
+      st->tv->brightness_control += ya_frand(0.15);
     }
-    if (random()%4==0) {
-      st->tv->contrast_control += frand(0.2) * ((random() & 1) ? 1 : -1);
+    if (ya_random()%4==0) {
+      st->tv->contrast_control += ya_frand(0.2) * ((ya_random() & 1) ? 1 : -1);
     }
   }
 
@@ -708,27 +708,27 @@ analogtv_convert (const char **infiles, const char *outfile,
         analogtv_reception *rec=&st->chansettings[i].recs[stati];
         int station;
         while (1) {
-          station=random()%st->n_stations;
+          station=ya_random()%st->n_stations;
           if (station!=last_station) break;
-          if ((random()%10)==0) break;
+          if ((ya_random()%10)==0) break;
         }
         last_station=station;
         rec->input = st->stations[station];
-        rec->level = pow(frand(1.0), 3.0) * 2.0 + 0.05;
-        rec->ofs=random()%ANALOGTV_SIGNAL_LEN;
-        if (random()%3) {
-          rec->multipath = frand(1.0);
+        rec->level = pow(ya_frand(1.0), 3.0) * 2.0 + 0.05;
+        rec->ofs=ya_random()%ANALOGTV_SIGNAL_LEN;
+        if (ya_random()%3) {
+          rec->multipath = ya_frand(1.0);
         } else {
           rec->multipath=0.0;
         }
         if (stati) {
           /* We only set a frequency error for ghosting stations,
              because it doesn't matter otherwise */
-          rec->freqerr = (frand(2.0)-1.0) * 3.0;
+          rec->freqerr = (ya_frand(2.0)-1.0) * 3.0;
         }
 
         if (rec->level > 0.3) break;
-        if (random()%4) break;
+        if (ya_random()%4) break;
       }
     }
   }
@@ -757,13 +757,13 @@ analogtv_convert (const char **infiles, const char *outfile,
 
   if (slideshow)
     /* First channel (initial unadulterated image) stays for this long */
-    frames_left = fps * (2 + frand(1.5));
+    frames_left = fps * (2 + ya_frand(1.5));
 
   if (slideshow) {
     /* Pick one of the input images and fill all channels with variants
        of it.
      */
-    int n = random() % nfiles;
+    int n = ya_random() % nfiles;
     XImage *ximage = ximages[n];
     base_image = ximage;
     if (verbose_p > 1)
@@ -783,7 +783,7 @@ analogtv_convert (const char **infiles, const char *outfile,
         input->updater = update_smpte_colorbars;
       }
 
-      analogtv_setup_sync (input, 1, (random()%20)==0);
+      analogtv_setup_sync (input, 1, (ya_random()%20)==0);
       analogtv_load_ximage (st->tv, input, ximage, 0, x, y, w, h);
     }
   } else {
@@ -800,10 +800,10 @@ analogtv_convert (const char **infiles, const char *outfile,
       int x = (output_w - w) / 2;
       int y = (output_h - h) / 2;
 
-      if (! (random() % 8))  /* Some stations are colorbars */
+      if (! (ya_random() % 8))  /* Some stations are colorbars */
         input->updater = update_smpte_colorbars;
 
-      analogtv_setup_sync (input, 1, (random()%20)==0);
+      analogtv_setup_sync (input, 1, (ya_random()%20)==0);
       analogtv_load_ximage (st->tv, input, ximage, 0, x, y, w, h);
     }
   }
@@ -824,29 +824,29 @@ analogtv_convert (const char **infiles, const char *outfile,
 
       if (slideshow && channel_changes == 1) {
         /* Second channel has short duration, 0.25 to 0.75 sec. */
-        frames_left = fps * (0.25 + frand(0.5));
+        frames_left = fps * (0.25 + ya_frand(0.5));
       } else if (slideshow) {
         /* 0.5 - 2.0 sec (was 0.5 - 3.0 sec) */
-        frames_left = fps * (0.5 + frand(1.5));
+        frames_left = fps * (0.5 + ya_frand(1.5));
       } else {
         /* 1 - 7 sec */
-        frames_left = fps * (1 + frand(6));
+        frames_left = fps * (1 + ya_frand(6));
       }
 
       if (slideshow && channel_changes == 2) {
         /* Always use the unadulterated image for the third channel:
            So the effect is, plain, brief blip, plain, then random. */
         st->curinputi = 0;
-        frames_left += fps * (0.1 + frand(0.5));
+        frames_left += fps * (0.1 + ya_frand(0.5));
 
-      } else if (slideshow && st->curinputi != 0 && ((random() % 100) < 75)) {
+      } else if (slideshow && st->curinputi != 0 && ((ya_random() % 100) < 75)) {
         /* Use the unadulterated image 75% of the time (was 33%) */
         st->curinputi = 0;
       } else {
         /* Otherwise random */
         int prev = st->curinputi;
       AGAIN:
-        st->curinputi = 1 + (random() % (N_CHANNELS - 1));
+        st->curinputi = 1 + (ya_random() % (N_CHANNELS - 1));
 
         /* In slideshow mode, always alternate to the unadulterated image:
            no two noisy images in a row, always intersperse clean. */
@@ -854,7 +854,7 @@ analogtv_convert (const char **infiles, const char *outfile,
           st->curinputi = 0;
 
         /* In slideshow mode, do colorbars-only a bit less often. */
-        if (slideshow && st->curinputi == 1 && !(random() % 3))
+        if (slideshow && st->curinputi == 1 && !(ya_random() % 3))
           goto AGAIN;
       }
 
@@ -868,19 +868,19 @@ analogtv_convert (const char **infiles, const char *outfile,
                  progname, curticks/1000.0, st->curinputi);
 
       /* Turn the knobs every now and then */
-      if (! (random() % 5)) {
-        if (random()%4==0) {
-          st->tv->tint_control += pow(frand(2.0)-1.0, 7) * 180.0 * ((random() & 1) ? 1 : -1);
+      if (! (ya_random() % 5)) {
+        if (ya_random()%4==0) {
+          st->tv->tint_control += pow(ya_frand(2.0)-1.0, 7) * 180.0 * ((ya_random() & 1) ? 1 : -1);
         }
         if (1) {
-          st->tv->color_control += frand(0.3) * ((random() & 1) ? 1 : -1);
+          st->tv->color_control += ya_frand(0.3) * ((ya_random() & 1) ? 1 : -1);
         }
         if (darkp) {
-          if (random()%4==0) {
-            st->tv->brightness_control += frand(0.15);
+          if (ya_random()%4==0) {
+            st->tv->brightness_control += ya_frand(0.15);
           }
-          if (random()%4==0) {
-            st->tv->contrast_control += frand(0.2) * ((random() & 1) ? 1 : -1);
+          if (ya_random()%4==0) {
+            st->tv->contrast_control += ya_frand(0.2) * ((ya_random() & 1) ? 1 : -1);
           }
         }
       }
@@ -1089,7 +1089,6 @@ main (int argc, char **argv)
 
   darkp = (nfiles == 1);
 
-# undef ya_rand_init
   ya_rand_init (0);
   analogtv_convert (infiles, outfile, logo,
                     w, h, duration, slideshow, powerp);
