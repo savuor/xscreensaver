@@ -111,18 +111,6 @@ ximage_putpixel_32 (XImage *ximage, int x, int y, unsigned long pixel)
 }
 
 
-static int
-custom_XInitImage (XImage *ximage)
-{
-  if (!ximage->bytes_per_line)
-    ximage->bytes_per_line = ximage->width * 4;
-
-  ximage->f.put_pixel = ximage_putpixel_32;
-  ximage->f.get_pixel = ximage_getpixel_32;
-
-  return 1;
-}
-
 XImage *
 custom_XCreateImage (unsigned int width, unsigned int height)
 {
@@ -139,9 +127,11 @@ custom_XCreateImage (unsigned int width, unsigned int height)
   ximage->green_mask = g;
   ximage->blue_mask  = b;
   ximage->bytes_per_line = 0;
+  ximage->bytes_per_line = ximage->width * 4;
 
-  custom_XInitImage (ximage);
-  if (! ximage->f.put_pixel) abort();
+  ximage->f.put_pixel = ximage_putpixel_32;
+  ximage->f.get_pixel = ximage_getpixel_32;
+
   return ximage;
 }
 
