@@ -172,7 +172,7 @@ custom_XInitImage (XImage *ximage)
 }
 
 XImage *
-custom_XCreateImage (unsigned int depth, int offset, char *data,
+custom_XCreateImage (unsigned int depth, char *data,
                      unsigned int width, unsigned int height,
                      int bytes_per_line)
 {
@@ -443,7 +443,7 @@ make_ximage (const char *filename,
     int chan = img.channels();
     int x, y;
 
-    image = custom_XCreateImage (32, 0, 0, w, h, 0);
+    image = custom_XCreateImage (32, 0, w, h, 0);
     image->data = (char *) malloc(h * image->bytes_per_line);
 
     /* Set the bit order in the XImage structure to whatever the
@@ -522,7 +522,7 @@ scale_ximage (XImage *ximage, int new_width, int new_height)
   double xscale, yscale;
 
   XImage *ximage2 = custom_XCreateImage (depth,
-                                  0, 0,
+                                  0,
                                   new_width, new_height, 0);
   ximage2->data = (char *) calloc (ximage2->height, ximage2->bytes_per_line);
 
@@ -638,7 +638,7 @@ analogtv_convert (const char **infiles, const char *outfile,
   memset (st, 0, sizeof(*st));
 
   st->output_frame = custom_XCreateImage ( ximages[0]->depth,
-                                   0, NULL,
+                                   NULL,
                                    output_w, output_h,
                                    0);
   st->output_frame->data = (char *)
@@ -652,7 +652,7 @@ analogtv_convert (const char **infiles, const char *outfile,
                progname, logofile, st->logo->width, st->logo->height);
     flip_ximage (st->logo);
     /* Pull the alpha out of the logo and make a separate mask ximage. */
-    st->logo_mask = custom_XCreateImage (st->logo->depth, 0,
+    st->logo_mask = custom_XCreateImage (st->logo->depth,
                                   NULL, st->logo->width, st->logo->height,
                                   0);
     st->logo_mask->data = (char *)
