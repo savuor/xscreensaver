@@ -271,21 +271,21 @@ analogtv_alloc_image(analogtv *it)
   /* Width is in bits. */
   unsigned width = (it->usewidth * bits_per_pixel + align) & ~align;
 
-  XImage *image = custom_XCreateImage (it->xgwa.depth, ZPixmap, 0, NULL,
+  it->image = custom_XCreateImage (it->xgwa.depth, ZPixmap, 0, NULL,
                                        width / bits_per_pixel, it->useheight, 8, 0);
-  int error = thread_malloc ((void **)&image->data, image->height * image->bytes_per_line);
+  int error = thread_malloc ((void **)&it->image->data, it->image->height * it->image->bytes_per_line);
   if (error)
   {
-    custom_XDestroyImage (image);
-    image = NULL;
+    custom_XDestroyImage (it->image);
+    it->image = NULL;
   }
   else
   {
-    memset (image->data, 0, image->height * image->bytes_per_line);
+    memset (it->image->data, 0, it->image->height * it->image->bytes_per_line);
   }
-  it->image = image;
 
-  if (it->image) {
+  if (it->image)
+  {
     memset (it->image->data, 0, it->image->height * it->image->bytes_per_line);
   } else {
     /* Not enough memory. Maybe try a smaller window. */
