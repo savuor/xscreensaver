@@ -124,16 +124,13 @@ custom_XInitImage (XImage *ximage)
 }
 
 XImage *
-custom_XCreateImage (char *data,
-                     unsigned int width, unsigned int height,
-                     int bytes_per_line)
+custom_XCreateImage (unsigned int width, unsigned int height)
 {
   XImage *ximage = (XImage *) calloc (1, sizeof(*ximage));
   unsigned long r, g, b;
 
   ximage->width = width;
   ximage->height = height;
-  ximage->data = data;
   r = 0x00FF0000L;
   g = 0x0000FF00L;
   b = 0x000000FFL;
@@ -141,7 +138,7 @@ custom_XCreateImage (char *data,
   ximage->red_mask   = r;
   ximage->green_mask = g;
   ximage->blue_mask  = b;
-  ximage->bytes_per_line = bytes_per_line;
+  ximage->bytes_per_line = 0;
 
   custom_XInitImage (ximage);
   if (! ximage->f.put_pixel) abort();
@@ -381,7 +378,7 @@ make_ximage (const char *filename,
     int chan = img.channels();
     int x, y;
 
-    image = custom_XCreateImage (0, w, h, 0);
+    image = custom_XCreateImage (w, h);
     image->data = (char *) malloc(h * image->bytes_per_line);
 
     if (!image->data)
@@ -451,7 +448,7 @@ scale_ximage (XImage *ximage, int new_width, int new_height)
   int x, y;
   double xscale, yscale;
 
-  XImage *ximage2 = custom_XCreateImage (0, new_width, new_height, 0);
+  XImage *ximage2 = custom_XCreateImage (new_width, new_height);
   ximage2->data = (char *) calloc (ximage2->height, ximage2->bytes_per_line);
 
   if (!ximage2->data)
@@ -565,7 +562,7 @@ analogtv_convert (const char **infiles, const char *outfile,
 
   memset (st, 0, sizeof(*st));
 
-  st->output_frame = custom_XCreateImage (NULL, output_w, output_h, 0);
+  st->output_frame = custom_XCreateImage (output_w, output_h);
   st->output_frame->data = (char *)
     calloc (st->output_frame->height, st->output_frame->bytes_per_line);
 
@@ -577,7 +574,7 @@ analogtv_convert (const char **infiles, const char *outfile,
                progname, logofile, st->logo->width, st->logo->height);
     flip_ximage (st->logo);
     /* Pull the alpha out of the logo and make a separate mask ximage. */
-    st->logo_mask = custom_XCreateImage (NULL, st->logo->width, st->logo->height, 0);
+    st->logo_mask = custom_XCreateImage (st->logo->width, st->logo->height);
     st->logo_mask->data = (char *)
     calloc (st->logo_mask->height, st->logo_mask->bytes_per_line);
 

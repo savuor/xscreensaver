@@ -75,9 +75,7 @@ extern int
 XPutPixel (XImage *ximage, int x, int y, unsigned long pixel);
 
 // from analogtv-cli.c
-XImage * custom_XCreateImage (char *data,
-                              unsigned int width, unsigned int height,
-                              int bytes_per_line);
+XImage * custom_XCreateImage (unsigned int width, unsigned int height);
 int custom_XDestroyImage (XImage *ximage);
 int custom_XGetWindowAttributes (XWindowAttributes *xgwa);
 int custom_XPutImage (XImage *image,
