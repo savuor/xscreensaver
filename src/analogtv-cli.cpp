@@ -44,7 +44,7 @@
 
 const char *progname;
 const char *progclass;
-static Bool verbose_p = 0;
+static bool verbose_p = 0;
 
 #define MAX_MULTICHAN 2
 static int N_CHANNELS=12;
@@ -64,7 +64,7 @@ struct state {
 
   int n_stations;
   analogtv_input **stations;
-  Bool image_loading_p;
+  bool image_loading_p;
   XImage *logo, *logo_mask;
 
   int curinputi;
@@ -412,7 +412,7 @@ flip_ximage (XImage *ximage)
 }
 
 
-static Bool
+static bool
 bigendian (void)
 {
   union { int i; char c[sizeof(int)]; } u;
@@ -518,7 +518,7 @@ file_to_ximage ( const char *filename)
    If out of memory, returns False, and the XImage will have been
    destroyed and freed.
  */
-static Bool
+static bool
 scale_ximage (XImage *ximage, int new_width, int new_height)
 {
   int depth = 32;
@@ -568,7 +568,7 @@ static void
 analogtv_convert (const char **infiles, const char *outfile,
                   const char *logofile,
                   int output_w, int output_h,
-                  int duration, int slideshow, Bool powerp)
+                  int duration, int slideshow, bool powerp)
 {
   unsigned long start_time = time((time_t *)0);
   struct state *st = &global_state;
@@ -1013,7 +1013,7 @@ main (int argc, char **argv)
   const char *infiles[1000];
   const char *outfile = 0;
   int duration = 30;
-  Bool powerp = False;
+  bool powerp = False;
   char *logo = 0;
   int w = 0, h = 0;
   int nfiles = 0;
