@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
