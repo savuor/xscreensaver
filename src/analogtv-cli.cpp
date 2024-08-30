@@ -134,8 +134,6 @@ custom_XCreateImage (char *data,
   ximage->width = width;
   ximage->height = height;
   ximage->data = data;
-  ximage->byte_order = LSBFirst;
-  ximage->bitmap_bit_order = ximage->byte_order;
   r = 0x00FF0000L;
   g = 0x0000FF00L;
   b = 0x000000FFL;
@@ -143,7 +141,6 @@ custom_XCreateImage (char *data,
   ximage->red_mask   = r;
   ximage->green_mask = g;
   ximage->blue_mask  = b;
-  ximage->bits_per_pixel = 32;
   ximage->bytes_per_line = bytes_per_line;
 
   custom_XInitImage (ximage);
@@ -357,14 +354,6 @@ flip_ximage (XImage *ximage)
 }
 
 
-static bool
-bigendian (void)
-{
-  union { int i; char c[sizeof(int)]; } u;
-  u.i = 1;
-  return !u.c[0];
-}
-
 /* Loads the image to an XImage, RGBA -- GDK Pixbuf version.
  */
 static XImage *
@@ -394,13 +383,6 @@ make_ximage (const char *filename,
 
     image = custom_XCreateImage (0, w, h, 0);
     image->data = (char *) malloc(h * image->bytes_per_line);
-
-    /* Set the bit order in the XImage structure to whatever the
-       local host's native bit order is.
-    */
-    image->bitmap_bit_order =
-      image->byte_order =
-      (bigendian() ? MSBFirst : LSBFirst);
 
     if (!image->data)
       {

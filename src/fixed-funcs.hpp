@@ -43,15 +43,15 @@ struct XImage
     int width, height;		/* size of image */
 
     char *data;			/* pointer to image data */
-    int byte_order;		/* data byte order, LSBFirst, MSBFirst */
-    int bitmap_bit_order;	/* LSBFirst, MSBFirst */
+    // int byte_order;		/* always LSBFirst */
+    // int bitmap_bit_order;	/* always LSBFirst */
     // int depth;			/* always 32 */
     int bytes_per_line;		/* accelarator to next line */
-    int bits_per_pixel;		/* bits per pixel (ZPixmap) */
+    // int bits_per_pixel;		/* always 32 */
     unsigned long red_mask;	/* bits in z arrangment */
     unsigned long green_mask;
     unsigned long blue_mask;
-//  XPointer obdata;		/* hook for the object routines to hang on */
+
     struct funcs {		/* image manipulation routines */
 	unsigned long (*get_pixel)  (XImage *, int, int);
 	int (*put_pixel)            (XImage *, int, int, unsigned long);

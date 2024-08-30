@@ -145,8 +145,6 @@ static float puramp(const analogtv *it, float tc, float start, float over)
   looks too slow.
 */
 
-/* localbyteorder is MSBFirst or LSBFirst */
-static int localbyteorder;
 static const double float_low8_ofs=8388608.0;
 static int float_extraction_works;
 
@@ -159,10 +157,6 @@ static void
 analogtv_init(void)
 {
   int i;
-  {
-    unsigned int localbyteorder_loc = (MSBFirst<<24) | (LSBFirst<<0);
-    localbyteorder=*(char *)&localbyteorder_loc;
-  }
 
   if (1) {
     float_extract_t fe;
@@ -1229,7 +1223,7 @@ analogtv_blast_imagerow(const analogtv *it,
                         float *rgbf, float *rgbf_end,
                         int ytop, int ybot)
 {
-  int i,j,x,y;
+  int i,y;
   float *rpf;
   char *level_copyfrom[3];
   int xrepl=it->xrepl;
@@ -1244,25 +1238,12 @@ analogtv_blast_imagerow(const analogtv *it,
     int level=it->leveltable[lineheight][line].index;
     float levelmult=it->leveltable[lineheight][line].value;
 
-    /* Fast special cases to avoid the slow XPutPixel. Ugh. It goes to show
-       why standard graphics sw has to be fast, or else people will have to
-       work around it and risk incompatibility. The quickdraw folks
-       understood this. The other answer would be for X11 to have fewer
-       formats for bitm.. oh, never mind. If neither of these cases work
-       (they probably cover 99% of setups) it falls back on the Xlib
-       routines. */
-
     if (level_copyfrom[level]) {
       memcpy(rowdata, level_copyfrom[level], it->image->bytes_per_line);
     }
     else {
       level_copyfrom[level] = rowdata;
 
-      if (0) {
-      }
-      else if (it->image->bits_per_pixel==32 &&
-               sizeof(unsigned int)==4 &&
-               it->image->byte_order==localbyteorder) {
         /* int is more likely to be 32 bits than long */
         unsigned int *pixelptr=(unsigned int *)rowdata;
         unsigned int pix;
@@ -1284,69 +1265,6 @@ analogtv_blast_imagerow(const analogtv *it,
           }
           pixelptr+=xrepl;
         }
-      }
-      else if (it->image->bits_per_pixel==16 &&
-               sizeof(unsigned short)==2 &&
-               float_extraction_works &&
-               it->image->byte_order==localbyteorder) {
-        unsigned short *pixelptr=(unsigned short *)rowdata;
-        float r2,g2,b2;
-        float_extract_t r1,g1,b1;
-        unsigned short pix;
-
-        for (rpf=rgbf; rpf!=rgbf_end; rpf+=3) {
-          r2=rpf[0]; g2=rpf[1]; b2=rpf[2];
-          r1.f=r2 * levelmult+float_low8_ofs;
-          g1.f=g2 * levelmult+float_low8_ofs;
-          b1.f=b2 * levelmult+float_low8_ofs;
-          pix = (it->red_values[r1.i & 0x3ff] |
-                 it->green_values[g1.i & 0x3ff] |
-                 it->blue_values[b1.i & 0x3ff]);
-          pixelptr[0] = pix;
-          if (xrepl>=2) {
-            pixelptr[1] = pix;
-            if (xrepl>=3) pixelptr[2] = pix;
-          }
-          pixelptr+=xrepl;
-        }
-      }
-      else if (it->image->bits_per_pixel==16 &&
-               sizeof(unsigned short)==2 &&
-               it->image->byte_order==localbyteorder) {
-        unsigned short *pixelptr=(unsigned short *)rowdata;
-        unsigned short pix;
-
-        for (rpf=rgbf; rpf!=rgbf_end; rpf+=3) {
-          int r1=rpf[0] * levelmult;
-          int g1=rpf[1] * levelmult;
-          int b1=rpf[2] * levelmult;
-          if (r1>=ANALOGTV_CV_MAX) r1=ANALOGTV_CV_MAX-1;
-          if (g1>=ANALOGTV_CV_MAX) g1=ANALOGTV_CV_MAX-1;
-          if (b1>=ANALOGTV_CV_MAX) b1=ANALOGTV_CV_MAX-1;
-          pix = it->red_values[r1] | it->green_values[g1] | it->blue_values[b1];
-          pixelptr[0] = pix;
-          if (xrepl>=2) {
-            pixelptr[1] = pix;
-            if (xrepl>=3) pixelptr[2] = pix;
-          }
-          pixelptr+=xrepl;
-        }
-      }
-      else {
-        for (x=0, rpf=rgbf; rpf!=rgbf_end ; x++, rpf+=3) {
-          int ntscri=rpf[0]*levelmult;
-          int ntscgi=rpf[1]*levelmult;
-          int ntscbi=rpf[2]*levelmult;
-          if (ntscri>=ANALOGTV_CV_MAX) ntscri=ANALOGTV_CV_MAX-1;
-          if (ntscgi>=ANALOGTV_CV_MAX) ntscgi=ANALOGTV_CV_MAX-1;
-          if (ntscbi>=ANALOGTV_CV_MAX) ntscbi=ANALOGTV_CV_MAX-1;
-          for (j=0; j<xrepl; j++) {
-            XPutPixel(it->image, x*xrepl + j, y,
-                      it->red_values[ntscri] | it->green_values[ntscgi] |
-                      it->blue_values[ntscbi]);
-          }
-        }
-      }
     }
   }
 }
