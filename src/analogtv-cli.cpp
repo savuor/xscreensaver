@@ -39,6 +39,7 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/videoio.hpp>
+#include <opencv2/highgui.hpp>
 
 
 const char *progname;
@@ -429,7 +430,7 @@ make_ximage (const char *filename,
 
   cv::Mat img = cv::imread(filename);
   //TODO: BGR to RGB?
-  cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
+  //cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
 
   if (img.empty())
   {
@@ -740,13 +741,15 @@ analogtv_convert (const char **infiles, const char *outfile,
   //const enum AVCodecID video_codec = AV_CODEC_ID_H264;
   //const enum AVPixelFormat pix_fmt = AV_PIX_FMT_YUV420P;
 
-  writer = cv::makePtr<cv::VideoWriter>(outfile + std::string("_ocv.avi"), cv::VideoWriter::fourcc('M', 'J', 'P', 'G'),
-                                        30, cv::Size(st->output_frame->width, st->output_frame->height));
-  if (!writer->isOpened())
-  {
-    printf("VideoWriter is not opened!\n");
-    abort();
-  }
+  //writer = cv::makePtr<cv::VideoWriter>(outfile + std::string("_ocv.avi"), cv::VideoWriter::fourcc('M', 'J', 'P', 'G'),
+  // writer = cv::makePtr<cv::VideoWriter>(outfile + std::string("_ocv.mp4"), cv::VideoWriter::fourcc('M', 'P', '4', 'V'),
+  //                                       30, cv::Size(st->output_frame->width, st->output_frame->height));
+  // if (!writer->isOpened())
+  // {
+  //   printf("VideoWriter is not opened!\n");
+  //   abort();
+  // }
+  cv::namedWindow("tv");
 
  INIT_CHANNELS:
 
@@ -927,7 +930,9 @@ analogtv_convert (const char **infiles, const char *outfile,
               (void*)st->output_frame->data, st->output_frame->bytes_per_line);
     cv::Mat m3;
     cvtColor(m, m3, cv::COLOR_BGRA2BGR);
-    writer->write(m3);
+    // writer->write(m3);
+    cv::imshow("tv", m3);
+    cv::waitKey(33);
 
     if (powerp &&
         curticks > (unsigned int)((duration*1000) - (POWERDOWN_DURATION*1000))) {
@@ -985,7 +990,8 @@ analogtv_convert (const char **infiles, const char *outfile,
   }
 
   free (stats);
-  writer->release();
+  //writer->release();
+  cv::destroyAllWindows();
 }
 
 
