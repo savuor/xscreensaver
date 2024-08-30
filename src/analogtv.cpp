@@ -271,7 +271,7 @@ analogtv_alloc_image(analogtv *it)
   /* Width is in bits. */
   unsigned width = (it->usewidth * bits_per_pixel + align) & ~align;
 
-  it->image = custom_XCreateImage (it->xgwa.depth, ZPixmap, 0, NULL,
+  it->image = custom_XCreateImage (it->xgwa.depth, 0, NULL,
                                        width / bits_per_pixel, it->useheight, 8, 0);
   int error = thread_malloc ((void **)&it->image->data, it->image->height * it->image->bytes_per_line);
   if (error)
@@ -1275,8 +1275,7 @@ analogtv_blast_imagerow(const analogtv *it,
 
       if (0) {
       }
-      else if (it->image->format==ZPixmap &&
-               it->image->bits_per_pixel==32 &&
+      else if (it->image->bits_per_pixel==32 &&
                sizeof(unsigned int)==4 &&
                it->image->byte_order==localbyteorder) {
         /* int is more likely to be 32 bits than long */
@@ -1301,8 +1300,7 @@ analogtv_blast_imagerow(const analogtv *it,
           pixelptr+=xrepl;
         }
       }
-      else if (it->image->format==ZPixmap &&
-               it->image->bits_per_pixel==16 &&
+      else if (it->image->bits_per_pixel==16 &&
                sizeof(unsigned short)==2 &&
                float_extraction_works &&
                it->image->byte_order==localbyteorder) {
@@ -1327,8 +1325,7 @@ analogtv_blast_imagerow(const analogtv *it,
           pixelptr+=xrepl;
         }
       }
-      else if (it->image->format==ZPixmap &&
-               it->image->bits_per_pixel==16 &&
+      else if (it->image->bits_per_pixel==16 &&
                sizeof(unsigned short)==2 &&
                it->image->byte_order==localbyteorder) {
         unsigned short *pixelptr=(unsigned short *)rowdata;

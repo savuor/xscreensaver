@@ -17,10 +17,6 @@
 
 // from jwxyz
 
-//#define XYBitmap		0	/* depth 1, XYFormat */
-//#define XYPixmap		1	/* depth == drawable depth */
-#define ZPixmap			2	/* depth == drawable depth */
-
 #define DoRed			(1<<0)
 #define DoGreen			(1<<1)
 #define DoBlue			(1<<2)
@@ -45,11 +41,9 @@ struct XColor {
 struct XImage
 {
     int width, height;		/* size of image */
-    int xoffset;		/* number of pixels offset in X direction */
-    int format;			/* XYBitmap, XYPixmap, ZPixmap */
+
     char *data;			/* pointer to image data */
     int byte_order;		/* data byte order, LSBFirst, MSBFirst */
-    int bitmap_unit;		/* quant. of scanline 8, 16, 32 */
     int bitmap_bit_order;	/* LSBFirst, MSBFirst */
     int bitmap_pad;		/* 8, 16, 32 either XY or ZPixmap */
     int depth;			/* depth of image */
@@ -68,7 +62,6 @@ struct XImage
 struct XWindowAttributes {
     int x, y;			/* location of window */
     int width, height;		/* width and height of window */
-    int border_width;		/* border width of window */
     int depth;          	/* depth of window */
 };
 
@@ -84,8 +77,7 @@ extern int
 XPutPixel (XImage *ximage, int x, int y, unsigned long pixel);
 
 // from analogtv-cli.c
-XImage * custom_XCreateImage (unsigned int depth,
-                    int format, int offset, char *data,
+XImage * custom_XCreateImage (unsigned int depth, int offset, char *data,
                     unsigned int width, unsigned int height,
                     int bitmap_pad, int bytes_per_line);
 int custom_XDestroyImage (XImage *ximage);
