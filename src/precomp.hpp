@@ -19,5 +19,3 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
-
-#include <X11/Xlib.h>

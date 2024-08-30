@@ -17,42 +17,60 @@
 
 // from jwxyz
 
-// struct XColor {
-//   unsigned long pixel;
-//   unsigned short red, green, blue;
-//   char flags;  /* do_red, do_green, do_blue */
-//   char pad;
-// };
+//#define XYBitmap		0	/* depth 1, XYFormat */
+//#define XYPixmap		1	/* depth == drawable depth */
+#define ZPixmap			2	/* depth == drawable depth */
 
-// struct XImage
-// {
-//     int width, height;		/* size of image */
-//     int xoffset;		/* number of pixels offset in X direction */
-//     int format;			/* XYBitmap, XYPixmap, ZPixmap */
-//     char *data;			/* pointer to image data */
-//     int byte_order;		/* data byte order, LSBFirst, MSBFirst */
-//     int bitmap_unit;		/* quant. of scanline 8, 16, 32 */
-//     int bitmap_bit_order;	/* LSBFirst, MSBFirst */
-//     int bitmap_pad;		/* 8, 16, 32 either XY or ZPixmap */
-//     int depth;			/* depth of image */
-//     int bytes_per_line;		/* accelarator to next line */
-//     int bits_per_pixel;		/* bits per pixel (ZPixmap) */
-//     unsigned long red_mask;	/* bits in z arrangment */
-//     unsigned long green_mask;
-//     unsigned long blue_mask;
-// //  XPointer obdata;		/* hook for the object routines to hang on */
-//     struct funcs {		/* image manipulation routines */
-// 	unsigned long (*get_pixel)  (XImage *, int, int);
-// 	int (*put_pixel)            (XImage *, int, int, unsigned long);
-//     } f;
-// };
+#define DoRed			(1<<0)
+#define DoGreen			(1<<1)
+#define DoBlue			(1<<2)
 
-// struct XWindowAttributes {
-//     int x, y;			/* location of window */
-//     int width, height;		/* width and height of window */
-//     int border_width;		/* border width of window */
-//     int depth;          	/* depth of window */
-// };
+// #define StaticGray		0
+// #define GrayScale		1
+// #define StaticColor		2
+// #define PseudoColor		3
+#define TrueColor		4
+//#define DirectColor		5
+
+#define LSBFirst		0
+#define MSBFirst		1
+
+struct XColor {
+  unsigned long pixel;
+  unsigned short red, green, blue;
+  char flags;  /* do_red, do_green, do_blue */
+  char pad;
+};
+
+struct XImage
+{
+    int width, height;		/* size of image */
+    int xoffset;		/* number of pixels offset in X direction */
+    int format;			/* XYBitmap, XYPixmap, ZPixmap */
+    char *data;			/* pointer to image data */
+    int byte_order;		/* data byte order, LSBFirst, MSBFirst */
+    int bitmap_unit;		/* quant. of scanline 8, 16, 32 */
+    int bitmap_bit_order;	/* LSBFirst, MSBFirst */
+    int bitmap_pad;		/* 8, 16, 32 either XY or ZPixmap */
+    int depth;			/* depth of image */
+    int bytes_per_line;		/* accelarator to next line */
+    int bits_per_pixel;		/* bits per pixel (ZPixmap) */
+    unsigned long red_mask;	/* bits in z arrangment */
+    unsigned long green_mask;
+    unsigned long blue_mask;
+//  XPointer obdata;		/* hook for the object routines to hang on */
+    struct funcs {		/* image manipulation routines */
+	unsigned long (*get_pixel)  (XImage *, int, int);
+	int (*put_pixel)            (XImage *, int, int, unsigned long);
+    } f;
+};
+
+struct XWindowAttributes {
+    int x, y;			/* location of window */
+    int width, height;		/* width and height of window */
+    int border_width;		/* border width of window */
+    int depth;          	/* depth of window */
+};
 
 // from resources.h
 extern double get_float_resource (char*);

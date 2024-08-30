@@ -13,7 +13,6 @@ include_directories(
 
 link_libraries(
     "pthread"
-    "X11"
     "m"
 )
 
