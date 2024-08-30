@@ -51,28 +51,15 @@ struct XImage
     unsigned long red_mask;	/* bits in z arrangment */
     unsigned long green_mask;
     unsigned long blue_mask;
-
-    struct funcs {		/* image manipulation routines */
-	unsigned long (*get_pixel)  (XImage *, int, int);
-	int (*put_pixel)            (XImage *, int, int, unsigned long);
-    } f;
 };
 
 struct XWindowAttributes {
-    int x, y;			/* location of window */
+    // int x, y;			/* location of window, always 0 */
     int width, height;		/* width and height of window */
 };
 
 // from resources.h
 extern double get_float_resource (char*);
-
-// from xshm.h
-
-extern unsigned long
-XGetPixel (XImage *ximage, int x, int y);
-
-extern int
-XPutPixel (XImage *ximage, int x, int y, unsigned long pixel);
 
 // from analogtv-cli.c
 XImage * custom_XCreateImage (unsigned int width, unsigned int height);

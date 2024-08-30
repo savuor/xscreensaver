@@ -1616,7 +1616,7 @@ analogtv_draw(analogtv *it, double noiselevel,
     for (x=0; x<it->usewidth; x++) {
       y = ytop + (ybot-ytop)*x / div;
       if (y<0 || y>=it->useheight) continue;
-      XPutPixel(it->image, x, y, 0xffffff);
+      *(uint32_t*)(it->image->data + y * it->image->bytes_per_line + x * sizeof(uint32_t)) = (uint32_t) 0xffffff;
     }
   }
 #endif
@@ -1698,12 +1698,16 @@ analogtv_load_ximage(analogtv *it, analogtv_input *input,
     int picy1=(y*img_h)/y_scanlength;
     int picy2=(y*img_h + y_scanlength/2)/y_scanlength;
 
-    for (x=0; x<x_length; x++) {
+    uint32_t* rowIm1 = (uint32_t*)(pic_im->data + picy1 * pic_im->bytes_per_line);
+    uint32_t* rowIm2 = (uint32_t*)(pic_im->data + picy2 * pic_im->bytes_per_line);
+    uint32_t* rowMask1 = mask_im ? (uint32_t*)(mask_im->data + picy1 * mask_im->bytes_per_line) : nullptr;
+    for (x=0; x<x_length; x++)
+    {
       int picx=(x*img_w)/x_length;
-      col1[x].pixel=XGetPixel(pic_im, picx, picy1);
-      col2[x].pixel=XGetPixel(pic_im, picx, picy2);
+      col1[x].pixel = rowIm1[picx];
+      col2[x].pixel = rowIm2[picx];
       if (mask_im)
-        mask[x] = (XGetPixel(mask_im, picx, picy1) != black);
+        mask[x] = (rowMask1[picx] != black);
       else
         mask[x] = 1;
     }

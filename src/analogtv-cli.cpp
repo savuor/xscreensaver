@@ -80,36 +80,6 @@ static struct state global_state;
    Most are unused. It seems like I am forever implementing subsets of X11.
  */
 
-unsigned long
-XGetPixel (XImage *ximage, int x, int y)
-{
-  return ximage->f.get_pixel (ximage, x, y);
-}
-
-int
-XPutPixel (XImage *ximage, int x, int y, unsigned long pixel)
-{
-  return ximage->f.put_pixel (ximage, x, y, pixel);
-}
-
-static unsigned long
-ximage_getpixel_32 (XImage *ximage, int x, int y)
-{
-  return ((unsigned long)
-          *((uint32_t *) ximage->data +
-            (y * (ximage->bytes_per_line >> 2)) +
-            x));
-}
-
-static int
-ximage_putpixel_32 (XImage *ximage, int x, int y, unsigned long pixel)
-{
-  *((uint32_t *) ximage->data +
-    (y * (ximage->bytes_per_line >> 2)) +
-    x) = (uint32_t) pixel;
-  return 0;
-}
-
 
 XImage *
 custom_XCreateImage (unsigned int width, unsigned int height)
@@ -126,11 +96,7 @@ custom_XCreateImage (unsigned int width, unsigned int height)
   ximage->red_mask   = r;
   ximage->green_mask = g;
   ximage->blue_mask  = b;
-  ximage->bytes_per_line = 0;
   ximage->bytes_per_line = ximage->width * 4;
-
-  ximage->f.put_pixel = ximage_putpixel_32;
-  ximage->f.get_pixel = ximage_getpixel_32;
 
   return ximage;
 }
@@ -460,8 +426,14 @@ scale_ximage (XImage *ximage, int new_width, int new_height)
   xscale = (double) ximage->width  / ximage2->width;
   yscale = (double) ximage->height / ximage2->height;
   for (y = 0; y < ximage2->height; y++)
+  {
+    uint32_t* srcrow = (uint32_t*)(ximage->data + (int)std::floor(y * yscale) * ximage->bytes_per_line);
     for (x = 0; x < ximage2->width; x++)
-      XPutPixel (ximage2, x, y, XGetPixel (ximage, x * xscale, y * yscale));
+    {
+      uint32_t p = srcrow[(int)std::floor(x * xscale)];
+      *(uint32_t*)(ximage2->data + y * ximage2->bytes_per_line + x * sizeof(uint32_t)) = (uint32_t) p;
+    }
+  }
 
   free (ximage->data);
   ximage->data = 0;
@@ -569,12 +541,16 @@ analogtv_convert (const char **infiles, const char *outfile,
     calloc (st->logo_mask->height, st->logo_mask->bytes_per_line);
 
     for (y = 0; y < st->logo->height; y++)
+    {
+      uint32_t* logoRow = (uint32_t*)(st->logo->data      + y * st->logo->bytes_per_line);
+      uint32_t* maskRow = (uint32_t*)(st->logo_mask->data + y * st->logo_mask->bytes_per_line);
       for (x = 0; x < st->logo->width; x++) {
-        unsigned long p = XGetPixel (st->logo, x, y);
-        uint8_t a =                     (p & 0xFF000000L) >> 24;
-        XPutPixel (st->logo,      x, y, (p & 0x00FFFFFFL));
-        XPutPixel (st->logo_mask, x, y, (a ? 0x00FFFFFFL : 0));
+        unsigned long p = logoRow[x];
+        uint8_t a = (p & 0xFF000000L) >> 24;
+        logoRow[x] = (uint32_t) (p & 0x00FFFFFFL);
+        maskRow[x] = (uint32_t) (a ? 0x00FFFFFFL : 0);
       }
+    }
   }
 
   st->tv=analogtv_allocate();
