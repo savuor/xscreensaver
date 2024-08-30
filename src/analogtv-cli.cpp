@@ -307,90 +307,55 @@ flip_ximage (XImage *ximage)
 }
 
 
-/* Loads the image to an XImage, RGBA -- GDK Pixbuf version.
- */
-static XImage *
-make_ximage (const char *filename,
-             const unsigned char *image_data, unsigned long data_size)
+XImage *
+file_to_ximage ( const char *filename)
 {
   assert(filename);
 
-  cv::Mat img = cv::imread(filename);
+  cv::Mat img = cv::imread(filename, cv::IMREAD_UNCHANGED);
   //TODO: BGR to RGB?
   //cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
 
   if (img.empty())
   {
     std::cout << "Failed to load image " << filename << std::endl;
-    return 0;
+    abort();
   }
 
+  if (img.depth() != CV_8U)
   {
-    XImage *image;
-    int w = img.cols;
-    int h = img.rows;
-    uchar *row = img.data;
-    int stride = img.step;
-    int chan = img.channels();
-    int x, y;
-
-    image = custom_XCreateImage (w, h);
-    image->data = (char *) malloc(h * image->bytes_per_line);
-
-    if (!image->data)
-      {
-        fprintf (stderr, "%s: out of memory (%d x %d)\n", progname, w, h);
-        return 0;
-      }
-
-    for (y = 0; y < h; y++)
-      {
-        uchar *i = row;
-        for (x = 0; x < w; x++)
-          {
-            unsigned long rgba = 0;
-            switch (chan) {
-            case 1:
-              rgba = ((0xFF << 24) |
-                      (*i   << 16) |
-                      (*i   <<  8) |
-                       *i);
-              i++;
-              break;
-            case 3:
-              rgba = ((0xFF << 24) |
-                      (i[2] << 16) |
-                      (i[1] <<  8) |
-                      i[0]);
-              i += 3;
-              break;
-            case 4:
-              rgba = ((i[3] << 24) |
-                      (i[2] << 16) |
-                      (i[1] <<  8) |
-                      i[0]);
-              i += 4;
-              break;
-            default:
-              abort();
-              break;
-            }
-            XPutPixel (image, x, y, rgba);
-          }
-        row += stride;
-      }
-
-    /* #### valgrind on xflame says there's a small leak in pb? */
-    return image;
+    std::cout << "Image depth is not 8 bit: " << filename << std::endl;
+    abort();
   }
-}
 
-XImage *
-file_to_ximage ( const char *filename)
-{
-  XImage *ximage = make_ximage ( filename, 0, 0);
-  flip_ximage (ximage);
-  return ximage;
+  cv::Mat cvt4;
+  if (img.channels() == 1)
+  {
+    cv::cvtColor(img, cvt4, cv::COLOR_GRAY2BGRA);
+  }
+  else if (img.channels() == 3)
+  {
+    cv::cvtColor(img, cvt4, cv::COLOR_BGR2BGRA);
+  }
+  else if (img.channels() == 4)
+  {
+    cvt4 = img;
+  }
+  else
+  {
+    std::cout << "Unknown format for file " << filename << std::endl;
+    abort();
+  }
+
+  XImage *image;
+  image = custom_XCreateImage(img.cols, img.rows);
+  image->data = (char *) malloc(img.rows * image->bytes_per_line);
+
+  cv::Mat mimg(img.size(), CV_8UC4, image->data);
+  cvt4.copyTo(mimg);
+
+  flip_ximage (image);
+  return image;
 }
 
 /* Scales an XImage, modifying it in place.
