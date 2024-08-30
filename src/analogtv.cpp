@@ -269,8 +269,7 @@ analogtv_alloc_image(analogtv *it)
   /* Width is in bits. */
   unsigned width = (it->usewidth * bits_per_pixel + align) & ~align;
 
-  it->image = custom_XCreateImage (it->xgwa.depth, NULL,
-                                       width / bits_per_pixel, it->useheight, 0);
+  it->image = custom_XCreateImage (NULL, width / bits_per_pixel, it->useheight, 0);
   int error = thread_malloc ((void **)&it->image->data, it->image->height * it->image->bytes_per_line);
   if (error)
   {

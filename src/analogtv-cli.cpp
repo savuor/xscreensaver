@@ -93,42 +93,6 @@ XPutPixel (XImage *ximage, int x, int y, unsigned long pixel)
 }
 
 static unsigned long
-ximage_getpixel_1 (XImage *ximage, int x, int y)
-{
-  return ((ximage->data [y * ximage->bytes_per_line + (x>>3)] >> (x & 7)) & 1);
-}
-
-static int
-ximage_putpixel_1 (XImage *ximage, int x, int y, unsigned long pixel)
-{
-  if (pixel)
-    ximage->data [y * ximage->bytes_per_line + (x>>3)] |=  (1 << (x & 7));
-  else
-    ximage->data [y * ximage->bytes_per_line + (x>>3)] &= ~(1 << (x & 7));
-
-  return 0;
-}
-
-static unsigned long
-ximage_getpixel_8 (XImage *ximage, int x, int y)
-{
-  return ((unsigned long)
-          *((uint8_t *) ximage->data +
-            (y * ximage->bytes_per_line) +
-            x));
-}
-
-static int
-ximage_putpixel_8 (XImage *ximage, int x, int y, unsigned long pixel)
-{
-  *((uint8_t *) ximage->data +
-    (y * ximage->bytes_per_line) +
-    x) = (uint8_t) pixel;
-  return 0;
-}
-
-
-static unsigned long
 ximage_getpixel_32 (XImage *ximage, int x, int y)
 {
   return ((unsigned long)
@@ -151,50 +115,35 @@ static int
 custom_XInitImage (XImage *ximage)
 {
   if (!ximage->bytes_per_line)
-    ximage->bytes_per_line = (ximage->depth == 1 ? (ximage->width + 7) / 8 :
-                              ximage->depth == 8 ? ximage->width :
-                              ximage->width * 4);
+    ximage->bytes_per_line = ximage->width * 4;
 
-  if (ximage->depth == 1) {
-    ximage->f.put_pixel = ximage_putpixel_1;
-    ximage->f.get_pixel = ximage_getpixel_1;
-  } else if (ximage->depth == 32 || ximage->depth == 24) {
-    ximage->f.put_pixel = ximage_putpixel_32;
-    ximage->f.get_pixel = ximage_getpixel_32;
-  } else if (ximage->depth == 8) {
-    ximage->f.put_pixel = ximage_putpixel_8;
-    ximage->f.get_pixel = ximage_getpixel_8;
-  } else {
-    printf("unknown depth\n");
-    assert(0); // "unknown depth"
-  }
+  ximage->f.put_pixel = ximage_putpixel_32;
+  ximage->f.get_pixel = ximage_getpixel_32;
+
   return 1;
 }
 
 XImage *
-custom_XCreateImage (unsigned int depth, char *data,
+custom_XCreateImage (char *data,
                      unsigned int width, unsigned int height,
                      int bytes_per_line)
 {
   XImage *ximage = (XImage *) calloc (1, sizeof(*ximage));
   unsigned long r, g, b;
 
-  if (depth == 0) depth = 32;
-
   ximage->width = width;
   ximage->height = height;
   ximage->data = data;
   ximage->byte_order = LSBFirst;
   ximage->bitmap_bit_order = ximage->byte_order;
-  ximage->depth = depth;
   r = 0x00FF0000L;
   g = 0x0000FF00L;
   b = 0x000000FFL;
 
-  ximage->red_mask   = (depth == 1 ? 0 : r);
-  ximage->green_mask = (depth == 1 ? 0 : g);
-  ximage->blue_mask  = (depth == 1 ? 0 : b);
-  ximage->bits_per_pixel = (depth == 1 ? 1 : 32);
+  ximage->red_mask   = r;
+  ximage->green_mask = g;
+  ximage->blue_mask  = b;
+  ximage->bits_per_pixel = 32;
   ximage->bytes_per_line = bytes_per_line;
 
   custom_XInitImage (ximage);
@@ -443,7 +392,7 @@ make_ximage (const char *filename,
     int chan = img.channels();
     int x, y;
 
-    image = custom_XCreateImage (32, 0, w, h, 0);
+    image = custom_XCreateImage (0, w, h, 0);
     image->data = (char *) malloc(h * image->bytes_per_line);
 
     /* Set the bit order in the XImage structure to whatever the
@@ -517,13 +466,10 @@ file_to_ximage ( const char *filename)
 static bool
 scale_ximage (XImage *ximage, int new_width, int new_height)
 {
-  int depth = 32;
   int x, y;
   double xscale, yscale;
 
-  XImage *ximage2 = custom_XCreateImage (depth,
-                                  0,
-                                  new_width, new_height, 0);
+  XImage *ximage2 = custom_XCreateImage (0, new_width, new_height, 0);
   ximage2->data = (char *) calloc (ximage2->height, ximage2->bytes_per_line);
 
   if (!ximage2->data)
@@ -637,10 +583,7 @@ analogtv_convert (const char **infiles, const char *outfile,
 
   memset (st, 0, sizeof(*st));
 
-  st->output_frame = custom_XCreateImage ( ximages[0]->depth,
-                                   NULL,
-                                   output_w, output_h,
-                                   0);
+  st->output_frame = custom_XCreateImage (NULL, output_w, output_h, 0);
   st->output_frame->data = (char *)
     calloc (st->output_frame->height, st->output_frame->bytes_per_line);
 
@@ -652,9 +595,7 @@ analogtv_convert (const char **infiles, const char *outfile,
                progname, logofile, st->logo->width, st->logo->height);
     flip_ximage (st->logo);
     /* Pull the alpha out of the logo and make a separate mask ximage. */
-    st->logo_mask = custom_XCreateImage (st->logo->depth,
-                                  NULL, st->logo->width, st->logo->height,
-                                  0);
+    st->logo_mask = custom_XCreateImage (NULL, st->logo->width, st->logo->height, 0);
     st->logo_mask->data = (char *)
     calloc (st->logo_mask->height, st->logo_mask->bytes_per_line);
 
