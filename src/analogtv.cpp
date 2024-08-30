@@ -221,8 +221,6 @@ analogtv_set_defaults(analogtv *it, const char *prefix)
          it->horiz_desync, it->flutter_horiz_desync);
   printf("  hashnoise rpm: %g\n",
          it->hashnoise_rpm);
-  printf("  vis: %d %d\n",
-         it->visclass, it->visdepth);
   printf("  shift: %d-%d %d-%d %d-%d\n",
          it->red_invprec,it->red_shift,
          it->green_invprec,it->green_shift,
@@ -405,7 +403,6 @@ analogtv_configure(analogtv *it)
 
   it->screen_xo = (it->xgwa.width-it->usewidth)/2;
   it->screen_yo = (it->xgwa.height-it->useheight)/2;
-  it->need_clear=1;
 }
 
 /* Can be any power-of-two <= 32. 16 a slightly better choice for 2-3 threads. */
@@ -484,12 +481,7 @@ analogtv * analogtv_allocate(void)
 
   it->shrinkpulse=-1;
 
-  it->n_colors=0;
-
   custom_XGetWindowAttributes (&it->xgwa);
-
-  it->visclass=TrueColor;
-  it->visdepth=it->xgwa.depth;
 
   it->red_mask   = 0x00FF0000L;
   it->green_mask = 0x0000FF00L;
@@ -1711,8 +1703,6 @@ analogtv_draw(analogtv *it, double noiselevel,
     }
   }
 #endif
-
-  it->need_clear=0;
 
   /*
     Subtle change: overall_bot was the bottom of the last scan line. Now it's

@@ -87,8 +87,6 @@ enum {
 typedef struct analogtv_input_s {
   signed char signal[ANALOGTV_V+1][ANALOGTV_H];
 
-  int do_teletext;
-
   /* for client use */
   void (*updater)(struct analogtv_input_s *inp);
   void *client_data;
@@ -129,11 +127,6 @@ typedef struct analogtv_s {
   unsigned int onscreen_signature[ANALOGTV_V];
 #endif
 
-  int n_colors;
-
-  int interlace;
-  int interlace_counter;
-
   float agclevel;
 
   /* If you change these, call analogtv_set_demod */
@@ -143,23 +136,17 @@ typedef struct analogtv_s {
   float squeezebottom;
   float powerup;
 
-  /* internal cache */
-  int blur_mult;
-
   /* For fast display, set fakeit_top, fakeit_bot to
      the scanlines (0..ANALOGTV_V) that can be preserved on screen.
      fakeit_scroll is the number of scan lines to scroll it up,
      or 0 to not scroll at all. It will DTRT if asked to scroll from
      an offscreen region.
   */
-  int fakeit_top;
-  int fakeit_bot;
-  int fakeit_scroll;
+  // int fakeit_top;
+  // int fakeit_bot;
+  // int fakeit_scroll;
   int redraw_all;
 
-  int bilevel_signal;
-
-  int visdepth,visclass,visbits;
   int red_invprec, red_shift;
   int green_invprec, green_shift;
   int blue_invprec, blue_shift;
@@ -170,11 +157,9 @@ typedef struct analogtv_s {
   int screen_xo,screen_yo; /* centers image in window */
 
   int flutter_horiz_desync;
-  int flutter_tint;
+  //int flutter_tint;
 
   struct timeval last_display_time;
-  int need_clear;
-
 
   /* Add hash (in the radio sense, not the programming sense.) These
      are the small white streaks that appear in quasi-regular patterns

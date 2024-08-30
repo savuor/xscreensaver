@@ -678,7 +678,6 @@ analogtv_convert (const char **infiles, const char *outfile,
   }
 
   analogtv_set_defaults(st->tv, "");
-  st->tv->need_clear=1;
 
   if (ya_random()%4==0) {
     st->tv->tint_control += pow(ya_frand(2.0)-1.0, 7) * 180.0;
