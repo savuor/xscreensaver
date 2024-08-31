@@ -3,16 +3,16 @@
 #pragma once
 
 #include <cstddef>
-#include <assert.h>
-#include <errno.h>
-#include <inttypes.h>
-#include <limits.h>
-#include <math.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
+#include <cassert>
+#include <cerrno>
+#include <cinttypes>
+#include <climits>
+#include <cmath>
+#include <csignal>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
 
 #include <sys/ipc.h>
 #include <sys/shm.h>
