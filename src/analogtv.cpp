@@ -246,10 +246,13 @@ analogtv_free_image(analogtv *it)
 {
   if (it->image)
   {
-    free (it->image->data);
-    it->image->data = NULL;
-    custom_XDestroyImage (it->image);
-    it->image=NULL;
+    if (it->image->data)
+    {
+      free(it->image->data);
+      it->image->data = NULL;
+    }
+    free(it->image);
+    it->image = NULL;
   }
 }
 
@@ -261,9 +264,17 @@ analogtv_alloc_image(analogtv *it)
   unsigned bits_per_pixel = 32;
   unsigned align = thread_memory_alignment() * 8 - 1;
   /* Width is in bits. */
-  unsigned width = (it->usewidth * bits_per_pixel + align) & ~align;
+  unsigned width = ((it->usewidth * bits_per_pixel + align) & ~align) / bits_per_pixel;
 
-  it->image = custom_XCreateImage (width / bits_per_pixel, it->useheight, true);
+  it->image = (XImage *) calloc (1, sizeof(XImage));
+  it->image->width = width;
+  it->image->height = it->useheight;
+  it->image->bytes_per_line = width * 4;
+  it->image->data = (char *) calloc(it->useheight, it->image->bytes_per_line);
+
+  it->image->red_mask   = 0x00FF0000L;
+  it->image->green_mask = 0x0000FF00L;
+  it->image->blue_mask  = 0x000000FFL;
 }
 
 

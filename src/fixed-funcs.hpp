@@ -71,8 +71,6 @@ struct XWindowAttributes {
 extern double get_float_resource (char*);
 
 // from analogtv-cli.c
-XImage * custom_XCreateImage (unsigned int width, unsigned int height, bool zero);
-int custom_XDestroyImage (XImage *ximage);
 int custom_XGetWindowAttributes (XWindowAttributes *xgwa);
 int custom_XPutImage (XImage *image,
                         int src_x, int src_y, int dest_x, int dest_y,

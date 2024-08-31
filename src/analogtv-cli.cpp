@@ -118,44 +118,6 @@ cv::Mat fromXImage(XImage* image)
    Most are unused. It seems like I am forever implementing subsets of X11.
  */
 
-
-XImage *
-custom_XCreateImage (unsigned int width, unsigned int height, bool zero)
-{
-  XImage *ximage = (XImage *) calloc (1, sizeof(*ximage));
-  unsigned long r, g, b;
-
-  ximage->width = width;
-  ximage->height = height;
-  r = 0x00FF0000L;
-  g = 0x0000FF00L;
-  b = 0x000000FFL;
-
-  ximage->red_mask   = r;
-  ximage->green_mask = g;
-  ximage->blue_mask  = b;
-  ximage->bytes_per_line = ximage->width * 4;
-
-  if (zero)
-  {
-    ximage->data = (char *) calloc(height, ximage->bytes_per_line);
-  }
-  else
-  {
-    ximage->data = (char *) malloc(height * ximage->bytes_per_line);
-  }
-
-  return ximage;
-}
-
-int
-custom_XDestroyImage (XImage *ximage)
-{
-  if (ximage->data) free (ximage->data);
-  free (ximage);
-  return 0;
-}
-
 int
 custom_XGetWindowAttributes (XWindowAttributes *xgwa)
 {
@@ -369,19 +331,6 @@ cv::Mat loadImage(std::string fname)
   cv::flip(cvt4, cvt4, 0);
 
   return cvt4;
-}
-
-XImage *
-file_to_ximage ( const char *filename)
-{
-  cv::Mat cvt4 = loadImage(filename);
-
-  XImage* image = custom_XCreateImage(cvt4.cols, cvt4.rows, false);
-
-  cv::Mat mimg(cvt4.size(), CV_8UC4, image->data);
-  cvt4.copyTo(mimg);
-
-  return image;
 }
 
 
