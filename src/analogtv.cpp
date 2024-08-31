@@ -246,7 +246,7 @@ analogtv_free_image(analogtv *it)
 {
   if (it->image)
   {
-    thread_free (it->image->data);
+    free (it->image->data);
     it->image->data = NULL;
     custom_XDestroyImage (it->image);
     it->image=NULL;
