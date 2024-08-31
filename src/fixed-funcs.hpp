@@ -17,20 +17,6 @@
 
 // from jwxyz
 
-#define DoRed			(1<<0)
-#define DoGreen			(1<<1)
-#define DoBlue			(1<<2)
-
-// #define StaticGray		0
-// #define GrayScale		1
-// #define StaticColor		2
-// #define PseudoColor		3
-#define TrueColor		4
-//#define DirectColor		5
-
-#define LSBFirst		0
-#define MSBFirst		1
-
 struct XColor {
   unsigned long pixel;
   unsigned short red, green, blue;
