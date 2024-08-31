@@ -58,8 +58,22 @@ typedef struct chansetting_s {
   double noise_level;
 } chansetting;
 
-struct state {
-  XImage *output_frame;
+struct state
+{
+  state() : 
+  outBuffer(),
+  tv(),
+  n_stations(),
+  stations(),
+  image_loading_p(),
+  logo(),
+  logo_mask(),
+  curinputi(),
+  chansettings(),
+  cs()
+  { }
+
+  cv::Mat outBuffer;
   analogtv *tv;
 
   int n_stations;
@@ -73,6 +87,31 @@ struct state {
 };
 
 static struct state global_state;
+
+
+XImage fromCvMat(cv::Mat& m)
+{
+  assert(!m.empty());
+  assert(m.type() == CV_8UC4);
+
+  XImage image;
+  image.width  = m.cols;
+  image.height = m.rows;
+  image.red_mask   = 0x00FF0000L;
+  image.green_mask = 0x0000FF00L;
+  image.blue_mask  = 0x000000FFL;
+  image.bytes_per_line = m.step;
+  image.data = (char*)m.data;
+
+  return image;
+}
+
+cv::Mat fromXImage(XImage* image)
+{
+  cv::Mat m(image->height, image->width, CV_8UC4, (uchar*)image->data);
+
+  return m;
+}
 
 
 /* Since this program does not connect to an X server, or in fact link
@@ -123,14 +162,9 @@ custom_XGetWindowAttributes (XWindowAttributes *xgwa)
 {
   struct state *st = &global_state;
   memset (xgwa, 0, sizeof(*xgwa));
-  xgwa->width = st->output_frame->width;
-  xgwa->height = st->output_frame->height;
+  xgwa->width = st->outBuffer.cols;
+  xgwa->height = st->outBuffer.rows;
   return true;
-}
-
-static uint32_t *image_ptr(XImage *image, unsigned int x, unsigned int y)
-{
-  return (uint32_t *) (image->data + image->bytes_per_line * y) + x;
 }
 
 int
@@ -139,37 +173,38 @@ custom_XPutImage (XImage *image,
            unsigned int w, unsigned int h)
 {
   struct state *st = &global_state;
-  XImage *out = st->output_frame;
-  int y;
+  cv::Mat img = fromXImage(image);
 
   if (src_x < 0)
-    {
-      w += src_x;
-      dest_x -= src_x;
-      src_x = 0;
-    }
-  if (dest_x < 0)
-    {
-      w += dest_x;
-      src_x -= dest_x;
-      dest_x = 0;
-    }
-  if (src_x + (int)w > image->width)
-    w = image->width - src_x;
-  if (dest_x + (int)w > out->width)
-    w = out->width - dest_x;
-
-  for (y = 0; y < (int)h; y++) {
-    int iy = src_y + y;
-    int oy = dest_y + y;
-    if (iy >= 0 &&
-        oy >= 0 &&
-        iy < image->height &&
-        oy < out->height)
-      memcpy (image_ptr (out, dest_x, oy),
-              image_ptr (image, src_x, iy),
-              4 * w);
+  {
+    w += src_x;
+    dest_x -= src_x;
+    src_x = 0;
   }
+  if (dest_x < 0)
+  {
+    w += dest_x;
+    src_x -= dest_x;
+    dest_x = 0;
+  }
+  w = std::min((int)w, std::min(st->outBuffer.cols - dest_x, image->width - src_x));
+
+  if (src_y < 0)
+  {
+    h += src_y;
+    dest_y -= src_y;
+    src_y = 0;
+  }
+  if (dest_y < 0)
+  {
+    h += dest_y;
+    src_y -= dest_y;
+    dest_y = 0;
+  }
+  h = std::min((int)h, std::min(st->outBuffer.rows - dest_y, image->height - src_y));
+
+  img(cv::Rect(src_x, src_y, w, h)).copyTo(st->outBuffer(cv::Rect(dest_x, dest_y, w, h)));
+
   return 0;
 }
 
@@ -279,8 +314,7 @@ update_smpte_colorbars(analogtv_input *input)
                               0.75, 1.00, 7, 0, 0);      /* black */
   if (st->logo)
     {
-      double aspect = (double)
-        st->output_frame->width / st->output_frame->height;
+      double aspect = (double)st->outBuffer.cols / st->outBuffer.rows;
       double scale = (aspect > 1 ? 0.35 : 0.6);
       int w2 = st->tv->xgwa.width  * scale;
       int h2 = st->tv->xgwa.height * scale * aspect;
@@ -425,7 +459,6 @@ analogtv_convert (const char **infiles, const char *outfile,
                   int duration, int slideshow, bool powerp)
 {
   unsigned long start_time = time((time_t *)0);
-  struct state *st = &global_state;
   int i;
   int nfiles;
   unsigned long curticks = 0, curticks_sub = 0;
@@ -493,9 +526,9 @@ analogtv_convert (const char **infiles, const char *outfile,
         }
     }
 
-  memset (st, 0, sizeof(*st));
+  struct state *st = &global_state;
 
-  st->output_frame = custom_XCreateImage (output_w, output_h, true);
+  st->outBuffer = cv::Mat(output_h, output_w, CV_8UC4, cv::Scalar(0));
 
   if (logofile) {
     int x, y;
@@ -774,10 +807,8 @@ analogtv_convert (const char **infiles, const char *outfile,
       }
     }
 
-    cv::Mat m(st->output_frame->height, st->output_frame->width, CV_8UC4,
-              (void*)st->output_frame->data, st->output_frame->bytes_per_line);
     cv::Mat m3;
-    cvtColor(m, m3, cv::COLOR_BGRA2BGR);
+    cvtColor(st->outBuffer, m3, cv::COLOR_BGRA2BGR);
     // writer->write(m3);
     cv::imshow("tv", m3);
     cv::waitKey(33);
