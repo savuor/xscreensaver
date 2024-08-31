@@ -271,10 +271,6 @@ analogtv_alloc_image(analogtv *it)
   it->image->height = it->useheight;
   it->image->bytes_per_line = width * 4;
   it->image->data = (char *) calloc(it->useheight, it->image->bytes_per_line);
-
-  it->image->red_mask   = 0x00FF0000L;
-  it->image->green_mask = 0x0000FF00L;
-  it->image->blue_mask  = 0x000000FFL;
 }
 
 
@@ -475,10 +471,6 @@ analogtv * analogtv_allocate(void)
 
   custom_XGetWindowAttributes (&it->xgwa);
 
-  it->red_mask   = 0x00FF0000L;
-  it->green_mask = 0x0000FF00L;
-  it->blue_mask  = 0x000000FFL;
-
   it->red_shift=it->red_invprec=-1;
   it->green_shift=it->green_invprec=-1;
   it->blue_shift=it->blue_invprec=-1;
@@ -490,11 +482,11 @@ analogtv * analogtv_allocate(void)
     for (prec = 1; prec < 16 && prec < 40 - shift; prec++)
     {
       unsigned long mask = (0xffffUL >> (16 - prec)) << shift;
-      if (it->red_shift < 0 && mask == it->red_mask)
+      if (it->red_shift < 0 && mask == 0x00FF0000L)
         it->red_shift = shift, it->red_invprec = 16 - prec;
-      if (it->green_shift < 0 && mask == it->green_mask)
+      if (it->green_shift < 0 && mask == 0x0000FF00L)
         it->green_shift = shift, it->green_invprec = 16 - prec;
-      if (it->blue_shift < 0 && mask == it->blue_mask)
+      if (it->blue_shift < 0 && mask == 0x000000FFL)
         it->blue_shift = shift, it->blue_invprec = 16 - prec;
     }
   }

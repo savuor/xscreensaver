@@ -150,7 +150,6 @@ typedef struct analogtv_s {
   int red_invprec, red_shift;
   int green_invprec, green_shift;
   int blue_invprec, blue_shift;
-  unsigned long red_mask, green_mask, blue_mask;
 
   int usewidth,useheight,xrepl,subwidth;
   XImage *image; /* usewidth * useheight */

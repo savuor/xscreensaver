@@ -28,10 +28,7 @@ struct XImage
         width(),
         height(),
         data(),
-        bytes_per_line(),
-        red_mask(),
-        green_mask(),
-        blue_mask()
+        bytes_per_line()
     { }
     int width, height;		/* size of image */
 
@@ -41,9 +38,9 @@ struct XImage
     // int depth;			/* always 32 */
     int bytes_per_line;		/* accelarator to next line */
     // int bits_per_pixel;		/* always 32 */
-    unsigned long red_mask;	/* bits in z arrangment */
-    unsigned long green_mask;
-    unsigned long blue_mask;
+    // unsigned long red_mask  ; /* always 0x00FF0000L */
+    // unsigned long green_mask; /* always 0x0000FF00L */
+    // unsigned long blue_mask ; /* always 0x000000FFL */
 };
 
 struct XWindowAttributes {

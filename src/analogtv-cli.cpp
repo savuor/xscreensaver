@@ -96,9 +96,6 @@ XImage fromCvMat(cv::Mat& m)
   XImage image;
   image.width  = m.cols;
   image.height = m.rows;
-  image.red_mask   = 0x00FF0000L;
-  image.green_mask = 0x0000FF00L;
-  image.blue_mask  = 0x000000FFL;
   image.bytes_per_line = m.step;
   image.data = (char*)m.data;
 
