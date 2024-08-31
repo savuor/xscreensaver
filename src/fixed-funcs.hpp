@@ -34,8 +34,6 @@
 struct XColor {
   unsigned long pixel;
   unsigned short red, green, blue;
-  char flags;  /* do_red, do_green, do_blue */
-  char pad;
 };
 
 struct XImage
@@ -75,8 +73,6 @@ int custom_XGetWindowAttributes (XWindowAttributes *xgwa);
 int custom_XPutImage (XImage *image,
                         int src_x, int src_y, int dest_x, int dest_y,
                         unsigned int w, unsigned int h);
-int custom_XQueryColor (XColor *color);
-int custom_XQueryColors (XColor *c, int n);
 
 // from screenhackI.h
 

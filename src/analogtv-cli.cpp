@@ -169,28 +169,6 @@ custom_XPutImage (XImage *image,
   return 0;
 }
 
-int
-custom_XQueryColor (XColor *color)
-{
-  uint16_t r = (color->pixel & 0x00FF0000L) >> 16;
-  uint16_t g = (color->pixel & 0x0000FF00L) >> 8;
-  uint16_t b = (color->pixel & 0x000000FFL);
-  color->red   = r | (r<<8);
-  color->green = g | (g<<8);
-  color->blue  = b | (b<<8);
-  color->flags = DoRed|DoGreen|DoBlue;
-  return 0;
-}
-
-int
-custom_XQueryColors (XColor *c, int n)
-{
-  int i;
-  for (i = 0; i < n; i++)
-    custom_XQueryColor (&c[i]);
-  return 0;
-}
-
 static int darkp = 0;
 double
 get_float_resource (char *name)

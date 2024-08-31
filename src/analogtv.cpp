@@ -1710,8 +1710,29 @@ analogtv_load_ximage(analogtv *it, analogtv_input *input,
       else
         mask[x] = 1;
     }
-    custom_XQueryColors( col1, x_length);
-    custom_XQueryColors( col2, x_length);
+
+    for (int i = 0; i < x_length; i++)
+    {
+      XColor& color = col1[i];
+      uint16_t r = (color.pixel & 0x00FF0000L) >> 16;
+      uint16_t g = (color.pixel & 0x0000FF00L) >> 8;
+      uint16_t b = (color.pixel & 0x000000FFL);
+      color.red   = r | (r<<8);
+      color.green = g | (g<<8);
+      color.blue  = b | (b<<8);
+    }
+
+    for (int i = 0; i < x_length; i++)
+    {
+      XColor& color = col2[i];
+      uint16_t r = (color.pixel & 0x00FF0000L) >> 16;
+      uint16_t g = (color.pixel & 0x0000FF00L) >> 8;
+      uint16_t b = (color.pixel & 0x000000FFL);
+      color.red   = r | (r<<8);
+      color.green = g | (g<<8);
+      color.blue  = b | (b<<8);
+    }
+
     for (i=0; i<7; i++) fyx[i]=fyy[i]=0;
     for (i=0; i<4; i++) fix[i]=fiy[i]=fqx[i]=fqy[i]=0.0;
 
