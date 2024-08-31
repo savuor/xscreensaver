@@ -226,7 +226,7 @@ void analogtv_draw(analogtv *it, double noiselevel,
                    const analogtv_reception *const *recs, unsigned rec_count);
 
 int analogtv_load_ximage(analogtv *it, analogtv_input *input,
-                         XImage *pic_im, XImage *mask_im,
+                         XImage pic_im, XImage mask_im,
                          int xoff, int yoff, int width, int height);
 
 void analogtv_reception_update(analogtv_reception *inp);

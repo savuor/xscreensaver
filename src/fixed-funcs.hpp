@@ -40,6 +40,15 @@ struct XColor {
 
 struct XImage
 {
+    XImage() :
+        width(),
+        height(),
+        data(),
+        bytes_per_line(),
+        red_mask(),
+        green_mask(),
+        blue_mask()
+    { }
     int width, height;		/* size of image */
 
     char *data;			/* pointer to image data */

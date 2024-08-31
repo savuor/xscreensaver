@@ -317,9 +317,7 @@ update_smpte_colorbars(analogtv_input *input)
       double scale = (aspect > 1 ? 0.35 : 0.6);
       int w2 = st->tv->xgwa.width  * scale;
       int h2 = st->tv->xgwa.height * scale * aspect;
-      XImage xlogo = fromCvMat(st->logoImg);
-      XImage xmask = fromCvMat(st->logoMask);
-      analogtv_load_ximage (st->tv, input, &xlogo, &xmask,
+      analogtv_load_ximage (st->tv, input, fromCvMat(st->logoImg), fromCvMat(st->logoMask),
                             (st->tv->xgwa.width - w2) / 2,
                             st->tv->xgwa.height * 0.20,
                             w2, h2);
@@ -329,31 +327,9 @@ update_smpte_colorbars(analogtv_input *input)
 }
 
 
-static void
-flip_ximage (XImage *ximage)
-{
-  char *data2, *in, *out;
-  int y;
-
-  if (!ximage) return;
-  data2 = (char*) malloc (ximage->bytes_per_line * ximage->height);
-  if (!data2) abort();
-  in = ximage->data;
-  out = data2 + ximage->bytes_per_line * (ximage->height - 1);
-  for (y = 0; y < ximage->height; y++)
-    {
-      memcpy (out, in, ximage->bytes_per_line);
-      in  += ximage->bytes_per_line;
-      out -= ximage->bytes_per_line;
-    }
-  free (ximage->data);
-  ximage->data = data2;
-}
-
-
 cv::Mat loadImage(std::string fname)
 {
-  assert(fname);
+  assert(!fname.empty());
 
   cv::Mat img = cv::imread(fname, cv::IMREAD_UNCHANGED);
   //TODO: BGR to RGB?
@@ -408,58 +384,6 @@ file_to_ximage ( const char *filename)
   return image;
 }
 
-/* Scales an XImage, modifying it in place.
-   This doesn't do dithering or smoothing, so it might have artifacts.
-   If out of memory, returns False, and the XImage will have been
-   destroyed and freed.
- */
-static bool
-scale_ximage (XImage *ximage, int new_width, int new_height)
-{
-  int x, y;
-  double xscale, yscale;
-
-  XImage *ximage2 = custom_XCreateImage (new_width, new_height, true);
-
-  if (!ximage2->data)
-    {
-      fprintf (stderr, "%s: out of memory scaling %dx%d image to %dx%d\n",
-               progname,
-               ximage->width, ximage->height,
-               ximage2->width, ximage2->height);
-      if (ximage->data) free (ximage->data);
-      if (ximage2->data) free (ximage2->data);
-      ximage->data = 0;
-      ximage2->data = 0;
-      custom_XDestroyImage (ximage);
-      custom_XDestroyImage (ximage2);
-      return false;
-    }
-
-  /* Brute force scaling... */
-  xscale = (double) ximage->width  / ximage2->width;
-  yscale = (double) ximage->height / ximage2->height;
-  for (y = 0; y < ximage2->height; y++)
-  {
-    uint32_t* srcrow = (uint32_t*)(ximage->data + (int)std::floor(y * yscale) * ximage->bytes_per_line);
-    for (x = 0; x < ximage2->width; x++)
-    {
-      uint32_t p = srcrow[(int)std::floor(x * xscale)];
-      *(uint32_t*)(ximage2->data + y * ximage2->bytes_per_line + x * sizeof(uint32_t)) = (uint32_t) p;
-    }
-  }
-
-  free (ximage->data);
-  ximage->data = 0;
-
-  (*ximage) = (*ximage2);
-
-  ximage2->data = 0;
-  custom_XDestroyImage (ximage2);
-
-  return true;
-}
-
 
 static void
 analogtv_convert (const char **infiles, const char *outfile,
@@ -475,8 +399,8 @@ analogtv_convert (const char **infiles, const char *outfile,
   int frames_left = 0;
   int channel_changes = 0;
   int fps = 30;
-  XImage **ximages;
-  XImage *base_image = 0;
+  std::vector<cv::Mat> images;
+  cv::Mat baseImage;
   int *stats;
   cv::Ptr<cv::VideoWriter> writer;
 
@@ -485,20 +409,19 @@ analogtv_convert (const char **infiles, const char *outfile,
   stats = (int *) calloc(N_CHANNELS, sizeof(*stats));
   for (nfiles = 0; infiles[nfiles]; nfiles++)
     ;
-  ximages = (XImage **) calloc (nfiles, sizeof(*ximages));
 
   {
     int maxw = 0, maxh = 0;
     for (i = 0; i < nfiles; i++)
       {
-        XImage *ximage = file_to_ximage (infiles[i]);
-        ximages[i] = ximage;
+        cv::Mat img = loadImage(infiles[i]);
+        images.push_back(img);
         if (verbose_p > 1)
           fprintf (stderr, "%s: loaded %s %dx%d\n", progname, infiles[i],
-                   ximage->width, ximage->height);
-        flip_ximage (ximage);
-        if (ximage->width  > maxw) maxw = ximage->width;
-        if (ximage->height > maxh) maxh = ximage->height;
+                   img.cols, img.rows);
+        flip(img, img, 0);
+        maxw = std::max(maxw, img.cols);
+        maxh = std::max(maxh, img.rows);
       }
 
     if (!output_w || !output_h) {
@@ -514,11 +437,11 @@ analogtv_convert (const char **infiles, const char *outfile,
    */
   for (i = 0; i < nfiles; i++)
     {
-      XImage *ximage = ximages[i];
-      if (ximage->width != output_w || ximage->height != output_h)
+      cv::Mat img = images[i];
+      if (img.size() != cv::Size(output_w, output_h))
         {
           double r1 = (double) output_w / output_h;
-          double r2 = (double) ximage->width / ximage->height;
+          double r2 = (double) img.cols / img.rows;
           int w2, h2;
           if (r1 > r2)
             {
@@ -530,8 +453,9 @@ analogtv_convert (const char **infiles, const char *outfile,
               w2 = output_w;
               h2 = output_w / r2;
             }
-          if (! scale_ximage (ximage, w2, h2))
-            abort();
+          cv::Mat out;
+          cv::resize(img, out, cv::Size(w2, h2));
+          images[i] = out;
         }
     }
 
@@ -648,22 +572,23 @@ analogtv_convert (const char **infiles, const char *outfile,
     /* First channel (initial unadulterated image) stays for this long */
     frames_left = fps * (2 + ya_frand(1.5));
 
-  if (slideshow) {
+  if (slideshow)
+  {
     /* Pick one of the input images and fill all channels with variants
        of it.
      */
     int n = ya_random() % nfiles;
-    XImage *ximage = ximages[n];
-    base_image = ximage;
+    cv::Mat img = images[n];
+    baseImage = img;
     if (verbose_p > 1)
       fprintf (stderr, "%s: initializing for %s %dx%d in %d channels\n", 
-               progname, infiles[n], ximage->width, ximage->height,
+               progname, infiles[n], img.cols, img.rows,
                MAX_STATIONS);
 
     for (i = 0; i < MAX_STATIONS; i++) {
       analogtv_input *input = st->stations[i];
-      int w = ximage->width  * 0.815;  /* underscan */
-      int h = ximage->height * 0.970;
+      int w = img.cols * 0.815;  /* underscan */
+      int h = img.rows * 0.970;
       int x = (output_w - w) / 2;
       int y = (output_h - h) / 2;
 
@@ -673,19 +598,22 @@ analogtv_convert (const char **infiles, const char *outfile,
       }
 
       analogtv_setup_sync (input, 1, (ya_random()%20)==0);
-      analogtv_load_ximage (st->tv, input, ximage, 0, x, y, w, h);
+      analogtv_load_ximage (st->tv, input, fromCvMat(img), XImage(), x, y, w, h);
     }
-  } else {
+  }
+  else
+  {
     /* Fill all channels with images */
     if (verbose_p > 1)
       fprintf (stderr, "%s: initializing %d files in %d channels\n",
                progname, nfiles, MAX_STATIONS);
 
-    for (i = 0; i < MAX_STATIONS; i++) {
-      XImage *ximage = ximages[i % nfiles];
+    for (i = 0; i < MAX_STATIONS; i++)
+    {
+      cv::Mat img = images[i % nfiles];
       analogtv_input *input = st->stations[i];
-      int w = ximage->width  * 0.815;  /* underscan */
-      int h = ximage->height * 0.970;
+      int w = img.cols * 0.815;  /* underscan */
+      int h = img.rows * 0.970;
       int x = (output_w - w) / 2;
       int y = (output_h - h) / 2;
 
@@ -693,7 +621,7 @@ analogtv_convert (const char **infiles, const char *outfile,
         input->updater = update_smpte_colorbars;
 
       analogtv_setup_sync (input, 1, (ya_random()%20)==0);
-      analogtv_load_ximage (st->tv, input, ximage, 0, x, y, w, h);
+      analogtv_load_ximage (st->tv, input, fromCvMat(img), XImage(), x, y, w, h);
     }
   }
 
@@ -801,14 +729,11 @@ analogtv_convert (const char **infiles, const char *outfile,
       analogtv_draw (st->tv, st->cs->noise_level, recs, rec_count);
 
       if (slideshow && st->curinputi == 0 &&
-          (!powerp || curticks > POWERUP_DURATION*1000)) {
+          (!powerp || curticks > POWERUP_DURATION*1000))
+      {
         /* Unadulterated image centered on top of border of static */
-        XImage *ximage = base_image;
-        int w = ximage->width;
-        int h = ximage->height;
-        int x = (output_w - w) / 2;
-        int y = (output_h - h) / 2;
-        custom_XPutImage (ximage, 0, 0, x, y, w, h);
+        cv::Point tl((output_w - baseImage.cols) / 2, (output_h - baseImage.rows) / 2);
+        baseImage.copyTo(st->outBuffer(cv::Rect(tl, baseImage.size())));
       }
     }
 

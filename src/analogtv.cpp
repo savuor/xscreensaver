@@ -1649,7 +1649,7 @@ analogtv_input_allocate(void)
 
 int
 analogtv_load_ximage(analogtv *it, analogtv_input *input,
-                     XImage *pic_im, XImage *mask_im,
+                     XImage pic_im, XImage mask_im,
                      int xoff, int yoff, int target_w, int target_h)
 {
   int i,x,y;
@@ -1670,8 +1670,8 @@ analogtv_load_ximage(analogtv *it, analogtv_input *input,
   if (target_w > 0) x_length     = x_length     * target_w / it->xgwa.width;
   if (target_h > 0) y_scanlength = y_scanlength * target_h / it->xgwa.height;
 
-  img_w = pic_im->width;
-  img_h = pic_im->height;
+  img_w = pic_im.width;
+  img_h = pic_im.height;
   
   xoff = ANALOGTV_PIC_LEN  * xoff / it->xgwa.width;
   yoff = ANALOGTV_VISLINES * yoff / it->xgwa.height;
@@ -1686,15 +1686,15 @@ analogtv_load_ximage(analogtv *it, analogtv_input *input,
     int picy1=(y*img_h)/y_scanlength;
     int picy2=(y*img_h + y_scanlength/2)/y_scanlength;
 
-    uint32_t* rowIm1 = (uint32_t*)(pic_im->data + picy1 * pic_im->bytes_per_line);
-    uint32_t* rowIm2 = (uint32_t*)(pic_im->data + picy2 * pic_im->bytes_per_line);
-    uint32_t* rowMask1 = mask_im ? (uint32_t*)(mask_im->data + picy1 * mask_im->bytes_per_line) : nullptr;
+    uint32_t* rowIm1 = (uint32_t*)(pic_im.data + picy1 * pic_im.bytes_per_line);
+    uint32_t* rowIm2 = (uint32_t*)(pic_im.data + picy2 * pic_im.bytes_per_line);
+    uint32_t* rowMask1 = mask_im.data ? (uint32_t*)(mask_im.data + picy1 * mask_im.bytes_per_line) : nullptr;
     for (x=0; x<x_length; x++)
     {
       int picx=(x*img_w)/x_length;
       col1[x].pixel = rowIm1[picx];
       col2[x].pixel = rowIm2[picx];
-      if (mask_im)
+      if (rowMask1)
         mask[x] = (rowMask1[picx] != black);
       else
         mask[x] = 1;
