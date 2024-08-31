@@ -62,24 +62,23 @@ struct state
 {
   state() : 
   outBuffer(),
+  logoImg(),
+  logoMask(),
   tv(),
   n_stations(),
   stations(),
   image_loading_p(),
-  logo(),
-  logo_mask(),
   curinputi(),
   chansettings(),
   cs()
   { }
 
-  cv::Mat outBuffer;
+  cv::Mat outBuffer, logoImg, logoMask;
   analogtv *tv;
 
   int n_stations;
   analogtv_input **stations;
   bool image_loading_p;
-  XImage *logo, *logo_mask;
 
   int curinputi;
   chansetting *chansettings;
@@ -312,13 +311,15 @@ update_smpte_colorbars(analogtv_input *input)
                               0.75, 1.00, 11, 0, 0);     /* black +4 */
   analogtv_draw_solid_rel_lcp(input, 5.0/6.0, 6.0/6.0,
                               0.75, 1.00, 7, 0, 0);      /* black */
-  if (st->logo)
+  if (!st->logoImg.empty())
     {
       double aspect = (double)st->outBuffer.cols / st->outBuffer.rows;
       double scale = (aspect > 1 ? 0.35 : 0.6);
       int w2 = st->tv->xgwa.width  * scale;
       int h2 = st->tv->xgwa.height * scale * aspect;
-      analogtv_load_ximage (st->tv, input, st->logo, st->logo_mask,
+      XImage xlogo = fromCvMat(st->logoImg);
+      XImage xmask = fromCvMat(st->logoMask);
+      analogtv_load_ximage (st->tv, input, &xlogo, &xmask,
                             (st->tv->xgwa.width - w2) / 2,
                             st->tv->xgwa.height * 0.20,
                             w2, h2);
@@ -350,24 +351,23 @@ flip_ximage (XImage *ximage)
 }
 
 
-XImage *
-file_to_ximage ( const char *filename)
+cv::Mat loadImage(std::string fname)
 {
-  assert(filename);
+  assert(fname);
 
-  cv::Mat img = cv::imread(filename, cv::IMREAD_UNCHANGED);
+  cv::Mat img = cv::imread(fname, cv::IMREAD_UNCHANGED);
   //TODO: BGR to RGB?
   //cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
 
   if (img.empty())
   {
-    std::cout << "Failed to load image " << filename << std::endl;
+    std::cout << "Failed to load image " << fname << std::endl;
     abort();
   }
 
   if (img.depth() != CV_8U)
   {
-    std::cout << "Image depth is not 8 bit: " << filename << std::endl;
+    std::cout << "Image depth is not 8 bit: " << fname << std::endl;
     abort();
   }
 
@@ -386,16 +386,25 @@ file_to_ximage ( const char *filename)
   }
   else
   {
-    std::cout << "Unknown format for file " << filename << std::endl;
+    std::cout << "Unknown format for file " << fname << std::endl;
     abort();
   }
 
-  XImage* image = custom_XCreateImage(img.cols, img.rows, false);
+  cv::flip(cvt4, cvt4, 0);
 
-  cv::Mat mimg(img.size(), CV_8UC4, image->data);
+  return cvt4;
+}
+
+XImage *
+file_to_ximage ( const char *filename)
+{
+  cv::Mat cvt4 = loadImage(filename);
+
+  XImage* image = custom_XCreateImage(cvt4.cols, cvt4.rows, false);
+
+  cv::Mat mimg(cvt4.size(), CV_8UC4, image->data);
   cvt4.copyTo(mimg);
 
-  flip_ximage (image);
   return image;
 }
 
@@ -530,27 +539,23 @@ analogtv_convert (const char **infiles, const char *outfile,
 
   st->outBuffer = cv::Mat(output_h, output_w, CV_8UC4, cv::Scalar(0));
 
-  if (logofile) {
-    int x, y;
-    st->logo = file_to_ximage ( logofile);
+  if (logofile)
+  {
+    st->logoImg = loadImage(logofile);
     if (verbose_p)
-      fprintf (stderr, "%s: loaded %s %dx%d\n", 
-               progname, logofile, st->logo->width, st->logo->height);
-    flip_ximage (st->logo);
-    /* Pull the alpha out of the logo and make a separate mask ximage. */
-    st->logo_mask = custom_XCreateImage (st->logo->width, st->logo->height, true);
-
-    for (y = 0; y < st->logo->height; y++)
     {
-      uint32_t* logoRow = (uint32_t*)(st->logo->data      + y * st->logo->bytes_per_line);
-      uint32_t* maskRow = (uint32_t*)(st->logo_mask->data + y * st->logo_mask->bytes_per_line);
-      for (x = 0; x < st->logo->width; x++) {
-        unsigned long p = logoRow[x];
-        uint8_t a = (p & 0xFF000000L) >> 24;
-        logoRow[x] = (uint32_t) (p & 0x00FFFFFFL);
-        maskRow[x] = (uint32_t) (a ? 0x00FFFFFFL : 0);
-      }
+      fprintf (stderr, "%s: loaded %s %dx%d\n", 
+               progname, logofile, st->logoImg.cols, st->logoImg.rows);
     }
+    cv::flip(st->logoImg, st->logoImg, 0);
+
+    /* Pull the alpha out of the logo and make a separate mask ximage. */
+    st->logoMask = cv::Mat(st->logoImg.size(), CV_8UC4, cv::Scalar(0));
+    std::vector<cv::Mat> logoCh;
+    cv::split(st->logoImg, logoCh);
+    cv::Mat z = cv::Mat(st->logoImg.size(), CV_8UC1, cv::Scalar(0));
+    cv::merge(std::vector<cv::Mat> {logoCh[0], logoCh[1], logoCh[2], z}, st->logoImg);
+    cv::merge(std::vector<cv::Mat> {z, z, z, logoCh[3]}, st->logoMask);
   }
 
   st->tv=analogtv_allocate();
