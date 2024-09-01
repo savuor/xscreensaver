@@ -242,11 +242,11 @@ update_smpte_colorbars(analogtv_input *input)
     {
       double aspect = (double)st->outBuffer.cols / st->outBuffer.rows;
       double scale = (aspect > 1 ? 0.35 : 0.6);
-      int w2 = st->tv->xgwa.width  * scale;
-      int h2 = st->tv->xgwa.height * scale * aspect;
+      int w2 = st->tv->outbuffer_width  * scale;
+      int h2 = st->tv->outbuffer_height * scale * aspect;
       analogtv_load_ximage (st->tv, input, fromCvMat(st->logoImg), fromCvMat(st->logoMask),
-                            (st->tv->xgwa.width - w2) / 2,
-                            st->tv->xgwa.height * 0.20,
+                            (st->tv->outbuffer_width - w2) / 2,
+                            st->tv->outbuffer_height * 0.20,
                             w2, h2);
     }
 

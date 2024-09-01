@@ -43,11 +43,6 @@ struct XImage
     // unsigned long blue_mask ; /* always 0x000000FFL */
 };
 
-struct XWindowAttributes {
-    // int x, y;			/* location of window, always 0 */
-    int width, height;		/* width and height of window */
-};
-
 // from resources.h
 extern double get_float_resource (char*);
 

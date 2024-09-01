@@ -271,8 +271,8 @@ analogtv_configure(analogtv *it)
   float ratio;
   float height_snap=0.025;
 
-  hlim = it->xgwa.height;
-  wlim = it->xgwa.width;
+  hlim = it->outbuffer_height;
+  wlim = it->outbuffer_width;
   ratio = wlim / (float) hlim;
 
 // NO_CONSTRAIN_RATIO is defined
@@ -289,7 +289,7 @@ analogtv_configure(analogtv *it)
 # ifdef DEBUG
       fprintf (stderr,
                "size: minimal: %dx%d in %dx%d (%.3f < %.3f < %.3f)\n",
-               wlim, hlim, it->xgwa.width, it->xgwa.height,
+               wlim, hlim, it->outbuffer_width, it->outbuffer_height,
                min_ratio, ratio, max_ratio);
 # endif
     }
@@ -307,7 +307,7 @@ analogtv_configure(analogtv *it)
 # ifdef DEBUG
       fprintf (stderr,
                "size: center H: %dx%d in %dx%d (%.3f < %.3f < %.3f)\n",
-               wlim, hlim, it->xgwa.width, it->xgwa.height,
+               wlim, hlim, it->outbuffer_width, it->outbuffer_height,
                min_ratio, ratio, max_ratio);
 # endif
     }
@@ -317,7 +317,7 @@ analogtv_configure(analogtv *it)
 # ifdef DEBUG
       fprintf (stderr,
                "size: center V: %dx%d in %dx%d (%.3f < %.3f < %.3f)\n",
-               wlim, hlim, it->xgwa.width, it->xgwa.height,
+               wlim, hlim, it->outbuffer_width, it->outbuffer_height,
                min_ratio, ratio, max_ratio);
 # endif
     }
@@ -325,13 +325,13 @@ analogtv_configure(analogtv *it)
   if (ratio < crazy_min_ratio || ratio > crazy_max_ratio)
     {
       if (ratio < crazy_min_ratio)
-        hlim = it->xgwa.height;
+        hlim = it->outbuffer_height;
       else
-        wlim = it->xgwa.width;
+        wlim = it->outbuffer_width;
 # ifdef DEBUG
       fprintf (stderr,
                "size: aspect: %dx%d in %dx%d (%.3f < %.3f < %.3f)\n",
-               wlim, hlim, it->xgwa.width, it->xgwa.height,
+               wlim, hlim, it->outbuffer_width, it->outbuffer_height,
                min_ratio, ratio, max_ratio);
 # endif
     }
@@ -358,8 +358,8 @@ analogtv_configure(analogtv *it)
     analogtv_alloc_image(it);
   }
 
-  it->screen_xo = (it->xgwa.width-it->usewidth)/2;
-  it->screen_yo = (it->xgwa.height-it->useheight)/2;
+  it->screen_xo = ( it->outbuffer_width  - it->usewidth  )/2;
+  it->screen_yo = ( it->outbuffer_height - it->useheight )/2;
 }
 
 /* Can be any power-of-two <= 32. 16 a slightly better choice for 2-3 threads. */
@@ -436,8 +436,8 @@ analogtv * analogtv_allocate(int outbuffer_width, int outbuffer_height)
 
   it->shrinkpulse=-1;
 
-  it->xgwa.width  = outbuffer_width;
-  it->xgwa.height = outbuffer_height;
+  it->outbuffer_width  = outbuffer_width;
+  it->outbuffer_height = outbuffer_height;
 
   it->red_shift=it->red_invprec=-1;
   it->green_shift=it->green_invprec=-1;
@@ -1638,14 +1638,14 @@ analogtv_load_ximage(analogtv *it, analogtv_input *input,
   int y_overscan=5*ANALOGTV_SCALE; /* overscan this much top and bottom */
   int y_scanlength=ANALOGTV_VISLINES+2*y_overscan;
 
-  if (target_w > 0) x_length     = x_length     * target_w / it->xgwa.width;
-  if (target_h > 0) y_scanlength = y_scanlength * target_h / it->xgwa.height;
+  if (target_w > 0) x_length     = x_length     * target_w / it->outbuffer_width;
+  if (target_h > 0) y_scanlength = y_scanlength * target_h / it->outbuffer_height;
 
   img_w = pic_im.width;
   img_h = pic_im.height;
   
-  xoff = ANALOGTV_PIC_LEN  * xoff / it->xgwa.width;
-  yoff = ANALOGTV_VISLINES * yoff / it->xgwa.height;
+  xoff = ANALOGTV_PIC_LEN  * xoff / it->outbuffer_width;
+  yoff = ANALOGTV_VISLINES * yoff / it->outbuffer_height;
 
   for (i=0; i<x_length+4; i++) {
     double phase=90.0-90.0*i;

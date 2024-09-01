@@ -119,7 +119,8 @@ struct analogtv_yiq_s {
 } /*yiq[ANALOGTV_PIC_LEN+10] */;
 
 typedef struct analogtv_s {
-  XWindowAttributes xgwa;
+  int outbuffer_width;
+  int outbuffer_height;
 
   struct threadpool threads;
 
