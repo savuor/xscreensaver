@@ -1,13 +1,20 @@
-This repo contains analogtv-cli tool from [XScreensaver](https://www.jwz.org/xscreensaver/) by [Jamie Zawinski](jwz.org) and the team stripped to the minimum required files to run.
+
+This repo contains a tool that shows images or videos like they are on an old TV screen.
+
+It's based on a tool called `analogtv-cli` from [XScreensaver](https://www.jwz.org/xscreensaver/) stripped to the minimum.
+The original code is written by [Trevor Blackwell](https://tlb.org/), [Jamie Zawinski](https://jwz.org/) and the team.
 
 It imitates old TV so well that I always wanted to have this as a filter.
 
 Build:
-Run `python3 gen_build.py > build.sh` script and run resulting script.
+* Get OpenCV and CMake
+* Run CMake with `-DOpenCV_DIR=<path_to_OpenCV_installation>` flag
+* Build it
 
 TODO:
-* build it with CMake
-* strip more extra files
+* strip platform-dependent threads
+* rewrite non-calculating code to proper c++
+* fix channel issue
 * transform this code to a platform-independent shader-like filter
 
 Copyright notice:
