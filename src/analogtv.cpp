@@ -146,37 +146,6 @@ static float puramp(const analogtv *it, float tc, float start, float over)
 */
 
 static const double float_low8_ofs=8388608.0;
-static int float_extraction_works;
-
-typedef union {
-  float f;
-  int i;
-} float_extract_t;
-
-static void
-analogtv_init(void)
-{
-  int i;
-
-  if (1) {
-    float_extract_t fe;
-    int ans;
-
-    float_extraction_works=1;
-    for (i=0; i<256*4; i++) {
-      fe.f=float_low8_ofs+(double)i;
-      ans=fe.i&0x3ff;
-      if (ans != i) {
-#ifdef DEBUG
-        printf("Float extraction failed for %d => %d\n",i,ans);
-#endif
-        float_extraction_works=0;
-        break;
-      }
-    }
-  }
-
-}
 
 void
 analogtv_set_defaults(analogtv *it, const char *prefix)
@@ -443,8 +412,6 @@ analogtv * analogtv_allocate(int outbuffer_width, int outbuffer_height)
   analogtv *it=NULL;
   int i;
   const size_t rx_signal_len = ANALOGTV_SIGNAL_LEN + 2*ANALOGTV_H;
-
-  analogtv_init();
 
   it=(analogtv *)calloc(1,sizeof(analogtv));
   if (!it) return 0;
