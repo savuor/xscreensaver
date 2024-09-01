@@ -6,6 +6,8 @@ The original code is written by [Trevor Blackwell](https://tlb.org/), [Jamie Zaw
 
 It imitates old TV so well that I always wanted to have this as a filter.
 
+OpenCV is used just for video I/O, image loading and memory management.
+
 Build:
 * Get OpenCV and CMake
 * Run CMake with `-DOpenCV_DIR=<path_to_OpenCV_installation>` flag
