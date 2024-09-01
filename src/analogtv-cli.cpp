@@ -729,7 +729,6 @@ usage(const char *err)
 int
 main (int argc, char **argv)
 {
-  int i;
   const char *infiles[1000];
   const char *outfile = 0;
   int duration = 30;
@@ -745,7 +744,7 @@ main (int argc, char **argv)
 
   memset (infiles, 0, sizeof(infiles));
 
-  for (i = 1; i < argc; i++)
+  for (int i = 1; i < argc; i++)
     {
       if (argv[i][0] == '-' && argv[i][1] == '-')
         argv[i]++;
