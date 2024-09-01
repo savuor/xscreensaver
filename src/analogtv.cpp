@@ -432,7 +432,7 @@ static void analogtv_thread_destroy(void *thread_raw)
 {
 }
 
-analogtv * analogtv_allocate(void)
+analogtv * analogtv_allocate(int outbuffer_width, int outbuffer_height)
 {
   static const struct threadpool_class cls = {
     sizeof(analogtv_thread),
@@ -469,7 +469,8 @@ analogtv * analogtv_allocate(void)
 
   it->shrinkpulse=-1;
 
-  custom_XGetWindowAttributes (&it->xgwa);
+  it->xgwa.width  = outbuffer_width;
+  it->xgwa.height = outbuffer_height;
 
   it->red_shift=it->red_invprec=-1;
   it->green_shift=it->green_invprec=-1;

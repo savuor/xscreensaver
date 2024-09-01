@@ -214,7 +214,7 @@ typedef struct analogtv_s {
 } analogtv;
 
 
-analogtv *analogtv_allocate(void);
+analogtv *analogtv_allocate(int outbuffer_width, int outbuffer_height);
 analogtv_input *analogtv_input_allocate(void);
 
 

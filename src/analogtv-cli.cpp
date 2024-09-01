@@ -116,16 +116,6 @@ cv::Mat fromXImage(XImage* image)
  */
 
 int
-custom_XGetWindowAttributes (XWindowAttributes *xgwa)
-{
-  struct state *st = &global_state;
-  memset (xgwa, 0, sizeof(*xgwa));
-  xgwa->width = st->outBuffer.cols;
-  xgwa->height = st->outBuffer.rows;
-  return true;
-}
-
-int
 custom_XPutImage (XImage *image, 
            int src_x, int src_y, int dest_x, int dest_y,
            unsigned int w, unsigned int h)
@@ -403,7 +393,7 @@ analogtv_convert (const char **infiles, const char *outfile,
     cv::merge(std::vector<cv::Mat> {z, z, z, logoCh[3]}, st->logoMask);
   }
 
-  st->tv=analogtv_allocate();
+  st->tv = analogtv_allocate(output_w, output_h);
 
   st->stations = (analogtv_input **)
     calloc (MAX_STATIONS, sizeof(*st->stations));
