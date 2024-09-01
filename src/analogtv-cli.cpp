@@ -303,8 +303,6 @@ cv::Mat loadImage(std::string fname)
     abort();
   }
 
-  cv::flip(cvt4, cvt4, 0);
-
   return cvt4;
 }
 
@@ -343,7 +341,7 @@ analogtv_convert (const char **infiles, const char *outfile,
         if (verbose_p > 1)
           fprintf (stderr, "%s: loaded %s %dx%d\n", progname, infiles[i],
                    img.cols, img.rows);
-        flip(img, img, 0);
+        
         maxw = std::max(maxw, img.cols);
         maxh = std::max(maxh, img.rows);
       }
@@ -395,7 +393,6 @@ analogtv_convert (const char **infiles, const char *outfile,
       fprintf (stderr, "%s: loaded %s %dx%d\n", 
                progname, logofile, st->logoImg.cols, st->logoImg.rows);
     }
-    cv::flip(st->logoImg, st->logoImg, 0);
 
     /* Pull the alpha out of the logo and make a separate mask ximage. */
     st->logoMask = cv::Mat(st->logoImg.size(), CV_8UC4, cv::Scalar(0));
