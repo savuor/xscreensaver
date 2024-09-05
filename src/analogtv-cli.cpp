@@ -34,6 +34,10 @@
 #include "analogtv.hpp"
 
 #include <iostream>
+#include <set>
+#include <map>
+#include <optional>
+#include <variant>
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
@@ -726,9 +730,337 @@ usage(const char *err)
   exit (1);
 }
 
+struct CmdArgument
+{
+  enum class Type
+  {
+    BOOL, INT, LIST_INT, STRING, LIST_STRING
+  };
+
+  Type type;
+  bool optional;
+  std::string exampleArgs;
+  std::string help;
+
+  CmdArgument(const std::string& _exampleArgs, const Type& _type,
+              bool _optional, const std::string& _help) :
+    type(_type),
+    optional(_optional),
+    exampleArgs(_exampleArgs),
+    help(_help)
+  { }
+};
+
+
+static const std::map<std::string, CmdArgument> knownArgs =
+{
+    // name, exampleArgs, type, optional, help
+    {"verbose",   CmdArgument { "n",                     CmdArgument::Type::INT,      true,
+          "      level of verbosity from 0 to 5" }},
+    {"duration",  CmdArgument { "secs",                  CmdArgument::Type::INT,      false,
+          "      length of video in secs, e.g. 60" }},
+    {"slideshow", CmdArgument { "secs",                  CmdArgument::Type::INT,      true,
+          "      how many secs to wait in slideshow mode, e.g. 5" }},
+    {"powerup",   CmdArgument { "",                      CmdArgument::Type::BOOL,     true,
+          "      to run power up sequence or not" }},
+    {"size",      CmdArgument { "width height",          CmdArgument::Type::LIST_INT, true,
+          "      use different size than maximum of given images" }},
+    {"logo",      CmdArgument { "file",                  CmdArgument::Type::STRING,   true,
+          "      logo image to display over color bars" }},
+    {"seed",      CmdArgument { "value",                 CmdArgument::Type::INT,      true,
+          "      random seed to start random generator or 0 to randomize by current date and time" }},
+    {"in",        CmdArgument { "src1 [src2 ... srcN]",  CmdArgument::Type::INT,      false,
+          "      signal sources: still images, video files or special sources:\n"
+          "        * :cam0 to :cam9 are camera sources\n"
+          "        * :bars are SMPTE color bars (if it's the only image and no size is given then the output size will be 320x240)" }},
+    {"out",       CmdArgument { "out1 [out2 ... outN]", CmdArgument::Type::INT,     false,
+          "      where to output video: video files or window, output to all sources happens simultaneously\n"
+          "        * :window means output to window, stable FPS is not guaranteed" }}
+};
+
+void showUsage()
+{
+  std::cout << "Shows images or videos like they are on an old TV screen" << std::endl;
+  std::cout << "Based on analogtv hack written by Trevor Blackwell (https://tlb.org/)" << std::endl;
+  std::cout << "from XScreensaver (https://www.jwz.org/xscreensaver/) by Jamie Zawinski (https://jwz.org/) and the team" << std::endl;
+
+  std::cout << "Usage: analogtv-cli";
+  for (const auto& [k, v] : knownArgs)
+  {
+    if (!v.optional)
+    {
+      std::cout << " --" << k << " " << v.exampleArgs;
+    }
+  }
+  std::cout << " [other keys are optional]" << std::endl;
+
+  std::cout << "Keys:" << std::endl;
+  for (const auto& [k, v] : knownArgs)
+  {
+    std::cout << "    --" << k << std::string(12 - k.length(), ' ');
+    std::cout << v.exampleArgs << std::endl;
+    std::cout << v.help << std::endl;
+  }
+}
+
+
+struct Params
+{
+  int         verbosity;
+  int         duration;
+  int         slideshow;
+  int         seed;
+  bool        powerup;
+  cv::Size    size;
+  std::string logoFname;
+
+  std::vector<std::string> sources;
+  std::vector<std::string> outputs;
+};
+
+//TODO: std::optional<>
+std::pair<int, bool> parseInt(const std::string& s)
+{
+  bool ok = true;
+  int v;
+  size_t at;
+  try
+  {
+    v = std::stoi(s, &at);
+  }
+  catch (std::invalid_argument const &ex)
+  {
+    std::cout << "Failed to parse " << s << ": " << ex.what() << std::endl;
+    ok = false;
+  }
+  catch (std::out_of_range const &ex)
+  {
+    std::cout << "Failed to parse " << s << ": " << ex.what() << std::endl;
+    ok = false;
+  }
+
+  if (at != s.length())
+  {
+    std::cout << "Failed to parse " << s << ": only " << at << " symbols parsed" << std::endl;
+    ok = false;
+  }
+
+  return {v, ok};
+}
+
+bool isArgName(const std::string& arg)
+{
+  return arg.length() > 2 && arg[0] == '-' && arg[1] == '-';
+}
+
+
+typedef std::variant<bool, int, std::string, std::vector<int>, std::vector<std::string>> ArgType;
+std::map<std::string, ArgType> parseCmdArgs(int nArgs, char** argv)
+{
+  std::map<std::string, ArgType> usedArgs;
+
+  for (int i = 1; i < nArgs; i++)
+  {
+    std::string arg(argv[i]);
+    if (!isArgName(arg))
+    {
+      std::cout << "Argument starting from \"--\" expected, instead we got " << arg << std::endl;
+      return { };
+    }
+
+    std::string name = arg.substr(2, arg.length() - 2);
+    if (knownArgs.count(name) != 1)
+    {
+      std::cout << "Argument " << name << " is not known" << std::endl;
+      return { };
+    }
+
+    if (usedArgs.count(name) > 0)
+    {
+      std::cout << "Argument " << name << " was already used" << std::endl;
+      return { };
+    }
+
+    ArgType value;
+    switch (knownArgs.at(name).type)
+    {
+      case CmdArgument::Type::BOOL: value = true; break;
+      case CmdArgument::Type::INT:
+        {
+          i++;
+          if (i >= nArgs)
+          {
+            std::cout << "Argument " << name << "requires int argument" << std::endl;
+            return { };
+          }
+          auto [v, ok] = parseInt(argv[i]);
+          if(!ok)
+          {
+            return { };
+          }
+          value = v;
+          break;
+        }
+      case CmdArgument::Type::STRING:
+        {
+          i++;
+          if (i >= nArgs)
+          {
+            std::cout << "Argument " << name << "requires string argument" << std::endl;
+            return { };
+          }
+          value = std::string(argv[i]);
+          break;
+        }
+      case CmdArgument::Type::LIST_INT:
+        {
+          std::vector<int> listInt;
+          while (++i < nArgs && !isArgName(argv[i]))
+          {
+            auto [v, ok] = parseInt(argv[i]);
+            if (!ok)
+            {
+              return { };
+            }
+
+            listInt.push_back(v);
+          }
+
+          if (listInt.empty())
+          {
+            std::cout << "Argument " << name << " requires a list of integers" << std::endl;
+            return { };
+          }
+          value = listInt;
+          break;
+        }
+      case CmdArgument::Type::LIST_STRING:
+        {
+          std::vector<std::string> listStr;
+          while (++i < nArgs && !isArgName(argv[i]))
+          {
+            listStr.push_back(argv[i]);
+          }
+
+          if (listStr.empty())
+          {
+            std::cout << "Argument " << name << " requires a list of strings" << std::endl;
+            return { };
+          }
+          value = listStr;
+          break;
+        }
+      default: break;
+    }
+    usedArgs[name] = value;
+  }
+
+  return usedArgs;
+}
+
+
+std::optional<Params> parseParams(int args, char** argv)
+{
+  std::set<std::string> mandatoryArgsToFill;
+  for (const auto& [k, v] : knownArgs)
+  {
+    if (!v.optional)
+    {
+      mandatoryArgsToFill.insert(k);
+    }
+  }
+
+  std::map<std::string, ArgType> usedArgs = parseCmdArgs(args, argv);
+  if (usedArgs.empty())
+  {
+    return { };
+  }
+
+  for (const auto& [name, val] : usedArgs)
+  {
+    if (mandatoryArgsToFill.count(name))
+    {
+      mandatoryArgsToFill.erase(name);
+    }
+  }
+
+  if (!mandatoryArgsToFill.empty())
+  {
+    std::cout << "Following args are required:";
+    for (const auto& k : mandatoryArgsToFill)
+    {
+      std::cout << " " << k;
+    }
+    std::cout << std::endl;
+    return { };
+  }
+
+  Params p;
+  p.sources  = std::get<std::vector<std::string>>(usedArgs.at("in"));
+  p.outputs  = std::get<std::vector<std::string>>(usedArgs.at("out"));
+  p.duration = std::get<int>(usedArgs.at("duration"));
+
+  p.verbosity = 0;
+  if (usedArgs.count("verbose"))
+  {
+    p.verbosity = std::get<int>(usedArgs.at("verbose"));
+  }
+
+  p.slideshow = 0;
+  if (usedArgs.count("slideshow"))
+  {
+    p.slideshow = std::get<int>(usedArgs.at("slideshow"));
+  }
+
+  p.powerup = false;
+  if (usedArgs.count("powerup"))
+  {
+    p.powerup = std::get<bool>(usedArgs.at("powerup"));
+  }
+
+  p.size = { };
+  if (usedArgs.count("size"))
+  {
+    std::vector<int> l = std::get<std::vector<int>>(usedArgs.at("size"));
+    if (l.size() != 2)
+    {
+      std::cout << "--size requires 2 integers" << std::endl;
+      return { };
+    }
+    p.size = { l[0], l[1]};
+    if (p.size.width < 64 || p.size.height < 64)
+    {
+      std::cout << "Image size should be bigger than 64x64" << std::endl;
+      return { };
+    }
+  }
+
+  p.logoFname = "";
+  if (usedArgs.count("logo"))
+  {
+    p.logoFname = std::get<std::string>(usedArgs.at("logo"));
+  }
+
+  p.seed = 0;
+  if (usedArgs.count("seed"))
+  {
+    p.seed = std::get<int>(usedArgs.at("seed"));
+  }
+
+  return p;
+}
+
 int
 main (int argc, char **argv)
 {
+  std::optional<Params> params = parseParams(argc, argv);
+  if (!params)
+  {
+    showUsage();
+    //return -1;
+  }
+
+
   const char *infiles[1000];
   const char *outfile = 0;
   int duration = 30;
