@@ -81,7 +81,7 @@ static int i1, i2;
 unsigned int
 ya_random (void)
 {
-  register int ret = a[i1] + a[i2];
+  int ret = a[i1] + a[i2];
   a[i1] = ret;
   if (++i1 >= VectorSize) i1 = 0;
   if (++i2 >= VectorSize) i2 = 0;
