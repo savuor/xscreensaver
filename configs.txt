@@ -1,93 +1,10 @@
-   <vgroup>
-    <number id="tvcolor" type="slider" arg="--tv-color %"
-            _label="Color Knob" _low-label="Low" _high-label="High"
-            low="0" high="400" default="70"/>
-    <number id="tvtint" type="slider" arg="--tv-tint %"
-            _label="Tint Knob" _low-label="Low" _high-label="High"
-            low="0" high="360" default="5"/>
-    <number id="tvbrightness" type="slider" arg="--tv-brightness %"
-            _label="Brightness Knob" _low-label="Low" _high-label="High"
-            low="-75.0" high="100.0" default="3.0"/>
-    <number id="tvcontrast" type="slider" arg="--tv-contrast %"
-            _label="Contrast Knob" _low-label="Low" _high-label="High"
-            low="0" high="500" default="150"/>
-   </vgroup>
 
-   <vgroup>
-    <number id="tvcolor" type="slider" arg="--tv-color %"
-            _label="Color Knob" _low-label="Low" _high-label="High"
-            low="0" high="400" default="70"/>
-    <number id="tvtint" type="slider" arg="--tv-tint %"
-            _label="Tint Knob" _low-label="Low" _high-label="High"
-            low="0" high="360" default="5"/>
-    <number id="noise" type="slider" arg="--noise %"
-            _label="Noise" _low-label="Low" _high-label="High"
-            low="0.0" high="0.2" default="0.04"/>
-   </vgroup>
-   <vgroup>
-    <number id="tvbrightness" type="slider" arg="--tv-brightness %"
-            _label="Brightness Knob" _low-label="Low" _high-label="High"
-            low="-75.0" high="100.0" default="3.0"/>
-    <number id="tvcontrast" type="slider" arg="--tv-contrast %"
-            _label="Contrast Knob" _low-label="Low" _high-label="High"
-            low="0" high="500" default="150"/>
-    <boolean id="showfps" _label="Show frame rate" arg-set="--fps"/>
-   </vgroup>
+<number id="noise" type="slider" arg="--noise %"        low="0.00" high="5.00" default="0.04"/>
+<number id="noise" type="slider" arg="--noise %"    low="0.0" high="0.2" default="0.04"/>
+<number id="tvbrightness" type="slider" arg="--tv-brightness %"        low="-75.0" high="100.0" default="1.5"/>
+<number id="tvbrightness" type="slider" arg="--tv-brightness %"        low="-75.0" high="100.0" default="3.0"/>
+<number id="tvcolor" type="slider" arg="--tv-color %"            low="0" high="400" default="70"/>
+<number id="tvcontrast" type="slider" arg="--tv-contrast %"         low="0" high="1500" default="1000"/>
+<number id="tvcontrast" type="slider" arg="--tv-contrast %"         low="0" high="500" default="150"/>
+<number id="tvtint" type="slider" arg="--tv-tint %"             low="0" high="360" default="5"/>
 
-       <number id="tvcolor" type="slider" arg="--tv-color %"
-            _label="Color Knob" _low-label="Low" _high-label="High"
-            low="0" high="400" default="70"/>
-    <number id="tvtint" type="slider" arg="--tv-tint %"
-            _label="Tint Knob" _low-label="Low" _high-label="High"
-            low="0" high="360" default="5"/>
-    <number id="tvbrightness" type="slider" arg="--tv-brightness %"
-            _label="Brightness Knob" _low-label="Low" _high-label="High"
-            low="-75.0" high="100.0" default="3.0"/>
-    <number id="tvcontrast" type="slider" arg="--tv-contrast %"
-            _label="Contrast Knob" _low-label="Low" _high-label="High"
-            low="0" high="500" default="150"/>
-
-    <number id="noise" type="slider" arg="--noise %"
-             _label="Noise" _low-label="Crisp" _high-label="Noisy"
-             low="0.00" high="5.00" default="0.04"/>
-    <number id="tvbrightness" type="slider" arg="--tv-brightness %"
-            _label="Brightness Knob" _low-label="Low" _high-label="High"
-            low="-75.0" high="100.0" default="3.0"/>
-    <number id="tvcontrast" type="slider" arg="--tv-contrast %"
-            _label="Contrast Knob" _low-label="Low" _high-label="High"
-            low="0" high="500" default="150"/>
-    <number id="tvcolor" type="slider" arg="--tv-color %"
-            _label="Color Knob" _low-label="Low" _high-label="High"
-            low="0" high="400" default="70"/>
-    <number id="tvtint" type="slider" arg="--tv-tint %"
-            _label="Tint Knob" _low-label="Low" _high-label="High"
-            low="0" high="360" default="5"/>
-   </vgroup>
-   <vgroup>
-    <number id="tvbrightness" type="slider" arg="--tv-brightness %"
-            _label="Brightness Knob" _low-label="Low" _high-label="High"
-            low="-75.0" high="100.0" default="3.0"/>
-    <number id="tvcontrast" type="slider" arg="--tv-contrast %"
-            _label="Contrast Knob" _low-label="Low" _high-label="High"
-            low="0" high="1500" default="1000"/>
-   </vgroup>
-   <vgroup>
-    <number id="tvcolor" type="slider" arg="--tv-color %"
-            _label="Color Knob" _low-label="Low" _high-label="High"
-            low="0" high="400" default="70"/>
-    <number id="tvtint" type="slider" arg="--tv-tint %"
-            _label="Tint Knob" _low-label="Low" _high-label="High"
-            low="0" high="360" default="5"/>
-    <number id="noise" type="slider" arg="--noise %"
-            _label="Noise" _low-label="Low" _high-label="High"
-            low="0.0" high="0.2" default="0.02"/>
-   </vgroup>
-   <vgroup>
-    <number id="tvbrightness" type="slider" arg="--tv-brightness %"
-            _label="Brightness Knob" _low-label="Low" _high-label="High"
-            low="-75.0" high="100.0" default="1.5"/>
-    <number id="tvcontrast" type="slider" arg="--tv-contrast %"
-            _label="Contrast Knob" _low-label="Low" _high-label="High"
-            low="0" high="500" default="150"/>
-   
-   </vgroup>
