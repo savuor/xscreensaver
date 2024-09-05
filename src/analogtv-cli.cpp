@@ -45,6 +45,19 @@
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
 
+struct Params
+{
+  int         verbosity;
+  int         duration;
+  int         slideshow;
+  int         seed;
+  bool        powerup;
+  cv::Size    size;
+  std::string logoFname;
+
+  std::vector<std::string> sources;
+  std::vector<std::string> outputs;
+};
 
 const char *progname;
 const char *progclass;
@@ -160,14 +173,12 @@ custom_XPutImage (XImage *image,
   return 0;
 }
 
-static int darkp = 0;
 double
 get_float_resource (char *name)
 {
   if (!strcmp(name, "TVTint")) return 5;		/* default 5   */
   if (!strcmp(name, "TVColor")) return 70;		/* default 70  */
-  if (!strcmp(name, "TVBrightness"))
-    return (darkp ? -15 : 2);				/* default 2   */
+  if (!strcmp(name, "TVBrightness")) return 2;				/* default 2   */
   if (!strcmp(name, "TVContrast")) return 150;		/* default 150 */
   abort();
 }
@@ -301,12 +312,46 @@ cv::Mat loadImage(std::string fname)
 }
 
 
-static void
-analogtv_convert (const char **infiles, const char *outfile,
-                  const char *logofile,
-                  int output_w, int output_h,
-                  int duration, int slideshow, bool powerp)
+static void run(Params params)
 {
+  std::vector<const char*> inVec;
+  for (const auto& f : params.sources)
+  {
+    inVec.push_back(f.c_str());
+  }
+  inVec.push_back(nullptr);
+
+  std::string& outFile = params.outputs[0];
+  verbose_p = params.verbosity;
+
+  int nFiles = params.sources.size();
+  if (nFiles == 1)
+  {
+    params.slideshow = params.duration;
+  }
+
+  /* stations should be a multiple of files, but >= 6.
+     channels should be double that. */
+  MAX_STATIONS = 6;
+  if (!params.slideshow)
+  {
+    MAX_STATIONS = 0;
+    while (MAX_STATIONS < 6)
+    {
+      MAX_STATIONS += nFiles;
+    }
+    MAX_STATIONS *= 2;
+  }
+  N_CHANNELS = MAX_STATIONS * 2;
+
+  ya_rand_init (params.seed);
+  const char **infiles = inVec.data();
+  const char *outfile  = outFile.c_str();
+  const char *logofile = params.logoFname.c_str();
+  int output_w = params.size.width, output_h = params.size.height;
+  int duration = params.duration, slideshow = params.slideshow;
+  bool powerp = params.powerup;
+
   unsigned long start_time = time((time_t *)0);
   int i;
   int nfiles;
@@ -811,22 +856,6 @@ void showUsage()
   }
 }
 
-
-struct Params
-{
-  int         verbosity;
-  int         duration;
-  int         slideshow;
-  int         seed;
-  bool        powerup;
-  cv::Size    size;
-  std::string logoFname;
-
-  std::vector<std::string> sources;
-  std::vector<std::string> outputs;
-};
-
-
 std::optional<int> parseInt(const std::string& s)
 {
   int v;
@@ -1070,9 +1099,13 @@ std::optional<Params> parseParams(int args, char** argv)
   return p;
 }
 
-int
-main (int argc, char **argv)
+
+int main (int argc, char **argv)
 {
+  char *s = strrchr (argv[0], '/');
+  progname = s ? s+1 : argv[0];
+  progclass = progname;
+
   std::optional<Params> oparams = parseParams(argc, argv);
   if (!oparams)
   {
@@ -1080,48 +1113,6 @@ main (int argc, char **argv)
     return -1;
   }
 
-  Params& params = oparams.value();
-
-  std::vector<const char*> inVec;
-  for (const auto& f : params.sources)
-  {
-    inVec.push_back(f.c_str());
-  }
-  inVec.push_back(nullptr);
-
-  std::string& outFile = params.outputs[0];
-
-  verbose_p = params.verbosity;
-
-  char *s = strrchr (argv[0], '/');
-  progname = s ? s+1 : argv[0];
-  progclass = progname;
-
-  int nFiles = params.sources.size();
-
-  if (nFiles == 1)
-  {
-    params.slideshow = params.duration;
-  }
-
-  /* stations should be a multiple of files, but >= 6.
-     channels should be double that. */
-  MAX_STATIONS = 6;
-  if (!params.slideshow)
-  {
-    MAX_STATIONS = 0;
-    while (MAX_STATIONS < 6)
-    {
-      MAX_STATIONS += nFiles;
-    }
-    MAX_STATIONS *= 2;
-  }
-  N_CHANNELS = MAX_STATIONS * 2;
-
-  darkp = (nFiles == 1);
-
-  ya_rand_init (params.seed);
-  analogtv_convert (inVec.data(), outFile.c_str(), params.logoFname.c_str(),
-                    params.size.width, params.size.height, params.duration, params.slideshow, params.powerup);
+  run(oparams.value());
   exit (0);
 }
