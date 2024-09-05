@@ -184,10 +184,6 @@ analogtv_set_defaults(analogtv *it, const char *prefix)
          it->horiz_desync, it->flutter_horiz_desync);
   printf("  hashnoise rpm: %g\n",
          it->hashnoise_rpm);
-  printf("  shift: %d-%d %d-%d %d-%d\n",
-         it->red_invprec,it->red_shift,
-         it->green_invprec,it->green_shift,
-         it->blue_invprec,it->blue_shift);
   printf("  size: %d %d  %d %d  xrepl=%d\n",
          it->usewidth, it->useheight,
          it->screen_xo, it->screen_yo, it->xrepl);
@@ -439,40 +435,12 @@ analogtv * analogtv_allocate(int outbuffer_width, int outbuffer_height)
   it->outbuffer_width  = outbuffer_width;
   it->outbuffer_height = outbuffer_height;
 
-  it->red_shift=it->red_invprec=-1;
-  it->green_shift=it->green_invprec=-1;
-  it->blue_shift=it->blue_invprec=-1;
-
-  /* Is there a standard way to do this? Does this handle all cases? */
-  int shift, prec;
-  for (shift = 0; shift < 32; shift++)
-  {
-    for (prec = 1; prec < 16 && prec < 40 - shift; prec++)
-    {
-      unsigned long mask = (0xffffUL >> (16 - prec)) << shift;
-      if (it->red_shift < 0 && mask == 0x00FF0000L)
-        it->red_shift = shift, it->red_invprec = 16 - prec;
-      if (it->green_shift < 0 && mask == 0x0000FF00L)
-        it->green_shift = shift, it->green_invprec = 16 - prec;
-      if (it->blue_shift < 0 && mask == 0x000000FFL)
-        it->blue_shift = shift, it->blue_invprec = 16 - prec;
-    }
-  }
-  if (it->red_shift < 0 || it->green_shift < 0 || it->blue_shift < 0)
-  {
-    if (0)
-      fprintf(stderr, "Can't figure out color space\n");
-    goto fail;
-  }
-
   for (i = 0; i < ANALOGTV_CV_MAX; i++)
   {
     int intensity = pow(i / 256.0, 0.8) * 65535.0; /* gamma correction */
     if (intensity > 65535)
       intensity = 65535;
-    it->red_values[i] = ((intensity >> it->red_invprec) << it->red_shift);
-    it->green_values[i] = ((intensity >> it->green_invprec) << it->green_shift);
-    it->blue_values[i] = ((intensity >> it->blue_invprec) << it->blue_shift);
+    it->intensity_values[i] = intensity >> 8;
   }
 
   analogtv_configure(it);
@@ -1214,9 +1182,10 @@ analogtv_blast_imagerow(const analogtv *it,
           if (ntscri>=ANALOGTV_CV_MAX) ntscri=ANALOGTV_CV_MAX-1;
           if (ntscgi>=ANALOGTV_CV_MAX) ntscgi=ANALOGTV_CV_MAX-1;
           if (ntscbi>=ANALOGTV_CV_MAX) ntscbi=ANALOGTV_CV_MAX-1;
-          pix = (it->red_values[ntscri] |
-                 it->green_values[ntscgi] |
-                 it->blue_values[ntscbi]);
+          pix = (it->intensity_values[ntscri] << 16) |
+                (it->intensity_values[ntscgi] <<  8) |
+                (it->intensity_values[ntscbi]);
+
           pixelptr[0] = pix;
           if (xrepl>=2) {
             pixelptr[1] = pix;
@@ -1618,6 +1587,31 @@ analogtv_input_allocate(void)
   mask: BlackPixel means don't render (it's not full alpha)
 */
 
+struct Color
+{
+  uint16_t red;
+  uint16_t green;
+  uint16_t blue;
+};
+
+inline Color pixToColor(uint32_t p)
+{
+  // uint16_t r = (p & 0x00FF0000L) >> 16;
+  // uint16_t g = (p & 0x0000FF00L) >> 8;
+  // uint16_t b = (p & 0x000000FFL);
+  uint16_t r = (p >> 16) & 0xFF;
+  uint16_t g = (p >>  8) & 0xFF;
+  uint16_t b = (p      ) & 0xFF;
+  Color c;
+  c.red   = r | (r<<8);
+  c.green = g | (g<<8);
+  c.blue  = b | (b<<8);
+  // c.red   = (r<<8);
+  // c.green = (g<<8);
+  // c.blue  = (b<<8);
+  return c;
+}
+
 int
 analogtv_load_ximage(analogtv *it, analogtv_input *input,
                      XImage pic_im, XImage mask_im,
@@ -1628,8 +1622,8 @@ analogtv_load_ximage(analogtv *it, analogtv_input *input,
   int fyx[7],fyy[7];
   int fix[4],fiy[4];
   int fqx[4],fqy[4];
-  XColor col1[ANALOGTV_PIC_LEN];
-  XColor col2[ANALOGTV_PIC_LEN];
+  Color col1[ANALOGTV_PIC_LEN];
+  Color col2[ANALOGTV_PIC_LEN];
   char mask[ANALOGTV_PIC_LEN];
   int multiq[ANALOGTV_PIC_LEN+4];
   unsigned long black = 0; /* not BlackPixelOfScreen (it->xgwa.screen); */
@@ -1654,7 +1648,7 @@ analogtv_load_ximage(analogtv *it, analogtv_input *input,
   }
 
   for (y=0; y<y_scanlength; y++) {
-    int picy1=(y*img_h)/y_scanlength;
+    int picy1=(y*img_h                 )/y_scanlength;
     int picy2=(y*img_h + y_scanlength/2)/y_scanlength;
 
     uint32_t* rowIm1 = (uint32_t*)(pic_im.data + picy1 * pic_im.bytes_per_line);
@@ -1663,34 +1657,12 @@ analogtv_load_ximage(analogtv *it, analogtv_input *input,
     for (x=0; x<x_length; x++)
     {
       int picx=(x*img_w)/x_length;
-      col1[x].pixel = rowIm1[picx];
-      col2[x].pixel = rowIm2[picx];
+      col1[x] = pixToColor(rowIm1[picx]);
+      col2[x] = pixToColor(rowIm2[picx]);
       if (rowMask1)
         mask[x] = (rowMask1[picx] != black);
       else
         mask[x] = 1;
-    }
-
-    for (int i = 0; i < x_length; i++)
-    {
-      XColor& color = col1[i];
-      uint16_t r = (color.pixel & 0x00FF0000L) >> 16;
-      uint16_t g = (color.pixel & 0x0000FF00L) >> 8;
-      uint16_t b = (color.pixel & 0x000000FFL);
-      color.red   = r | (r<<8);
-      color.green = g | (g<<8);
-      color.blue  = b | (b<<8);
-    }
-
-    for (int i = 0; i < x_length; i++)
-    {
-      XColor& color = col2[i];
-      uint16_t r = (color.pixel & 0x00FF0000L) >> 16;
-      uint16_t g = (color.pixel & 0x0000FF00L) >> 8;
-      uint16_t b = (color.pixel & 0x000000FFL);
-      color.red   = r | (r<<8);
-      color.green = g | (g<<8);
-      color.blue  = b | (b<<8);
     }
 
     for (i=0; i<7; i++) fyx[i]=fyy[i]=0;
@@ -1748,7 +1720,6 @@ analogtv_load_ximage(analogtv *it, analogtv_input *input,
       fqy[3] = (fqx[0]+fqx[3]) + 3 * (fqx[1]+fqx[2])
         + ((2612*fqy[0] - 9007*fqy[1] + 10453 * fqy[2]) >> 12);
       filtq = fqy[3];
-
 
       composite = filty + ((multiq[x] * filti + multiq[x+3] * filtq)>>12);
       composite = ((composite*100)>>14) + ANALOGTV_BLACK_LEVEL;

@@ -17,11 +17,6 @@
 
 // from jwxyz
 
-struct XColor {
-  unsigned long pixel;
-  unsigned short red, green, blue;
-};
-
 struct XImage
 {
     XImage() :

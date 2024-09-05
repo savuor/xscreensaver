@@ -148,10 +148,6 @@ typedef struct analogtv_s {
   // int fakeit_scroll;
   int redraw_all;
 
-  int red_invprec, red_shift;
-  int green_invprec, green_shift;
-  int blue_invprec, blue_shift;
-
   int usewidth,useheight,xrepl,subwidth;
   XImage *image; /* usewidth * useheight */
   int screen_xo,screen_yo; /* centers image in window */
@@ -177,9 +173,7 @@ typedef struct analogtv_s {
 
   float crtload[ANALOGTV_V];
 
-  unsigned int red_values[ANALOGTV_CV_MAX];
-  unsigned int green_values[ANALOGTV_CV_MAX];
-  unsigned int blue_values[ANALOGTV_CV_MAX];
+  unsigned int intensity_values[ANALOGTV_CV_MAX];
 
   unsigned long colors[256];
   int cmap_y_levels;
