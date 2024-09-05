@@ -719,17 +719,6 @@ analogtv_convert (const char **infiles, const char *outfile,
 }
 
 
-static void
-usage(const char *err)
-{
-  if (err) fprintf (stderr, "%s: %s unknown\n", progname, err);
-  fprintf (stderr, "usage: %s [--verbose] [--duration secs] [--slideshow secs]"
-           " [--powerup] [--size WxH]"
-           " infile.png ... outfile.mp4\n",
-           progname);
-  exit (1);
-}
-
 struct CmdArgument
 {
   enum class Type
@@ -740,42 +729,58 @@ struct CmdArgument
   Type type;
   bool optional;
   std::string exampleArgs;
-  std::string help;
+  std::vector<std::string> help;
 
   CmdArgument(const std::string& _exampleArgs, const Type& _type,
               bool _optional, const std::string& _help) :
     type(_type),
     optional(_optional),
     exampleArgs(_exampleArgs),
-    help(_help)
-  { }
+    help()
+  {
+    size_t p0 = 0;
+    for (size_t i = 0; i < _help.length(); i++)
+    {
+      if (_help.at(i) == '\n')
+      {
+        help.push_back(_help.substr(p0, i - p0));
+        p0 = i+1;
+      }
+    }
+    if (p0 < _help.length())
+    {
+      help.push_back(_help.substr(p0, _help.length() - p0 - 1));
+    }
+  }
 };
 
 
 static const std::map<std::string, CmdArgument> knownArgs =
 {
     // name, exampleArgs, type, optional, help
-    {"verbose",   CmdArgument { "n",                     CmdArgument::Type::INT,      true,
-          "      level of verbosity from 0 to 5" }},
-    {"duration",  CmdArgument { "secs",                  CmdArgument::Type::INT,      false,
-          "      length of video in secs, e.g. 60" }},
-    {"slideshow", CmdArgument { "secs",                  CmdArgument::Type::INT,      true,
-          "      how many secs to wait in slideshow mode, e.g. 5" }},
-    {"powerup",   CmdArgument { "",                      CmdArgument::Type::BOOL,     true,
-          "      to run power up sequence or not" }},
-    {"size",      CmdArgument { "width height",          CmdArgument::Type::LIST_INT, true,
-          "      use different size than maximum of given images" }},
-    {"logo",      CmdArgument { "file",                  CmdArgument::Type::STRING,   true,
-          "      logo image to display over color bars" }},
-    {"seed",      CmdArgument { "value",                 CmdArgument::Type::INT,      true,
-          "      random seed to start random generator or 0 to randomize by current date and time" }},
-    {"in",        CmdArgument { "src1 [src2 ... srcN]",  CmdArgument::Type::INT,      false,
-          "      signal sources: still images, video files or special sources:\n"
-          "        * :cam0 to :cam9 are camera sources\n"
-          "        * :bars are SMPTE color bars (if it's the only image and no size is given then the output size will be 320x240)" }},
-    {"out",       CmdArgument { "out1 [out2 ... outN]", CmdArgument::Type::INT,     false,
-          "      where to output video: video files or window, output to all sources happens simultaneously\n"
-          "        * :window means output to window, stable FPS is not guaranteed" }}
+    {"verbose",
+      { "n",     CmdArgument::Type::INT, true, "level of verbosity from 0 to 5" }},
+    {"duration",
+      { "secs",  CmdArgument::Type::INT, false, "length of video in secs, e.g. 60" }},
+    {"slideshow",
+      { "secs",  CmdArgument::Type::INT, true, "how many secs to wait in slideshow mode, e.g. 5" }},
+    {"powerup",
+      { "",      CmdArgument::Type::BOOL, true, "to run power up sequence or not" }},
+    {"size",
+      { "width height", CmdArgument::Type::LIST_INT, true, "use different size than maximum of given images" }},
+    {"logo",
+      { "file",  CmdArgument::Type::STRING, true, "logo image to display over color bars" }},
+    {"seed",
+      { "value", CmdArgument::Type::INT, true, "random seed to start random generator or 0 to randomize by current date and time" }},
+    {"in",
+      { "src1 [src2 ... srcN]", CmdArgument::Type::LIST_STRING, false,
+          "signal sources: still images, video files or special sources:\n"
+          "  * :cam0 to :cam9 are camera sources\n"
+          "  * :bars are SMPTE color bars (if it's the only image and no size is given then the output size will be 320x240)" }},
+    {"out",
+      { "out1 [out2 ... outN]", CmdArgument::Type::LIST_STRING, false,
+          "where to output video: video files or window, output to all sources happens simultaneously\n"
+          "  * :window means output to window, stable FPS is not guaranteed" }}
 };
 
 void showUsage()
@@ -799,7 +804,10 @@ void showUsage()
   {
     std::cout << "    --" << k << std::string(12 - k.length(), ' ');
     std::cout << v.exampleArgs << std::endl;
-    std::cout << v.help << std::endl;
+    for (const auto& hs : v.help)
+    {
+      std::cout << "      " << hs << std::endl;
+    }
   }
 }
 
@@ -818,10 +826,9 @@ struct Params
   std::vector<std::string> outputs;
 };
 
-//TODO: std::optional<>
-std::pair<int, bool> parseInt(const std::string& s)
+
+std::optional<int> parseInt(const std::string& s)
 {
-  bool ok = true;
   int v;
   size_t at;
   try
@@ -831,21 +838,21 @@ std::pair<int, bool> parseInt(const std::string& s)
   catch (std::invalid_argument const &ex)
   {
     std::cout << "Failed to parse " << s << ": " << ex.what() << std::endl;
-    ok = false;
+    return { };
   }
   catch (std::out_of_range const &ex)
   {
     std::cout << "Failed to parse " << s << ": " << ex.what() << std::endl;
-    ok = false;
+    return { };
   }
 
   if (at != s.length())
   {
     std::cout << "Failed to parse " << s << ": only " << at << " symbols parsed" << std::endl;
-    ok = false;
+    return { };
   }
 
-  return {v, ok};
+  return v;
 }
 
 bool isArgName(const std::string& arg)
@@ -893,12 +900,15 @@ std::map<std::string, ArgType> parseCmdArgs(int nArgs, char** argv)
             std::cout << "Argument " << name << "requires int argument" << std::endl;
             return { };
           }
-          auto [v, ok] = parseInt(argv[i]);
-          if(!ok)
+          auto v = parseInt(argv[i]);
+          if (v)
+          {
+            value = v.value();
+          }
+          else
           {
             return { };
           }
-          value = v;
           break;
         }
       case CmdArgument::Type::STRING:
@@ -915,15 +925,21 @@ std::map<std::string, ArgType> parseCmdArgs(int nArgs, char** argv)
       case CmdArgument::Type::LIST_INT:
         {
           std::vector<int> listInt;
-          while (++i < nArgs && !isArgName(argv[i]))
+          while (++i < nArgs)
           {
-            auto [v, ok] = parseInt(argv[i]);
-            if (!ok)
+            if (isArgName(argv[i]))
+            {
+              i--; break;
+            }
+            auto v = parseInt(argv[i]);
+            if (v)
+            {
+              listInt.push_back(v.value());
+            }
+            else
             {
               return { };
             }
-
-            listInt.push_back(v);
           }
 
           if (listInt.empty())
@@ -937,8 +953,12 @@ std::map<std::string, ArgType> parseCmdArgs(int nArgs, char** argv)
       case CmdArgument::Type::LIST_STRING:
         {
           std::vector<std::string> listStr;
-          while (++i < nArgs && !isArgName(argv[i]))
+          while (++i < nArgs)
           {
+            if (isArgName(argv[i]))
+            {
+              i--; break;
+            }
             listStr.push_back(argv[i]);
           }
 
@@ -1053,101 +1073,55 @@ std::optional<Params> parseParams(int args, char** argv)
 int
 main (int argc, char **argv)
 {
-  std::optional<Params> params = parseParams(argc, argv);
-  if (!params)
+  std::optional<Params> oparams = parseParams(argc, argv);
+  if (!oparams)
   {
     showUsage();
-    //return -1;
+    return -1;
   }
 
+  Params& params = oparams.value();
 
-  const char *infiles[1000];
-  const char *outfile = 0;
-  int duration = 30;
-  bool powerp = false;
-  char *logo = 0;
-  int w = 0, h = 0;
-  int nfiles = 0;
-  int slideshow = 0;
+  std::vector<const char*> inVec;
+  for (const auto& f : params.sources)
+  {
+    inVec.push_back(f.c_str());
+  }
+  inVec.push_back(nullptr);
+
+  std::string& outFile = params.outputs[0];
+
+  verbose_p = params.verbosity;
 
   char *s = strrchr (argv[0], '/');
   progname = s ? s+1 : argv[0];
   progclass = progname;
 
-  memset (infiles, 0, sizeof(infiles));
+  int nFiles = params.sources.size();
 
-  for (int i = 1; i < argc; i++)
-    {
-      if (argv[i][0] == '-' && argv[i][1] == '-')
-        argv[i]++;
-       if (!strcmp(argv[i], "-v") ||
-           !strcmp(argv[i], "-verbose"))
-        verbose_p++;
-       else if (!strcmp(argv[i], "-vv")) verbose_p += 2;
-       else if (!strcmp(argv[i], "-vvv")) verbose_p += 3;
-       else if (!strcmp(argv[i], "-vvvv")) verbose_p += 4;
-       else if (!strcmp(argv[i], "-vvvvv")) verbose_p += 5;
-       else if (!strcmp(argv[i], "-duration") && argv[i+1])
-         {
-           char dummy;
-           i++;
-           if (1 != sscanf (argv[i], " %d %c", &duration, &dummy))
-             usage(argv[i]);
-         }
-       else if (!strcmp(argv[i], "-slideshow") && argv[i+1])
-         {
-           char dummy;
-           i++;
-           if (1 != sscanf (argv[i], " %d %c", &slideshow, &dummy))
-             usage(argv[i]);
-         }
-       else if (!strcmp(argv[i], "-size") && argv[i+1])
-         {
-           char dummy;
-           i++;
-           if (2 != sscanf (argv[i], " %d x %d %c", &w, &h, &dummy))
-             usage(argv[i]);
-         }
-       else if (!strcmp(argv[i], "-logo") && argv[i+1])
-         logo = argv[++i];
-       else if (!strcmp(argv[i], "-powerup") ||
-                !strcmp(argv[i], "-power"))
-         powerp = true;
-       else if (!strcmp(argv[i], "-no-powerup") ||
-                !strcmp(argv[i], "-no-power"))
-         powerp = false;
-      else if (argv[i][0] == '-')
-        usage(argv[i]);
-      else if (nfiles >= (int)(sizeof(infiles)/sizeof(*infiles))-1)
-        usage("too many files");
-      else
-        infiles[nfiles++] = argv[i];
-    }
-
-  if (nfiles < 2)
-    usage("");
-
-  outfile = infiles[nfiles-1];
-  infiles[--nfiles] = 0;
-
-  if (nfiles == 1)
-    slideshow = duration;
+  if (nFiles == 1)
+  {
+    params.slideshow = params.duration;
+  }
 
   /* stations should be a multiple of files, but >= 6.
      channels should be double that. */
   MAX_STATIONS = 6;
-  if (! slideshow) {
+  if (!params.slideshow)
+  {
     MAX_STATIONS = 0;
     while (MAX_STATIONS < 6)
-      MAX_STATIONS += nfiles;
+    {
+      MAX_STATIONS += nFiles;
+    }
     MAX_STATIONS *= 2;
   }
   N_CHANNELS = MAX_STATIONS * 2;
 
-  darkp = (nfiles == 1);
+  darkp = (nFiles == 1);
 
-  ya_rand_init (0);
-  analogtv_convert (infiles, outfile, logo,
-                    w, h, duration, slideshow, powerp);
+  ya_rand_init (params.seed);
+  analogtv_convert (inVec.data(), outFile.c_str(), params.logoFname.c_str(),
+                    params.size.width, params.size.height, params.duration, params.slideshow, params.powerup);
   exit (0);
 }
