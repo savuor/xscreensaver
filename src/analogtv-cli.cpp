@@ -274,8 +274,6 @@ cv::Mat loadImage(std::string fname)
   assert(!fname.empty());
 
   cv::Mat img = cv::imread(fname, cv::IMREAD_UNCHANGED);
-  //TODO: BGR to RGB?
-  //cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
 
   if (img.empty())
   {
@@ -296,10 +294,14 @@ cv::Mat loadImage(std::string fname)
   }
   else if (img.channels() == 3)
   {
+    //TODO: BGR to RGB?
     cv::cvtColor(img, cvt4, cv::COLOR_BGR2BGRA);
+    //cv::cvtColor(img, cvt4, cv::COLOR_BGR2RGBA);
   }
   else if (img.channels() == 4)
   {
+    //TODO: BGR to RGB?
+    //cv::cvtColor(img, cvt4, cv::COLOR_BGRA2RGBA);
     cvt4 = img;
   }
   else
@@ -354,7 +356,7 @@ static void run(Params params)
 
   unsigned long start_time = time((time_t *)0);
   int i;
-  int nfiles;
+
   unsigned long curticks = 0, curticks_sub = 0;
   time_t lastlog = time((time_t *)0);
   int frames_left = 0;
@@ -368,12 +370,10 @@ static void run(Params params)
   /* Load all of the input images.
    */
   stats = (int *) calloc(N_CHANNELS, sizeof(*stats));
-  for (nfiles = 0; infiles[nfiles]; nfiles++)
-    ;
 
   {
     int maxw = 0, maxh = 0;
-    for (i = 0; i < nfiles; i++)
+    for (i = 0; i < nFiles; i++)
       {
         cv::Mat img = loadImage(infiles[i]);
         images.push_back(img);
@@ -396,7 +396,7 @@ static void run(Params params)
 
   /* Scale all of the input images to the size of the largest one, or frame.
    */
-  for (i = 0; i < nfiles; i++)
+  for (i = 0; i < nFiles; i++)
     {
       cv::Mat img = images[i];
       if (img.size() != cv::Size(output_w, output_h))
@@ -537,7 +537,7 @@ static void run(Params params)
     /* Pick one of the input images and fill all channels with variants
        of it.
      */
-    int n = ya_random() % nfiles;
+    int n = ya_random() % nFiles;
     cv::Mat img = images[n];
     baseImage = img;
     if (verbose_p > 1)
@@ -566,11 +566,11 @@ static void run(Params params)
     /* Fill all channels with images */
     if (verbose_p > 1)
       fprintf (stderr, "%s: initializing %d files in %d channels\n",
-               progname, nfiles, MAX_STATIONS);
+               progname, nFiles, MAX_STATIONS);
 
     for (i = 0; i < MAX_STATIONS; i++)
     {
-      cv::Mat img = images[i % nfiles];
+      cv::Mat img = images[i % nFiles];
       analogtv_input *input = st->stations[i];
       int w = img.cols * 0.815;  /* underscan */
       int h = img.rows * 0.970;
