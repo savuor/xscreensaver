@@ -169,6 +169,7 @@ analogtv_set_defaults(analogtv *it)
   it->horiz_desync=ya_frand(10.0)-5.0;
   it->squeezebottom=ya_frand(5.0)-1.0;
 
+  //TODO: make logs
 #ifdef DEBUG
   printf("analogtv: prefix=%s\n",prefix);
   printf("  use: color=1\n");
@@ -720,7 +721,7 @@ analogtv_setup_frame(analogtv *it)
   if (it->rx_signal_level != 0.0)
     it->agclevel = 1.0/it->rx_signal_level;
 
-
+//TODO: make logs
 #ifdef DEBUG2
   printf("filter: ");
   for (i=0; i<ANALOGTV_GHOSTFIR_LEN; i++) {
