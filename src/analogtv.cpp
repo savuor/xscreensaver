@@ -151,7 +151,7 @@ void
 analogtv_set_defaults(analogtv *it)
 {
   // values taken from analogtv-cli
-  it->tint_control = 5;
+  it->tint_control = 5; // 270 (almost) fixes the color issue!
   it->color_control = 70/100.0;
   it->brightness_control = 2 / 100.0;
   it->contrast_control = 150 / 100.0;
