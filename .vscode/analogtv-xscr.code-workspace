@@ -29,7 +29,7 @@
 			        // "--logo", "/home/savuor/code/xscreensaver/hacks/images/amiga.png",
 					// //"--slideshow", "2",
 
-					"--verbose", "1",
+					"--verbose", "2",
 					"--duration", "60",
 					//"--slideshow", "2",
 					"--powerup",
@@ -37,7 +37,7 @@
 					"--logo", "/home/savuor/code/xscreensaver/hacks/images/amiga.png",
 					"--seed", "1234",
 					"--in", "~/Pictures/90s/*",
-					"--out", "~/Videos/90s.mp4"
+					"--out", "~/Videos/90s.mp4", ":highgui",
 						],
 				"stopAtEntry": false,
 				"cwd": "${fileDirname}",

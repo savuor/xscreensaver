@@ -45,6 +45,91 @@
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
 
+struct Output
+{
+  Output() { }
+
+  static std::shared_ptr<Output> create(const std::string& s, cv::Size imgSize);
+
+  virtual void send(const cv::Mat& m) = 0;
+
+  virtual ~Output() { }
+};
+
+struct HighguiOutput : Output
+{
+  HighguiOutput()
+  {
+    cv::namedWindow("tv");
+  }
+
+  void send(const cv::Mat& m) override
+  {
+    cv::imshow("tv", m);
+    cv::waitKey(1);
+  }
+
+  ~HighguiOutput()
+  {
+    cv::destroyAllWindows();
+  }
+};
+
+struct VideoOutput : Output
+{
+  // used with ffmpeg:
+  //const enum AVCodecID video_codec = AV_CODEC_ID_H264;
+  //const enum AVPixelFormat pix_fmt = AV_PIX_FMT_YUV420P;
+
+  VideoOutput(const std::string& s, cv::Size imgSize)
+  {
+    // cv::VideoWriter::fourcc('M', 'J', 'P', 'G')
+    if (!writer.open(s, cv::VideoWriter::fourcc('m', 'p', '4', 'v'), /* fps */ 30, imgSize))
+    {
+      throw std::runtime_error("Failed to open VideoWriter");
+    }
+    //TODO: logger
+    //if (verbose_p > 1)
+    {
+      fprintf(stderr, "%s: opened %s %dx%d\n", progname, s.c_str(), imgSize.width, imgSize.height);
+    }
+  }
+
+  virtual void send(const cv::Mat& m) override
+  {
+    cv::Mat out = m;
+    if (m.channels() == 4)
+    {
+      cvtColor(m, out, cv::COLOR_BGRA2BGR);
+    }
+    writer.write(out);
+  }
+
+  ~VideoOutput() { }
+
+  cv::VideoWriter writer;
+};
+
+std::shared_ptr<Output> Output::create(const std::string& s, cv::Size imgSize)
+{
+  if (s.at(0) == ':')
+  {
+    std::string name = s.substr(1, s.length() - 1);
+    if (name == "highgui")
+    {
+      return std::make_shared<HighguiOutput>();
+    }
+    else
+    {
+      throw std::runtime_error("Unknown video output: " + name);
+    }
+  }
+  else
+  {
+    return std::make_shared<VideoOutput>(s, imgSize);
+  }
+}
+
 struct Params
 {
   int         verbosity;
@@ -87,7 +172,8 @@ struct state
   image_loading_p(),
   curinputi(),
   chansettings(),
-  cs()
+  cs(),
+  outputs()
   { }
 
   cv::Mat outBuffer, logoImg, logoMask;
@@ -100,6 +186,8 @@ struct state
   int curinputi;
   chansetting *chansettings;
   chansetting *cs;
+
+  std::vector<std::shared_ptr<Output>> outputs;
 };
 
 static struct state global_state;
@@ -323,7 +411,6 @@ static void run(Params params)
   }
   inVec.push_back(nullptr);
 
-  std::string& outFile = params.outputs[0];
   verbose_p = params.verbosity;
 
   int nFiles = params.sources.size();
@@ -348,7 +435,6 @@ static void run(Params params)
 
   ya_rand_init (params.seed);
   const char **infiles = inVec.data();
-  const char *outfile  = outFile.c_str();
   const char *logofile = params.logoFname.c_str();
   int output_w = params.size.width, output_h = params.size.height;
   int duration = params.duration, slideshow = params.slideshow;
@@ -365,7 +451,6 @@ static void run(Params params)
   std::vector<cv::Mat> images;
   cv::Mat baseImage;
   int *stats;
-  cv::Ptr<cv::VideoWriter> writer;
 
   /* Load all of the input images.
    */
@@ -507,19 +592,10 @@ static void run(Params params)
   st->curinputi=0;
   st->cs = &st->chansettings[st->curinputi];
 
-  // used with ffmpeg:
-  //const enum AVCodecID video_codec = AV_CODEC_ID_H264;
-  //const enum AVPixelFormat pix_fmt = AV_PIX_FMT_YUV420P;
-
-  //writer = cv::makePtr<cv::VideoWriter>(outfile + std::string("_ocv.avi"), cv::VideoWriter::fourcc('M', 'J', 'P', 'G'),
-  // writer = cv::makePtr<cv::VideoWriter>(outfile + std::string("_ocv.mp4"), cv::VideoWriter::fourcc('M', 'P', '4', 'V'),
-  //                                       30, cv::Size(st->output_frame->width, st->output_frame->height));
-  // if (!writer->isOpened())
-  // {
-  //   printf("VideoWriter is not opened!\n");
-  //   abort();
-  // }
-  cv::namedWindow("tv");
+  for (const auto& s : params.outputs)
+  {
+    st->outputs.emplace_back(Output::create(s, st->outBuffer.size()));
+  }
 
  INIT_CHANNELS:
 
@@ -697,11 +773,10 @@ static void run(Params params)
       }
     }
 
-    cv::Mat m3;
-    cvtColor(st->outBuffer, m3, cv::COLOR_BGRA2BGR);
-    // writer->write(m3);
-    cv::imshow("tv", m3);
-    cv::waitKey(33);
+    for (const auto& o : st->outputs)
+    {
+      o->send(st->outBuffer);
+    }
 
     if (powerp &&
         curticks > (unsigned int)((duration*1000) - (POWERDOWN_DURATION*1000))) {
@@ -759,8 +834,6 @@ static void run(Params params)
   }
 
   free (stats);
-  //writer->release();
-  cv::destroyAllWindows();
 }
 
 
@@ -825,7 +898,7 @@ static const std::map<std::string, CmdArgument> knownArgs =
     {"out",
       { "out1 [out2 ... outN]", CmdArgument::Type::LIST_STRING, false,
           "where to output video: video files or window, output to all sources happens simultaneously\n"
-          "  * :window means output to window, stable FPS is not guaranteed" }}
+          "  * :highgui means output to window using OpenCV HighGUI module, stable FPS is not guaranteed" }}
 };
 
 void showUsage()
