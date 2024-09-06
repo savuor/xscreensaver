@@ -233,16 +233,16 @@ update_smpte_colorbars(analogtv_input *input)
   analogtv_draw_solid_rel_lcp(input, 5.0/6.0, 6.0/6.0,
                               0.75, 1.00, 7, 0, 0);      /* black */
   if (!st->logoImg.empty())
-    {
-      double aspect = (double)st->outBuffer.cols / st->outBuffer.rows;
-      double scale = (aspect > 1 ? 0.35 : 0.6);
-      int w2 = st->tv->outbuffer_width  * scale;
-      int h2 = st->tv->outbuffer_height * scale * aspect;
-      analogtv_load_ximage (st->tv, input, fromCvMat(st->logoImg), fromCvMat(st->logoMask),
-                            (st->tv->outbuffer_width - w2) / 2,
-                            st->tv->outbuffer_height * 0.20,
-                            w2, h2);
-    }
+  {
+    double aspect = (double)st->outBuffer.cols / st->outBuffer.rows;
+    double scale = (aspect > 1 ? 0.35 : 0.6);
+    int w2 = st->tv->outbuffer_width  * scale;
+    int h2 = st->tv->outbuffer_height * scale * aspect;
+    analogtv_load_ximage (st->tv, input, fromCvMat(st->logoImg), fromCvMat(st->logoMask),
+                          (st->tv->outbuffer_width - w2) / 2,
+                          st->tv->outbuffer_height * 0.20,
+                          w2, h2);
+  }
 
   input->next_update_time += 1.0;
 }
@@ -447,7 +447,7 @@ static void run(Params params)
 
   for (const auto& s : params.outputs)
   {
-    st->outputs.emplace_back(Output::create(s, st->outBuffer.size()));
+    st->outputs.emplace_back(Output::create(s, outSize));
   }
 
  INIT_CHANNELS:
