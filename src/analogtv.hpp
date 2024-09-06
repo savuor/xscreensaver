@@ -9,8 +9,7 @@
  * implied warranty.
  */
 
-#ifndef _XSCREENSAVER_ANALOGTV_H
-#define _XSCREENSAVER_ANALOGTV_H
+#pragma once
 
 #include "precomp.hpp"
 
@@ -271,5 +270,3 @@ void analogtv_draw_solid_rel_lcp(analogtv_input *input,
   { "-tv-tint",         ".TVTint",       XrmoptionSepArg, 0 }, \
   { "-tv-brightness",   ".TVBrightness", XrmoptionSepArg, 0 }, \
   { "-tv-contrast",     ".TVContrast",   XrmoptionSepArg, 0 },
-
-#endif /* _XSCREENSAVER_ANALOGTV_H */

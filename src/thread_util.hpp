@@ -13,8 +13,7 @@ software for any purpose.  It is provided "as is" without express or
 implied warranty.
 */
 
-#ifndef THREAD_UTIL_H
-#define THREAD_UTIL_H
+#pragma once
 
 /* thread_util.h because C11 took threads.h. */
 
@@ -374,4 +373,3 @@ void io_thread_finish(struct io_thread *self);
 */
 #define GET_PARENT_OBJ(struct_name, member_name, member) (struct_name *)((char *)member - offsetof(struct_name, member_name));
 
-#endif

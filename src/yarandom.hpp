@@ -9,8 +9,7 @@
  * implied warranty.
  */
 
-#ifndef __YARANDOM_H__
-#define __YARANDOM_H__
+#pragma once
 
 #include "precomp.hpp"
 
@@ -36,4 +35,3 @@ static double _ya_frand_tmp_;
 
 #endif /* not GCC2 */
 
-#endif /* __YARANDOM_H__ */

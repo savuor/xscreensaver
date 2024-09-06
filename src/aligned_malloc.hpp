@@ -13,8 +13,7 @@ software for any purpose.  It is provided "as is" without express or
 implied warranty.
 */
 
-#ifndef __ALIGNED_MALLOC_H__
-#define __ALIGNED_MALLOC_H__
+#pragma once
 
 #include "precomp.hpp"
 
@@ -27,4 +26,4 @@ unsigned get_cache_line_size(void);
 int aligned_malloc(void **ptr, unsigned alignment, size_t size);
 void aligned_free(void *);
 
-#endif /* __ALIGNED_MALLOC_H__ */
+

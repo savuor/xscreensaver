@@ -9,8 +9,7 @@
  * implied warranty.
  */
 
-#ifndef __FIXED_FUNCS_H__
-#define __FIXED_FUNCS_H__
+#pragma once
 
 #include "precomp.hpp"
 
@@ -47,4 +46,3 @@ int custom_XPutImage (XImage *image,
 
 extern const char *progname;
 
-#endif /* __FIXED_FUNCS_H__ */
