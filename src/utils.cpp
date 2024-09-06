@@ -17,13 +17,13 @@ cv::Mat loadImage(const std::string& fname)
 
   if (img.empty())
   {
-    std::cout << "Failed to load image " << fname << std::endl;
+    std::cerr << "Failed to load image " << fname << std::endl;
     abort();
   }
 
   if (img.depth() != CV_8U)
   {
-    std::cout << "Image depth is not 8 bit: " << fname << std::endl;
+    std::cerr << "Image depth is not 8 bit: " << fname << std::endl;
     abort();
   }
 
@@ -44,7 +44,7 @@ cv::Mat loadImage(const std::string& fname)
   }
   else
   {
-    std::cout << "Unknown format for file " << fname << std::endl;
+    std::cerr << "Unknown format for file " << fname << std::endl;
     abort();
   }
 
@@ -148,18 +148,18 @@ std::optional<int> parseInt(const std::string &s)
     }
     catch (std::invalid_argument const &ex)
     {
-        std::cout << "Failed to parse " << s << ": " << ex.what() << std::endl;
+        std::cerr << "Failed to parse \"" << s << "\": " << ex.what() << std::endl;
         return {};
     }
     catch (std::out_of_range const &ex)
     {
-        std::cout << "Failed to parse " << s << ": " << ex.what() << std::endl;
+        std::cerr << "Failed to parse \"" << s << "\": " << ex.what() << std::endl;
         return {};
     }
 
     if (at != s.length())
     {
-        std::cout << "Failed to parse " << s << ": only " << at << " symbols parsed" << std::endl;
+        std::cerr << "Failed to parse \"" << s << "\": only " << at << " symbols parsed" << std::endl;
         return {};
     }
 
@@ -190,20 +190,20 @@ std::map<std::string, ArgType> parseCmdArgs(const std::map<std::string, CmdArgum
         std::string arg(argv[i]);
         if (!isArgName(arg))
         {
-            std::cout << "Argument starting from \"--\" expected, instead we got " << arg << std::endl;
+            std::cerr << "Argument starting from \"--\" expected, instead we got " << arg << std::endl;
             return {};
         }
 
         std::string name = arg.substr(2, arg.length() - 2);
         if (knownArgs.count(name) != 1)
         {
-            std::cout << "Argument " << name << " is not known" << std::endl;
+            std::cerr << "Argument \"" << name << "\" is not known" << std::endl;
             return {};
         }
 
         if (usedArgs.count(name) > 0)
         {
-            std::cout << "Argument " << name << " was already used" << std::endl;
+            std::cerr << "Argument \"" << name << "\" was already used" << std::endl;
             return {};
         }
 
@@ -218,7 +218,7 @@ std::map<std::string, ArgType> parseCmdArgs(const std::map<std::string, CmdArgum
             i++;
             if (i >= nArgs)
             {
-                std::cout << "Argument " << name << "requires int argument" << std::endl;
+                std::cerr << "Argument \"" << name << "\" requires int argument" << std::endl;
                 return {};
             }
             auto v = parseInt(argv[i]);
@@ -237,7 +237,7 @@ std::map<std::string, ArgType> parseCmdArgs(const std::map<std::string, CmdArgum
             i++;
             if (i >= nArgs)
             {
-                std::cout << "Argument " << name << "requires string argument" << std::endl;
+                std::cerr << "Argument \"" << name << "\" requires string argument" << std::endl;
                 return {};
             }
             value = std::string(argv[i]);
@@ -266,7 +266,7 @@ std::map<std::string, ArgType> parseCmdArgs(const std::map<std::string, CmdArgum
 
             if (listInt.empty())
             {
-                std::cout << "Argument " << name << " requires a list of integers" << std::endl;
+                std::cerr << "Argument \"" << name << "\" requires a list of integers" << std::endl;
                 return {};
             }
             value = listInt;
@@ -287,7 +287,7 @@ std::map<std::string, ArgType> parseCmdArgs(const std::map<std::string, CmdArgum
 
             if (listStr.empty())
             {
-                std::cout << "Argument " << name << " requires a list of strings" << std::endl;
+                std::cerr << "Argument \"" << name << "\" requires a list of strings" << std::endl;
                 return {};
             }
             value = listStr;
@@ -309,12 +309,12 @@ std::map<std::string, ArgType> parseCmdArgs(const std::map<std::string, CmdArgum
 
     if (!mandatoryArgsToFill.empty())
     {
-        std::cout << "Following args are required:";
+        std::cerr << "Following args are required:";
         for (const auto &k : mandatoryArgsToFill)
         {
-            std::cout << " " << k;
+            std::cerr << " " << k;
         }
-        std::cout << std::endl;
+        std::cerr << std::endl;
         return {};
     }
 
