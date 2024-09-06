@@ -15,10 +15,6 @@
  *    --duration     Length in seconds of output MP4.
  *    --size WxH     Dimensions of output MP4.  Defaults to dimensions of
  *                   the largest input image.
- *    --slideshow    With multiple files, how many seconds to display
- *                   variants of each file before switching to the next.
- *                   If unspecified, they all go in the mix at once with
- *                   short duration.
  *    --powerup      Do the power-on animation at the beginning, and
  *                   fade to black at the end.
  *    --logo FILE    Small image overlayed onto the colorbars image.
@@ -44,7 +40,6 @@ struct Params
 {
   int         verbosity;
   int         duration;
-  int         slideshow;
   int         seed;
   bool        powerup;
   bool        fixSettings;
@@ -258,28 +253,21 @@ static void run(Params params)
   inVec.push_back(nullptr);
 
   int nFiles = params.sources.size();
-  if (nFiles == 1)
-  {
-    params.slideshow = params.duration;
-  }
 
   /* stations should be a multiple of files, but >= 6.
      channels should be double that. */
-  int MAX_STATIONS = 6;
-  if (!params.slideshow)
+  int MAX_STATIONS = 0;
+  while (MAX_STATIONS < 6)
   {
-    MAX_STATIONS = 0;
-    while (MAX_STATIONS < 6)
-    {
-      MAX_STATIONS += nFiles;
-    }
-    MAX_STATIONS *= 2;
+    MAX_STATIONS += nFiles;
   }
+  MAX_STATIONS *= 2;
+
   int N_CHANNELS = MAX_STATIONS * 2;
 
   ya_rand_init (params.seed);
   cv::Size outSize = params.size;
-  int duration = params.duration, slideshow = params.slideshow;
+  int duration = params.duration;
 
   unsigned long start_time = time((time_t *)0);
 
@@ -450,69 +438,31 @@ static void run(Params params)
     st->outputs.emplace_back(Output::create(s, outSize));
   }
 
- INIT_CHANNELS:
-
   curticks_sub = 0;
   channel_changes = 0;
   st->curinputi = 0;
   st->tv->powerup = 0.0;
 
-  if (slideshow)
-    /* First channel (initial unadulterated image) stays for this long */
-    frames_left = fps * (2 + ya_frand(1.5));
+  /* Fill all channels with images */
+  Log::write(2, "initializing " + std::to_string(nFiles) + " files in " +
+                std::to_string(MAX_STATIONS) + " channels");
 
-  if (slideshow)
+  for (int i = 0; i < MAX_STATIONS; i++)
   {
-    /* Pick one of the input images and fill all channels with variants
-       of it.
-     */
+    cv::Mat img = images[i % nFiles];
+    analogtv_input *input = st->stations[i];
+    int w = img.cols * 0.815; /* underscan */
+    int h = img.rows * 0.970;
+    int x = (outSize.width  - w) / 2;
+    int y = (outSize.height - h) / 2;
 
-    //TODO: won't work when sources are implemented
-    int n = ya_random() % nFiles;
-    cv::Mat img = images[n];
-    baseImage = img;
-    Log::write(2, "initializing for " + params.sources[n] +
-                  " " + std::to_string(img.cols)+"x" + std::to_string(img.rows) +
-                  " in " + std::to_string(MAX_STATIONS) + " channels");
-
-    for (int i = 0; i < MAX_STATIONS; i++)
+    if (!(ya_random() % 8)) /* Some stations are colorbars */
     {
-      analogtv_input *input = st->stations[i];
-      int w = img.cols * 0.815;  /* underscan */
-      int h = img.rows * 0.970;
-      int x = (outSize.width  - w) / 2;
-      int y = (outSize.height - h) / 2;
-
-      if (i == 1) {   /* station 0 is the unadulterated image.
-                         station 1 is colorbars. */
-        input->updater = update_smpte_colorbars;
-      }
-
-      analogtv_setup_sync (input, 1, (ya_random()%20)==0);
-      analogtv_load_ximage (st->tv, input, fromCvMat(img), XImage(), x, y, w, h);
+      input->updater = update_smpte_colorbars;
     }
-  }
-  else
-  {
-    /* Fill all channels with images */
-    Log::write(2, "initializing " + std::to_string(nFiles) + " files in " +
-                  std::to_string(MAX_STATIONS) + " channels");
 
-    for (int i = 0; i < MAX_STATIONS; i++)
-    {
-      cv::Mat img = images[i % nFiles];
-      analogtv_input *input = st->stations[i];
-      int w = img.cols * 0.815;  /* underscan */
-      int h = img.rows * 0.970;
-      int x = (outSize.width  - w) / 2;
-      int y = (outSize.height - h) / 2;
-
-      if (! (ya_random() % 8))  /* Some stations are colorbars */
-        input->updater = update_smpte_colorbars;
-
-      analogtv_setup_sync (input, 1, (ya_random()%20)==0);
-      analogtv_load_ximage (st->tv, input, fromCvMat(img), XImage(), x, y, w, h);
-    }
+    analogtv_setup_sync(input, 1, (ya_random() % 20) == 0);
+    analogtv_load_ximage(st->tv, input, fromCvMat(img), XImage(), x, y, w, h);
   }
 
   /* This is xanalogtv_draw()
@@ -522,60 +472,18 @@ static void run(Params params)
     const analogtv_reception *recs[MAX_MULTICHAN];
     unsigned rec_count = 0;
     double curtime = curticks * 0.001;
-    double curtime_sub = curticks_sub * 0.001;
 
     frames_left--;
     if (frames_left <= 0 &&
         (!params.powerup || curticks > POWERUP_DURATION*1000))
     {
-
       channel_changes++;
 
-      if (slideshow && channel_changes == 1)
-      {
-        /* Second channel has short duration, 0.25 to 0.75 sec. */
-        frames_left = fps * (0.25 + ya_frand(0.5));
-      }
-      else if (slideshow)
-      {
-        /* 0.5 - 2.0 sec (was 0.5 - 3.0 sec) */
-        frames_left = fps * (0.5 + ya_frand(1.5));
-      }
-      else
-      {
-        /* 1 - 7 sec */
-        frames_left = fps * (1 + ya_frand(6));
-      }
+      /* 1 - 7 sec */
+      frames_left = fps * (1 + ya_frand(6));
 
-      if (slideshow && channel_changes == 2)
-      {
-        /* Always use the unadulterated image for the third channel:
-           So the effect is, plain, brief blip, plain, then random. */
-        st->curinputi = 0;
-        frames_left += fps * (0.1 + ya_frand(0.5));
-
-      }
-      else if (slideshow && st->curinputi != 0 && ((ya_random() % 100) < 75))
-      {
-        /* Use the unadulterated image 75% of the time (was 33%) */
-        st->curinputi = 0;
-      }
-      else
-      {
-        /* Otherwise random */
-        int prev = st->curinputi;
-      AGAIN:
-        st->curinputi = 1 + (ya_random() % (N_CHANNELS - 1));
-
-        /* In slideshow mode, always alternate to the unadulterated image:
-           no two noisy images in a row, always intersperse clean. */
-        if (slideshow && prev != 0)
-          st->curinputi = 0;
-
-        /* In slideshow mode, do colorbars-only a bit less often. */
-        if (slideshow && st->curinputi == 1 && !(ya_random() % 3))
-          goto AGAIN;
-      }
+      /* Otherwise random */
+      st->curinputi = 1 + (ya_random() % (N_CHANNELS - 1));
 
       stats[st->curinputi]++;
       st->cs = &st->chanSettings[st->curinputi];
@@ -633,14 +541,6 @@ static void run(Params params)
       }
 
       analogtv_draw (st->tv, st->cs->noise_level, recs, rec_count);
-
-      if (slideshow && st->curinputi == 0 &&
-          (!params.powerup || curticks > POWERUP_DURATION*1000))
-      {
-        /* Unadulterated image centered on top of border of static */
-        cv::Point tl((outSize.width - baseImage.cols) / 2, (outSize.height - baseImage.rows) / 2);
-        baseImage.copyTo(st->outBuffer(cv::Rect(tl, baseImage.size())));
-      }
     }
 
     // Send rendered frame to outputs
@@ -664,9 +564,6 @@ static void run(Params params)
 
     if (curtime >= duration)
       break;
-
-    if (slideshow && curtime_sub >= slideshow)
-      goto INIT_CHANNELS;
 
     curticks     += 1000/fps;
     curticks_sub += 1000/fps;
@@ -714,9 +611,6 @@ static const std::map<std::string, CmdArgument> knownArgs =
     {"duration",
       { "secs",  CmdArgument::Type::INT,  false,
         "length of video in secs, e.g. 60" }},
-    {"slideshow",
-      { "secs",  CmdArgument::Type::INT,  true,
-        "how many secs to wait in slideshow mode, e.g. 5" }},
     {"powerup",
       { "",      CmdArgument::Type::BOOL, true,
         "to run power up sequence or not" }},
@@ -767,12 +661,6 @@ std::optional<Params> parseParams(int args, char** argv)
   if (usedArgs.count("verbose"))
   {
     p.verbosity = std::get<int>(usedArgs.at("verbose"));
-  }
-
-  p.slideshow = 0;
-  if (usedArgs.count("slideshow"))
-  {
-    p.slideshow = std::get<int>(usedArgs.at("slideshow"));
   }
 
   p.powerup = false;
