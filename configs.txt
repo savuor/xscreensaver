@@ -1,10 +1,6 @@
-
-<number id="noise" type="slider" arg="--noise %"        low="0.00" high="5.00" default="0.04"/>
-<number id="noise" type="slider" arg="--noise %"    low="0.0" high="0.2" default="0.04"/>
-<number id="tvbrightness" type="slider" arg="--tv-brightness %"        low="-75.0" high="100.0" default="1.5"/>
-<number id="tvbrightness" type="slider" arg="--tv-brightness %"        low="-75.0" high="100.0" default="3.0"/>
-<number id="tvcolor" type="slider" arg="--tv-color %"            low="0" high="400" default="70"/>
-<number id="tvcontrast" type="slider" arg="--tv-contrast %"         low="0" high="1500" default="1000"/>
-<number id="tvcontrast" type="slider" arg="--tv-contrast %"         low="0" high="500" default="150"/>
-<number id="tvtint" type="slider" arg="--tv-tint %"             low="0" high="360" default="5"/>
+noise:           0 to 0.2 or 0 to 5.0, default 0.04
+brightness:    -75 to 100, default 1.5 or 3.0
+color:           0 to 400, default 70
+contrast:        0 to 500, default 150; or 0 to 1500, default 1000
+tint:            0 to 360, default 5
 
