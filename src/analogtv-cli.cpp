@@ -149,8 +149,6 @@ const char *progclass;
 static int verbose_p = 0;
 
 #define MAX_MULTICHAN 2
-static int N_CHANNELS=12;
-static int MAX_STATIONS=6;
 
 #define POWERUP_DURATION   6  /* Hardcoded in analogtv.c */
 #define POWERDOWN_DURATION 1  /* Only used here */
@@ -167,11 +165,9 @@ struct state
   logoImg(),
   logoMask(),
   tv(),
-  n_stations(),
   stations(),
-  image_loading_p(),
   curinputi(),
-  chansettings(),
+  chanSettings(),
   cs(),
   outputs()
   { }
@@ -179,12 +175,10 @@ struct state
   cv::Mat outBuffer, logoImg, logoMask;
   analogtv *tv;
 
-  int n_stations;
-  analogtv_input **stations;
-  bool image_loading_p;
+  std::vector<analogtv_input*> stations;
 
   int curinputi;
-  chansetting *chansettings;
+  std::vector<chansetting> chanSettings;
   chansetting *cs;
 
   std::vector<std::shared_ptr<Output>> outputs;
@@ -347,7 +341,7 @@ update_smpte_colorbars(analogtv_input *input)
 }
 
 
-cv::Mat loadImage(std::string fname)
+cv::Mat loadImage(const std::string& fname)
 {
   assert(!fname.empty());
 
@@ -411,7 +405,7 @@ static void run(Params params)
 
   /* stations should be a multiple of files, but >= 6.
      channels should be double that. */
-  MAX_STATIONS = 6;
+  int MAX_STATIONS = 6;
   if (!params.slideshow)
   {
     MAX_STATIONS = 0;
@@ -421,7 +415,7 @@ static void run(Params params)
     }
     MAX_STATIONS *= 2;
   }
-  N_CHANNELS = MAX_STATIONS * 2;
+  int N_CHANNELS = MAX_STATIONS * 2;
 
   ya_rand_init (params.seed);
   int output_w = params.size.width, output_h = params.size.height;
@@ -520,12 +514,11 @@ static void run(Params params)
 
   st->tv = analogtv_allocate(output_w, output_h);
 
-  st->stations = (analogtv_input **) calloc (MAX_STATIONS, sizeof(*st->stations));
-  while (st->n_stations < MAX_STATIONS)
+  for (int i = 0; i < MAX_STATIONS; i++)
   {
     analogtv_input *input=analogtv_input_allocate();
-    st->stations[st->n_stations++]=input;
     input->client_data = st;
+    st->stations.push_back(input);
   }
 
   analogtv_set_defaults(st->tv);
@@ -545,17 +538,19 @@ static void run(Params params)
     }
   }
 
-  st->chansettings = (chansetting *)calloc (N_CHANNELS, sizeof (*st->chansettings));
-  for (i = 0; i < N_CHANNELS; i++) {
-    st->chansettings[i].noise_level = 0.06;
+  st->chanSettings.resize(N_CHANNELS);
+  for (i = 0; i < N_CHANNELS; i++)
+  {
+    st->chanSettings[i].noise_level = 0.06;
+
+    int last_station=42;
+    for (int stati=0; stati<MAX_MULTICHAN; stati++)
     {
-      int last_station=42;
-      int stati;
-      for (stati=0; stati<MAX_MULTICHAN; stati++) {
-        analogtv_reception *rec=&st->chansettings[i].recs[stati];
+        analogtv_reception *rec = &st->chanSettings[i].recs[stati];
         int station;
-        while (1) {
-          station=ya_random()%st->n_stations;
+        while (1)
+        {
+          station=ya_random()%(st->stations.size());
           if (station!=last_station) break;
           if ((ya_random()%10)==0) break;
         }
@@ -581,7 +576,7 @@ static void run(Params params)
   }
 
   st->curinputi=0;
-  st->cs = &st->chansettings[st->curinputi];
+  st->cs = &st->chanSettings[st->curinputi];
 
   for (const auto& s : params.outputs)
   {
@@ -658,7 +653,8 @@ static void run(Params params)
 
   /* This is xanalogtv_draw()
    */
-  while (1) {
+  while (1)
+  {
     const analogtv_reception *recs[MAX_MULTICHAN];
     unsigned rec_count = 0;
     double curtime = curticks * 0.001;
@@ -707,7 +703,7 @@ static void run(Params params)
       }
 
       stats[st->curinputi]++;
-      st->cs = &st->chansettings[st->curinputi];
+      st->cs = &st->chanSettings[st->curinputi];
       /* Set channel change noise flag */
       st->tv->channel_change_cycles=200000;
 
@@ -734,7 +730,8 @@ static void run(Params params)
       }
     }
 
-    for (i=0; i<MAX_MULTICHAN; i++) {
+    for (i=0; i<MAX_MULTICHAN; i++)
+    {
       analogtv_reception *rec = &st->cs->recs[i];
       analogtv_input *inp=rec->input;
       if (!inp) continue;
