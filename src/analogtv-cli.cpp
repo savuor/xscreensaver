@@ -190,8 +190,8 @@ struct state
   std::vector<std::shared_ptr<Output>> outputs;
 };
 
-static struct state global_state;
-
+//TODO: refactor it
+static cv::Mat globalOutBuffer;
 
 XImage fromCvMat(cv::Mat& m)
 {
@@ -225,7 +225,6 @@ custom_XPutImage (XImage *image,
            int src_x, int src_y, int dest_x, int dest_y,
            unsigned int w, unsigned int h)
 {
-  struct state *st = &global_state;
   cv::Mat img = fromXImage(image);
 
   if (src_x < 0)
@@ -240,7 +239,7 @@ custom_XPutImage (XImage *image,
     src_x -= dest_x;
     dest_x = 0;
   }
-  w = std::min((int)w, std::min(st->outBuffer.cols - dest_x, image->width - src_x));
+  w = std::min((int)w, std::min(globalOutBuffer.cols - dest_x, image->width - src_x));
 
   if (src_y < 0)
   {
@@ -254,9 +253,9 @@ custom_XPutImage (XImage *image,
     src_y -= dest_y;
     dest_y = 0;
   }
-  h = std::min((int)h, std::min(st->outBuffer.rows - dest_y, image->height - src_y));
+  h = std::min((int)h, std::min(globalOutBuffer.rows - dest_y, image->height - src_y));
 
-  img(cv::Rect(src_x, src_y, w, h)).copyTo(st->outBuffer(cv::Rect(dest_x, dest_y, w, h)));
+  img(cv::Rect(src_x, src_y, w, h)).copyTo(globalOutBuffer(cv::Rect(dest_x, dest_y, w, h)));
 
   return 0;
 }
@@ -456,24 +455,24 @@ static void run(Params params)
    */
   stats = (int *) calloc(N_CHANNELS, sizeof(*stats));
 
+  int maxw = 0, maxh = 0;
+  for (i = 0; i < nFiles; i++)
   {
-    int maxw = 0, maxh = 0;
-    for (i = 0; i < nFiles; i++)
-      {
-        cv::Mat img = loadImage(infiles[i]);
-        images.push_back(img);
-        if (verbose_p > 1)
-          fprintf (stderr, "%s: loaded %s %dx%d\n", progname, infiles[i],
-                   img.cols, img.rows);
-        
-        maxw = std::max(maxw, img.cols);
-        maxh = std::max(maxh, img.rows);
-      }
-
-    if (!output_w || !output_h) {
-      output_w = maxw;
-      output_h = maxh;
+    cv::Mat img = loadImage(infiles[i]);
+    images.push_back(img);
+    if (verbose_p > 1)
+    {
+      fprintf(stderr, "%s: loaded %s %dx%d\n", progname, infiles[i],
+              img.cols, img.rows);
     }
+    maxw = std::max(maxw, img.cols);
+    maxh = std::max(maxh, img.rows);
+  }
+
+  if (!output_w || !output_h)
+  {
+    output_w = maxw;
+    output_h = maxh;
   }
 
   output_w &= ~1;  /* can't be odd */
@@ -505,9 +504,11 @@ static void run(Params params)
         }
     }
 
-  struct state *st = &global_state;
+  state runState;
+  state* st = &runState;
 
   st->outBuffer = cv::Mat(output_h, output_w, CV_8UC4, cv::Scalar(0));
+  globalOutBuffer = st->outBuffer;
 
   if (logofile)
   {
@@ -529,9 +530,9 @@ static void run(Params params)
 
   st->tv = analogtv_allocate(output_w, output_h);
 
-  st->stations = (analogtv_input **)
-    calloc (MAX_STATIONS, sizeof(*st->stations));
-  while (st->n_stations < MAX_STATIONS) {
+  st->stations = (analogtv_input **) calloc (MAX_STATIONS, sizeof(*st->stations));
+  while (st->n_stations < MAX_STATIONS)
+  {
     analogtv_input *input=analogtv_input_allocate();
     st->stations[st->n_stations++]=input;
     input->client_data = st;
