@@ -7,6 +7,52 @@
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
 
+// I/O
+
+cv::Mat loadImage(const std::string& fname)
+{
+  assert(!fname.empty());
+
+  cv::Mat img = cv::imread(fname, cv::IMREAD_UNCHANGED);
+
+  if (img.empty())
+  {
+    std::cout << "Failed to load image " << fname << std::endl;
+    abort();
+  }
+
+  if (img.depth() != CV_8U)
+  {
+    std::cout << "Image depth is not 8 bit: " << fname << std::endl;
+    abort();
+  }
+
+  cv::Mat cvt4;
+  if (img.channels() == 1)
+  {
+    cv::cvtColor(img, cvt4, cv::COLOR_GRAY2BGRA);
+  }
+  else if (img.channels() == 3)
+  {
+    //TODO: BGR to RGB?
+    cv::cvtColor(img, cvt4, cv::COLOR_BGR2BGRA);
+  }
+  else if (img.channels() == 4)
+  {
+    //TODO: BGR to RGB?
+    cvt4 = img;
+  }
+  else
+  {
+    std::cout << "Unknown format for file " << fname << std::endl;
+    abort();
+  }
+
+  return cvt4;
+}
+
+// Output classes
+
 struct HighguiOutput : Output
 {
   HighguiOutput();

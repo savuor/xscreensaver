@@ -38,10 +38,6 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/videoio.hpp>
-#include <opencv2/highgui.hpp>
-
 
 
 struct Params
@@ -253,51 +249,6 @@ update_smpte_colorbars(analogtv_input *input)
     }
 
   input->next_update_time += 1.0;
-}
-
-
-cv::Mat loadImage(const std::string& fname)
-{
-  assert(!fname.empty());
-
-  cv::Mat img = cv::imread(fname, cv::IMREAD_UNCHANGED);
-
-  if (img.empty())
-  {
-    std::cout << "Failed to load image " << fname << std::endl;
-    abort();
-  }
-
-  if (img.depth() != CV_8U)
-  {
-    std::cout << "Image depth is not 8 bit: " << fname << std::endl;
-    abort();
-  }
-
-  cv::Mat cvt4;
-  if (img.channels() == 1)
-  {
-    cv::cvtColor(img, cvt4, cv::COLOR_GRAY2BGRA);
-  }
-  else if (img.channels() == 3)
-  {
-    //TODO: BGR to RGB?
-    cv::cvtColor(img, cvt4, cv::COLOR_BGR2BGRA);
-    //cv::cvtColor(img, cvt4, cv::COLOR_BGR2RGBA);
-  }
-  else if (img.channels() == 4)
-  {
-    //TODO: BGR to RGB?
-    //cv::cvtColor(img, cvt4, cv::COLOR_BGRA2RGBA);
-    cvt4 = img;
-  }
-  else
-  {
-    std::cout << "Unknown format for file " << fname << std::endl;
-    abort();
-  }
-
-  return cvt4;
 }
 
 

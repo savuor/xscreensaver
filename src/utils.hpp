@@ -29,3 +29,5 @@ struct Output
 //     static setVerbosity(int n);
 //     static setProgName(const std::string& s);
 // };
+cv::Mat loadImage(const std::string& fname);
+
