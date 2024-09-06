@@ -847,5 +847,6 @@ int main (int argc, char **argv)
   }
 
   run(oparams.value());
-  exit (0);
+
+  return 0;
 }
