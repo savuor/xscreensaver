@@ -22,13 +22,14 @@ struct Output
   virtual ~Output() { }
 };
 
-//TODO
-// struct Logger
-// {
-//     static write(const std::string& s);
-//     static setVerbosity(int n);
-//     static setProgName(const std::string& s);
-// };
+
+struct Log
+{
+    static void write(int level, const std::string& s);
+    static void setVerbosity(int n);
+    static int  getVerbosity();
+    static void setProgName(const std::string& s);
+};
 
 
 cv::Mat loadImage(const std::string& fname);

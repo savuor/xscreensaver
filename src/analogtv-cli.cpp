@@ -55,10 +55,6 @@ struct Params
   std::vector<std::string> outputs;
 };
 
-const char *progname;
-const char *progclass;
-static int verbose_p = 0;
-
 #define MAX_MULTICHAN 2
 
 #define POWERUP_DURATION   6  /* Hardcoded in analogtv.c */
@@ -261,8 +257,6 @@ static void run(Params params)
   }
   inVec.push_back(nullptr);
 
-  verbose_p = params.verbosity;
-
   int nFiles = params.sources.size();
   if (nFiles == 1)
   {
@@ -311,10 +305,6 @@ static void run(Params params)
     std::string fname = params.sources[i];
     cv::Mat img = loadImage(fname);
     images.push_back(img);
-    if (verbose_p > 1)
-    {
-      fprintf(stderr, "%s: loaded %s %dx%d\n", progname, fname.c_str(), img.cols, img.rows);
-    }
     maxw = std::max(maxw, img.cols);
     maxh = std::max(maxh, img.rows);
   }
@@ -363,12 +353,6 @@ static void run(Params params)
   if (!params.logoFname.empty())
   {
     st->logoImg = loadImage(params.logoFname);
-    if (verbose_p)
-    {
-      fprintf (stderr, "%s: loaded %s %dx%d\n", 
-               progname, params.logoFname.c_str(), st->logoImg.cols, st->logoImg.rows);
-    }
-
     /* Pull the alpha out of the logo and make a separate mask ximage. */
     st->logoMask = cv::Mat(st->logoImg.size(), CV_8UC4, cv::Scalar(0));
     std::vector<cv::Mat> logoCh;
@@ -490,14 +474,12 @@ static void run(Params params)
     int n = ya_random() % nFiles;
     cv::Mat img = images[n];
     baseImage = img;
-    if (verbose_p > 1)
-    {
-      fprintf (stderr, "%s: initializing for %s %dx%d in %d channels\n", 
-               progname, params.sources[n].c_str(), img.cols, img.rows,
-               MAX_STATIONS);
-    }
+    Log::write(2, "initializing for " + params.sources[n] +
+                  " " + std::to_string(img.cols)+"x" + std::to_string(img.rows) +
+                  " in " + std::to_string(MAX_STATIONS) + " channels");
 
-    for (i = 0; i < MAX_STATIONS; i++) {
+    for (i = 0; i < MAX_STATIONS; i++)
+    {
       analogtv_input *input = st->stations[i];
       int w = img.cols * 0.815;  /* underscan */
       int h = img.rows * 0.970;
@@ -516,9 +498,8 @@ static void run(Params params)
   else
   {
     /* Fill all channels with images */
-    if (verbose_p > 1)
-      fprintf (stderr, "%s: initializing %d files in %d channels\n",
-               progname, nFiles, MAX_STATIONS);
+    Log::write(2, "initializing " + std::to_string(nFiles) + " files in " +
+                  std::to_string(MAX_STATIONS) + " channels");
 
     for (i = 0; i < MAX_STATIONS; i++)
     {
@@ -593,9 +574,7 @@ static void run(Params params)
       /* Set channel change noise flag */
       st->tv->channel_change_cycles=200000;
 
-      if (verbose_p > 1)
-        fprintf (stderr, "%s: %5.1f sec: channel %d\n",
-                 progname, curticks/1000.0, st->curinputi);
+      Log::write(2, std::to_string(curticks/1000.0) + " sec: channel " + std::to_string(st->curinputi));
 
       /* Turn the knobs every now and then */
       if (!fixSettings && !(ya_random() % 5))
@@ -678,40 +657,36 @@ static void run(Params params)
     curticks     += 1000/fps;
     curticks_sub += 1000/fps;
 
-    if (verbose_p) {
-      unsigned long now = time((time_t *)0);
-      if (now > (unsigned int)(verbose_p == 1 ? lastlog : lastlog + 10)) {
-        unsigned long elapsed = now - start_time;
+    //TODO: refactor it
+    unsigned long now = time((time_t *)0);
+    if (now > (unsigned int)(Log::getVerbosity() == 1 ? lastlog : lastlog + 10))
+    {
+      unsigned long elapsed = now - start_time;
         double ratio = curtime / (double) duration;
         int remaining = (ratio ? (elapsed / ratio) - elapsed : 0);
-        int pct = 100 * ratio;
+        int percent = 100 * ratio;
         int cols = 47;
-        char dots[80];
-        int ii;
-        for (ii = 0; ii < cols * ratio; ii++)
-          dots[ii] = '.';
-        dots[ii] = 0;
-        fprintf (stderr, "%s%s: %s %2d%%, %d:%02d:%02d ETA%s",
-                 (verbose_p == 1 ? "\r" : ""),
-                 progname,
-                 dots, pct, 
+        std::string dots(cols * ratio, '.');
+        fprintf (stderr, "%sprocessing%s %2d%%, %d:%02d:%02d ETA%s",
+                 (Log::getVerbosity() == 1 ? "\r" : ""),
+                 dots.c_str(), percent, 
                  (remaining/60/60),
                  (remaining/60)%60,
                  remaining%60,
-                 (verbose_p == 1 ? "" : "\n"));
+                 (Log::getVerbosity() == 1 ? "" : "\n"));
         lastlog = now;
-      }
     }
   }
 
-  if (verbose_p == 1) fprintf(stderr, "\n");
+  if (Log::getVerbosity() == 1) fprintf(stderr, "\n");
 
-  if (verbose_p > 1) {
-    if (channel_changes == 0) channel_changes++;
-    fprintf(stderr, "%s: channels shown: %d\n", progname, channel_changes);
-    for (i = 0; i < N_CHANNELS; i++)
-      fprintf(stderr, "%s:   %2d: %3d%%\n", progname,
-              i+1, stats[i] * 100 / channel_changes);
+
+  if (channel_changes == 0) channel_changes++;
+
+  Log::write(2, "channels shown: " + std::to_string(channel_changes));
+  for (i = 0; i < N_CHANNELS; i++)
+  {
+    Log::write(2, "  " + std::to_string(i+1) + ":  " + std::to_string(stats[i] * 100 / channel_changes));
   }
 
   free (stats);
@@ -836,15 +811,17 @@ std::optional<Params> parseParams(int args, char** argv)
 int main (int argc, char **argv)
 {
   char *s = strrchr (argv[0], '/');
-  progname = s ? s+1 : argv[0];
-  progclass = progname;
+  std::string progName(s ? s+1 : argv[0]);
 
   std::optional<Params> oparams = parseParams(argc, argv);
   if (!oparams)
   {
-    showUsage(message, progname, knownArgs);
+    showUsage(message, progName, knownArgs);
     return -1;
   }
+
+  Log::setProgName(progName);
+  Log::setVerbosity(oparams.value().verbosity);
 
   run(oparams.value());
 

@@ -42,7 +42,3 @@ int custom_XPutImage (XImage *image,
                         int src_x, int src_y, int dest_x, int dest_y,
                         unsigned int w, unsigned int h);
 
-// from screenhackI.h
-
-extern const char *progname;
-

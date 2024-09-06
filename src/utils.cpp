@@ -48,6 +48,8 @@ cv::Mat loadImage(const std::string& fname)
     abort();
   }
 
+    Log::write(2, "loaded " + fname + " " + std::to_string(img.cols) + "x" + std::to_string(img.rows));
+
   return cvt4;
 }
 
@@ -101,11 +103,7 @@ VideoOutput::VideoOutput(const std::string &s, cv::Size imgSize)
     {
         throw std::runtime_error("Failed to open VideoWriter");
     }
-    // TODO: logger
-    // if (verbose_p > 1)
-    {
-        //fprintf(stderr, "%s: opened %s %dx%d\n", progname, s.c_str(), imgSize.width, imgSize.height);
-    }
+    Log::write(2, "opened " + s + " " + std::to_string(imgSize.width) + "x" + std::to_string(imgSize.height));
 }
 
 void VideoOutput::send(const cv::Mat &m)
@@ -346,6 +344,34 @@ void showUsage(const std::string& message, const std::string& appName, const std
         {
             std::cout << "      " << hs << std::endl;
         }
+    }
+}
+
+// Logging 
+
+static std::string progname = "";
+static int verbose_p = 0;
+
+void Log::setVerbosity(int n)
+{
+    verbose_p = n;
+}
+
+int Log::getVerbosity()
+{
+    return verbose_p;
+}
+
+void Log::setProgName(const std::string& s)
+{
+    progname = s;
+}
+
+void Log::write(int level, const std::string& s)
+{
+    if (verbose_p >= level)
+    {
+        std::cerr << progname << ": " << s << std::endl;
     }
 }
 

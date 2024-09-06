@@ -74,6 +74,8 @@
 #include "fixed-funcs.hpp"
 #include "analogtv.hpp"
 #include "yarandom.hpp"
+#include "utils.hpp"
+
 
 /* #define DEBUG 1 */
 
@@ -273,44 +275,32 @@ analogtv_configure(analogtv *it)
   max_ratio = 10;
 //#endif
 
+  std::string debugPrint1 = std::to_string(wlim) + "x" + std::to_string(hlim);
+  std::string debugPrint2 = " in " + std::to_string(it->outbuffer_width) + "x" + std::to_string(it->outbuffer_height);
+  std::string debugPrint3 = " (" + std::to_string(min_ratio) + " < " + std::to_string(ratio) + " < " + std::to_string(max_ratio) + ")";
   if (wlim < 266 || hlim < 200)
     {
       wlim = 266;
       hlim = 200;
-# ifdef DEBUG
-      fprintf (stderr,
-               "size: minimal: %dx%d in %dx%d (%.3f < %.3f < %.3f)\n",
-               wlim, hlim, it->outbuffer_width, it->outbuffer_height,
-               min_ratio, ratio, max_ratio);
-# endif
+      // debug mode
+      Log::write(3, "size: minimal: " + debugPrint1 + debugPrint2 + debugPrint3);
     }
   else if (ratio > min_ratio && ratio < max_ratio)
     {
-# ifdef DEBUG
-      fprintf (stderr,
-               "size: close enough: %dx%d (%.3f < %.3f < %.3f)\n",
-               wlim, hlim, min_ratio, ratio, max_ratio);
-# endif
+      // debug mode
+      Log::write(3, "size: close enough:" + debugPrint1 + debugPrint3);
     }
   else if (ratio >= max_ratio)
     {
       wlim = hlim*max_ratio;
-# ifdef DEBUG
-      fprintf (stderr,
-               "size: center H: %dx%d in %dx%d (%.3f < %.3f < %.3f)\n",
-               wlim, hlim, it->outbuffer_width, it->outbuffer_height,
-               min_ratio, ratio, max_ratio);
-# endif
+      // debug mode
+      Log::write(3, "size: center H: " + debugPrint1 + debugPrint2 + debugPrint3);
     }
   else /* ratio <= min_ratio */
     {
       hlim = wlim/min_ratio;
-# ifdef DEBUG
-      fprintf (stderr,
-               "size: center V: %dx%d in %dx%d (%.3f < %.3f < %.3f)\n",
-               wlim, hlim, it->outbuffer_width, it->outbuffer_height,
-               min_ratio, ratio, max_ratio);
-# endif
+      // debug mode
+      Log::write(3, "size: center V: " + debugPrint1 + debugPrint2 + debugPrint3);
     }
 
   if (ratio < crazy_min_ratio || ratio > crazy_max_ratio)
@@ -319,12 +309,8 @@ analogtv_configure(analogtv *it)
         hlim = it->outbuffer_height;
       else
         wlim = it->outbuffer_width;
-# ifdef DEBUG
-      fprintf (stderr,
-               "size: aspect: %dx%d in %dx%d (%.3f < %.3f < %.3f)\n",
-               wlim, hlim, it->outbuffer_width, it->outbuffer_height,
-               min_ratio, ratio, max_ratio);
-# endif
+      // debug mode
+      Log::write(3, "size: aspect: " + debugPrint1 + debugPrint2 + debugPrint3);
     }
 
 
