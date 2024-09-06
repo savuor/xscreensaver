@@ -38,17 +38,12 @@ struct XImage
     // unsigned long blue_mask ; /* always 0x000000FFL */
 };
 
-// from resources.h
-extern double get_float_resource (char*);
-
 // from analogtv-cli.c
 int custom_XPutImage (XImage *image,
                         int src_x, int src_y, int dest_x, int dest_y,
                         unsigned int w, unsigned int h);
 
 // from screenhackI.h
-
-extern bool mono_p;
 
 extern const char *progname;
 

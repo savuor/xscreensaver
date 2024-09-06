@@ -260,15 +260,6 @@ custom_XPutImage (XImage *image,
   return 0;
 }
 
-double
-get_float_resource (char *name)
-{
-  if (!strcmp(name, "TVTint")) return 5;		/* default 5   */
-  if (!strcmp(name, "TVColor")) return 70;		/* default 70  */
-  if (!strcmp(name, "TVBrightness")) return 2;				/* default 2   */
-  if (!strcmp(name, "TVContrast")) return 150;		/* default 150 */
-  abort();
-}
 
 static void
 update_smpte_colorbars(analogtv_input *input)
@@ -433,8 +424,6 @@ static void run(Params params)
   N_CHANNELS = MAX_STATIONS * 2;
 
   ya_rand_init (params.seed);
-  const char **infiles = inVec.data();
-  const char *logofile = params.logoFname.c_str();
   int output_w = params.size.width, output_h = params.size.height;
   int duration = params.duration, slideshow = params.slideshow;
   bool powerp = params.powerup;
@@ -458,12 +447,13 @@ static void run(Params params)
   int maxw = 0, maxh = 0;
   for (i = 0; i < nFiles; i++)
   {
-    cv::Mat img = loadImage(infiles[i]);
+    //TODO: sources
+    std::string fname = params.sources[i];
+    cv::Mat img = loadImage(fname);
     images.push_back(img);
     if (verbose_p > 1)
     {
-      fprintf(stderr, "%s: loaded %s %dx%d\n", progname, infiles[i],
-              img.cols, img.rows);
+      fprintf(stderr, "%s: loaded %s %dx%d\n", progname, fname.c_str(), img.cols, img.rows);
     }
     maxw = std::max(maxw, img.cols);
     maxh = std::max(maxh, img.rows);
@@ -510,13 +500,13 @@ static void run(Params params)
   st->outBuffer = cv::Mat(output_h, output_w, CV_8UC4, cv::Scalar(0));
   globalOutBuffer = st->outBuffer;
 
-  if (logofile)
+  if (!params.logoFname.empty())
   {
-    st->logoImg = loadImage(logofile);
+    st->logoImg = loadImage(params.logoFname);
     if (verbose_p)
     {
       fprintf (stderr, "%s: loaded %s %dx%d\n", 
-               progname, logofile, st->logoImg.cols, st->logoImg.rows);
+               progname, params.logoFname.c_str(), st->logoImg.cols, st->logoImg.rows);
     }
 
     /* Pull the alpha out of the logo and make a separate mask ximage. */
@@ -538,7 +528,7 @@ static void run(Params params)
     input->client_data = st;
   }
 
-  analogtv_set_defaults(st->tv, "");
+  analogtv_set_defaults(st->tv);
 
   if (ya_random()%4==0) {
     st->tv->tint_control += pow(ya_frand(2.0)-1.0, 7) * 180.0;
@@ -614,13 +604,17 @@ static void run(Params params)
     /* Pick one of the input images and fill all channels with variants
        of it.
      */
+
+    //TODO: won't work when sources are implemented
     int n = ya_random() % nFiles;
     cv::Mat img = images[n];
     baseImage = img;
     if (verbose_p > 1)
+    {
       fprintf (stderr, "%s: initializing for %s %dx%d in %d channels\n", 
-               progname, infiles[n], img.cols, img.rows,
+               progname, params.sources[n].c_str(), img.cols, img.rows,
                MAX_STATIONS);
+    }
 
     for (i = 0; i < MAX_STATIONS; i++) {
       analogtv_input *input = st->stations[i];

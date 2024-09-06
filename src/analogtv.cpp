@@ -148,18 +148,13 @@ static float puramp(const analogtv *it, float tc, float start, float over)
 static const double float_low8_ofs=8388608.0;
 
 void
-analogtv_set_defaults(analogtv *it, const char *prefix)
+analogtv_set_defaults(analogtv *it)
 {
-  char buf[256];
-
-  sprintf(buf,"%sTVTint",prefix);
-  it->tint_control = get_float_resource(buf);
-  sprintf(buf,"%sTVColor",prefix);
-  it->color_control = get_float_resource(buf)/100.0;
-  sprintf(buf,"%sTVBrightness",prefix);
-  it->brightness_control = get_float_resource(buf) / 100.0;
-  sprintf(buf,"%sTVContrast",prefix);
-  it->contrast_control = get_float_resource(buf) / 100.0;
+  // values taken from analogtv-cli
+  it->tint_control = 5;
+  it->color_control = 70/100.0;
+  it->brightness_control = 2 / 100.0;
+  it->contrast_control = 150 / 100.0;
   it->height_control = 1.0;
   it->width_control = 1.0;
   it->squish_control = 0.0;

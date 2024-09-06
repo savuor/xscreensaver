@@ -213,7 +213,7 @@ analogtv *analogtv_allocate(int outbuffer_width, int outbuffer_height);
 analogtv_input *analogtv_input_allocate(void);
 
 
-void analogtv_set_defaults(analogtv *it, const char *prefix);
+void analogtv_set_defaults(analogtv *it);
 void analogtv_setup_frame(analogtv *it);
 void analogtv_setup_sync(analogtv_input *input, int do_cb, int do_ssavi);
 void analogtv_draw(analogtv *it, double noiselevel,
