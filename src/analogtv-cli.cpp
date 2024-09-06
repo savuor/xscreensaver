@@ -137,6 +137,7 @@ struct Params
   int         slideshow;
   int         seed;
   bool        powerup;
+  bool        fixSettings;
   cv::Size    size;
   std::string logoFname;
 
@@ -523,18 +524,25 @@ static void run(Params params)
 
   analogtv_set_defaults(st->tv);
 
-  if (ya_random()%4==0) {
-    st->tv->tint_control += pow(ya_frand(2.0)-1.0, 7) * 180.0;
-  }
-  if (1) {
-    st->tv->color_control += ya_frand(0.3) * ((ya_random() & 1) ? 1 : -1);
-  }
-  if (darkp) {
-    if (ya_random()%4==0) {
-      st->tv->brightness_control += ya_frand(0.15);
+  bool fixSettings = params.fixSettings;
+  if (!fixSettings)
+  {
+    if (ya_random()%4==0)
+    {
+      st->tv->tint_control += pow(ya_frand(2.0)-1.0, 7) * 180.0;
     }
-    if (ya_random()%4==0) {
-      st->tv->contrast_control += ya_frand(0.2) * ((ya_random() & 1) ? 1 : -1);
+    if (1)
+    {
+      st->tv->color_control += ya_frand(0.3) * ((ya_random() & 1) ? 1 : -1);
+    }
+    if (0) //if (darkp)
+    {
+      if (ya_random()%4==0) {
+        st->tv->brightness_control += ya_frand(0.15);
+      }
+      if (ya_random()%4==0) {
+        st->tv->contrast_control += ya_frand(0.2) * ((ya_random() & 1) ? 1 : -1);
+      }
     }
   }
 
@@ -556,22 +564,35 @@ static void run(Params params)
         }
         last_station=station;
         rec->input = st->stations[station];
-        rec->level = pow(ya_frand(1.0), 3.0) * 2.0 + 0.05;
-        rec->ofs=ya_random()%ANALOGTV_SIGNAL_LEN;
-        if (ya_random()%3) {
-          rec->multipath = ya_frand(1.0);
-        } else {
+        if (fixSettings)
+        {
+          rec->level = 0.3;
+          rec->ofs=0;
           rec->multipath=0.0;
+          rec->freqerr = 0;
         }
-        if (stati) {
-          /* We only set a frequency error for ghosting stations,
-             because it doesn't matter otherwise */
-          rec->freqerr = (ya_frand(2.0)-1.0) * 3.0;
+        else
+        {
+          rec->level = pow(ya_frand(1.0), 3.0) * 2.0 + 0.05;
+          rec->ofs = ya_random()%ANALOGTV_SIGNAL_LEN;
+          if (ya_random()%3)
+          {
+            rec->multipath = ya_frand(1.0);
+          }
+          else
+          {
+            rec->multipath=0.0;
+          }
+          if (stati)
+          {
+            /* We only set a frequency error for ghosting stations,
+              because it doesn't matter otherwise */
+            rec->freqerr = (ya_frand(2.0)-1.0) * 3.0;
+          }
         }
 
         if (rec->level > 0.3) break;
         if (ya_random()%4) break;
-      }
     }
   }
 
@@ -712,14 +733,17 @@ static void run(Params params)
                  progname, curticks/1000.0, st->curinputi);
 
       /* Turn the knobs every now and then */
-      if (! (ya_random() % 5)) {
+      if (!fixSettings && !(ya_random() % 5))
+      {
         if (ya_random()%4==0) {
           st->tv->tint_control += pow(ya_frand(2.0)-1.0, 7) * 180.0 * ((ya_random() & 1) ? 1 : -1);
         }
-        if (1) {
+        if (1)
+        {
           st->tv->color_control += ya_frand(0.3) * ((ya_random() & 1) ? 1 : -1);
         }
-        if (darkp) {
+        if (0) //(darkp)
+        {
           if (ya_random()%4==0) {
             st->tv->brightness_control += ya_frand(0.15);
           }
@@ -876,6 +900,8 @@ static const std::map<std::string, CmdArgument> knownArgs =
       { "secs",  CmdArgument::Type::INT, true, "how many secs to wait in slideshow mode, e.g. 5" }},
     {"powerup",
       { "",      CmdArgument::Type::BOOL, true, "to run power up sequence or not" }},
+    {"fixsettings",
+      { "",      CmdArgument::Type::BOOL, true, "apply less randomness to settings" }},
     {"size",
       { "width height", CmdArgument::Type::LIST_INT, true, "use different size than maximum of given images" }},
     {"logo",
@@ -1131,6 +1157,12 @@ std::optional<Params> parseParams(int args, char** argv)
   if (usedArgs.count("powerup"))
   {
     p.powerup = std::get<bool>(usedArgs.at("powerup"));
+  }
+
+  p.fixSettings = false;
+  if (usedArgs.count("fixsettings"))
+  {
+    p.fixSettings = std::get<bool>(usedArgs.at("fixsettings"));
   }
 
   p.size = { };
