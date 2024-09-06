@@ -718,51 +718,15 @@ static void run(Params params)
 }
 
 
-struct CmdArgument
-{
-  enum class Type
-  {
-    BOOL, INT, LIST_INT, STRING, LIST_STRING
-  };
-
-  Type type;
-  bool optional;
-  std::string exampleArgs;
-  std::vector<std::string> help;
-
-  CmdArgument(const std::string& _exampleArgs, const Type& _type,
-              bool _optional, const std::string& _help) :
-    type(_type),
-    optional(_optional),
-    exampleArgs(_exampleArgs),
-    help()
-  {
-    size_t p0 = 0;
-    for (size_t i = 0; i < _help.length(); i++)
-    {
-      if (_help.at(i) == '\n')
-      {
-        help.push_back(_help.substr(p0, i - p0));
-        p0 = i+1;
-      }
-    }
-    if (p0 < _help.length())
-    {
-      help.push_back(_help.substr(p0, _help.length() - p0 - 1));
-    }
-  }
-};
-
-
 static const std::map<std::string, CmdArgument> knownArgs =
 {
     // name, exampleArgs, type, optional, help
     {"verbose",
-      { "n",     CmdArgument::Type::INT, true, "level of verbosity from 0 to 5" }},
+      { "n",     CmdArgument::Type::INT,  true, "level of verbosity from 0 to 5" }},
     {"duration",
-      { "secs",  CmdArgument::Type::INT, false, "length of video in secs, e.g. 60" }},
+      { "secs",  CmdArgument::Type::INT,  false, "length of video in secs, e.g. 60" }},
     {"slideshow",
-      { "secs",  CmdArgument::Type::INT, true, "how many secs to wait in slideshow mode, e.g. 5" }},
+      { "secs",  CmdArgument::Type::INT,  true, "how many secs to wait in slideshow mode, e.g. 5" }},
     {"powerup",
       { "",      CmdArgument::Type::BOOL, true, "to run power up sequence or not" }},
     {"fixsettings",
@@ -785,217 +749,15 @@ static const std::map<std::string, CmdArgument> knownArgs =
           "  * :highgui means output to window using OpenCV HighGUI module, stable FPS is not guaranteed" }}
 };
 
-void showUsage()
-{
-  std::cout << "Shows images or videos like they are on an old TV screen" << std::endl;
-  std::cout << "Based on analogtv hack written by Trevor Blackwell (https://tlb.org/)" << std::endl;
-  std::cout << "from XScreensaver (https://www.jwz.org/xscreensaver/) by Jamie Zawinski (https://jwz.org/) and the team" << std::endl;
-
-  std::cout << "Usage: analogtv-cli";
-  for (const auto& [k, v] : knownArgs)
-  {
-    if (!v.optional)
-    {
-      std::cout << " --" << k << " " << v.exampleArgs;
-    }
-  }
-  std::cout << " [other keys are optional]" << std::endl;
-
-  std::cout << "Keys:" << std::endl;
-  for (const auto& [k, v] : knownArgs)
-  {
-    std::cout << "    --" << k << std::string(12 - k.length(), ' ');
-    std::cout << v.exampleArgs << std::endl;
-    for (const auto& hs : v.help)
-    {
-      std::cout << "      " << hs << std::endl;
-    }
-  }
-}
-
-std::optional<int> parseInt(const std::string& s)
-{
-  int v;
-  size_t at;
-  try
-  {
-    v = std::stoi(s, &at);
-  }
-  catch (std::invalid_argument const &ex)
-  {
-    std::cout << "Failed to parse " << s << ": " << ex.what() << std::endl;
-    return { };
-  }
-  catch (std::out_of_range const &ex)
-  {
-    std::cout << "Failed to parse " << s << ": " << ex.what() << std::endl;
-    return { };
-  }
-
-  if (at != s.length())
-  {
-    std::cout << "Failed to parse " << s << ": only " << at << " symbols parsed" << std::endl;
-    return { };
-  }
-
-  return v;
-}
-
-bool isArgName(const std::string& arg)
-{
-  return arg.length() > 2 && arg[0] == '-' && arg[1] == '-';
-}
-
-
-typedef std::variant<bool, int, std::string, std::vector<int>, std::vector<std::string>> ArgType;
-std::map<std::string, ArgType> parseCmdArgs(int nArgs, char** argv)
-{
-  std::map<std::string, ArgType> usedArgs;
-
-  std::set<std::string> mandatoryArgsToFill;
-  for (const auto& [k, v] : knownArgs)
-  {
-    if (!v.optional)
-    {
-      mandatoryArgsToFill.insert(k);
-    }
-  }
-
-  for (int i = 1; i < nArgs; i++)
-  {
-    std::string arg(argv[i]);
-    if (!isArgName(arg))
-    {
-      std::cout << "Argument starting from \"--\" expected, instead we got " << arg << std::endl;
-      return { };
-    }
-
-    std::string name = arg.substr(2, arg.length() - 2);
-    if (knownArgs.count(name) != 1)
-    {
-      std::cout << "Argument " << name << " is not known" << std::endl;
-      return { };
-    }
-
-    if (usedArgs.count(name) > 0)
-    {
-      std::cout << "Argument " << name << " was already used" << std::endl;
-      return { };
-    }
-
-    ArgType value;
-    switch (knownArgs.at(name).type)
-    {
-      case CmdArgument::Type::BOOL: value = true; break;
-      case CmdArgument::Type::INT:
-        {
-          i++;
-          if (i >= nArgs)
-          {
-            std::cout << "Argument " << name << "requires int argument" << std::endl;
-            return { };
-          }
-          auto v = parseInt(argv[i]);
-          if (v)
-          {
-            value = v.value();
-          }
-          else
-          {
-            return { };
-          }
-          break;
-        }
-      case CmdArgument::Type::STRING:
-        {
-          i++;
-          if (i >= nArgs)
-          {
-            std::cout << "Argument " << name << "requires string argument" << std::endl;
-            return { };
-          }
-          value = std::string(argv[i]);
-          break;
-        }
-      case CmdArgument::Type::LIST_INT:
-        {
-          std::vector<int> listInt;
-          while (++i < nArgs)
-          {
-            if (isArgName(argv[i]))
-            {
-              i--; break;
-            }
-            auto v = parseInt(argv[i]);
-            if (v)
-            {
-              listInt.push_back(v.value());
-            }
-            else
-            {
-              return { };
-            }
-          }
-
-          if (listInt.empty())
-          {
-            std::cout << "Argument " << name << " requires a list of integers" << std::endl;
-            return { };
-          }
-          value = listInt;
-          break;
-        }
-      case CmdArgument::Type::LIST_STRING:
-        {
-          std::vector<std::string> listStr;
-          while (++i < nArgs)
-          {
-            if (isArgName(argv[i]))
-            {
-              i--; break;
-            }
-            listStr.push_back(argv[i]);
-          }
-
-          if (listStr.empty())
-          {
-            std::cout << "Argument " << name << " requires a list of strings" << std::endl;
-            return { };
-          }
-          value = listStr;
-          break;
-        }
-      default: break;
-    }
-    usedArgs[name] = value;
-  }
-
-  for (const auto& [name, val] : usedArgs)
-  {
-    if (mandatoryArgsToFill.count(name))
-    {
-      mandatoryArgsToFill.erase(name);
-    }
-  }
-
-  if (!mandatoryArgsToFill.empty())
-  {
-    std::cout << "Following args are required:";
-    for (const auto& k : mandatoryArgsToFill)
-    {
-      std::cout << " " << k;
-    }
-    std::cout << std::endl;
-    return { };
-  }
-
-  return usedArgs;
-}
+static const std::string message =
+"Shows images or videos like they are on an old TV screen\n"
+"Based on analogtv hack written by Trevor Blackwell (https://tlb.org/)\n"
+"from XScreensaver (https://www.jwz.org/xscreensaver/) by Jamie Zawinski (https://jwz.org/) and the team";
 
 
 std::optional<Params> parseParams(int args, char** argv)
 {
-  std::map<std::string, ArgType> usedArgs = parseCmdArgs(args, argv);
+  std::map<std::string, ArgType> usedArgs = parseCmdArgs(knownArgs, args, argv);
   if (usedArgs.empty())
   {
     return { };
@@ -1072,7 +834,7 @@ int main (int argc, char **argv)
   std::optional<Params> oparams = parseParams(argc, argv);
   if (!oparams)
   {
-    showUsage();
+    showUsage(message, progname, knownArgs);
     return -1;
   }
 
