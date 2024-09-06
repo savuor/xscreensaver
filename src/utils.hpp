@@ -25,6 +25,7 @@ struct Output
 
 struct Log
 {
+    // TODO: variadic
     static void write(int level, const std::string& s);
     static void setVerbosity(int n);
     static int  getVerbosity();
