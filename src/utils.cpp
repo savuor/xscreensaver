@@ -118,25 +118,24 @@ void VideoOutput::send(const cv::Mat &m)
     writer.write(out);
 }
 
-
-std::shared_ptr<Output> Output::create(const std::string& s, cv::Size imgSize)
+std::shared_ptr<Output> Output::create(const std::string &s, cv::Size imgSize)
 {
-  if (s.at(0) == ':')
-  {
-    std::string name = s.substr(1, s.length() - 1);
-    if (name == "highgui")
+    if (s.at(0) == ':')
     {
-      return std::make_shared<HighguiOutput>();
+        std::string name = s.substr(1, s.length() - 1);
+        if (name == "highgui")
+        {
+            return std::make_shared<HighguiOutput>();
+        }
+        else
+        {
+            throw std::runtime_error("Unknown video output: " + name);
+        }
     }
     else
     {
-      throw std::runtime_error("Unknown video output: " + name);
+        return std::make_shared<VideoOutput>(s, imgSize);
     }
-  }
-  else
-  {
-    return std::make_shared<VideoOutput>(s, imgSize);
-  }
 }
 
 // Command line parser
