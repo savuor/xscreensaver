@@ -122,7 +122,7 @@ cv::Mat fromXImage(XImage* image)
  */
 
 int
-custom_XPutImage (XImage *image, 
+custom_XPutImage (XImage *image,
            int src_x, int src_y, int dest_x, int dest_y,
            unsigned int w, unsigned int h)
 {
@@ -278,12 +278,10 @@ static void run(Params params)
   int N_CHANNELS = MAX_STATIONS * 2;
 
   ya_rand_init (params.seed);
-  int output_w = params.size.width, output_h = params.size.height;
+  cv::Size outSize = params.size;
   int duration = params.duration, slideshow = params.slideshow;
-  bool powerp = params.powerup;
 
   unsigned long start_time = time((time_t *)0);
-  int i;
 
   unsigned long curticks = 0, curticks_sub = 0;
   time_t lastlog = time((time_t *)0);
@@ -292,14 +290,13 @@ static void run(Params params)
   int fps = 30;
   std::vector<cv::Mat> images;
   cv::Mat baseImage;
-  int *stats;
+  std::vector<int> stats(N_CHANNELS);
 
   /* Load all of the input images.
    */
-  stats = (int *) calloc(N_CHANNELS, sizeof(*stats));
 
   int maxw = 0, maxh = 0;
-  for (i = 0; i < nFiles; i++)
+  for (int i = 0; i < nFiles; i++)
   {
     //TODO: sources
     std::string fname = params.sources[i];
@@ -309,45 +306,45 @@ static void run(Params params)
     maxh = std::max(maxh, img.rows);
   }
 
-  if (!output_w || !output_h)
+  if (outSize.empty())
   {
-    output_w = maxw;
-    output_h = maxh;
+    outSize = cv::Size(maxw, maxh);
   }
 
-  output_w &= ~1;  /* can't be odd */
-  output_h &= ~1;
+  /* can't be odd */
+  outSize.width  &= ~1;
+  outSize.height &= ~1;
 
   /* Scale all of the input images to the size of the largest one, or frame.
    */
-  for (i = 0; i < nFiles; i++)
+  for (int i = 0; i < nFiles; i++)
+  {
+    cv::Mat img = images[i];
+    if (img.size() != outSize)
     {
-      cv::Mat img = images[i];
-      if (img.size() != cv::Size(output_w, output_h))
+      double r1 = (double) outSize.width / outSize.height;
+      double r2 = (double) img.cols / img.rows;
+      int w2, h2;
+      if (r1 > r2)
         {
-          double r1 = (double) output_w / output_h;
-          double r2 = (double) img.cols / img.rows;
-          int w2, h2;
-          if (r1 > r2)
-            {
-              w2 = output_h * r2;
-              h2 = output_h;
-            }
-          else
-            {
-              w2 = output_w;
-              h2 = output_w / r2;
-            }
-          cv::Mat out;
-          cv::resize(img, out, cv::Size(w2, h2));
-          images[i] = out;
+          w2 = outSize.height * r2;
+          h2 = outSize.height;
         }
+      else
+        {
+          w2 = outSize.width;
+          h2 = outSize.width / r2;
+        }
+      cv::Mat out;
+      cv::resize(img, out, cv::Size(w2, h2));
+      images[i] = out;
     }
+  }
 
   state runState;
   state* st = &runState;
 
-  st->outBuffer = cv::Mat(output_h, output_w, CV_8UC4, cv::Scalar(0));
+  st->outBuffer = cv::Mat(outSize, CV_8UC4, cv::Scalar(0));
   globalOutBuffer = st->outBuffer;
 
   if (!params.logoFname.empty())
@@ -362,11 +359,11 @@ static void run(Params params)
     cv::merge(std::vector<cv::Mat> {z, z, z, logoCh[3]}, st->logoMask);
   }
 
-  st->tv = analogtv_allocate(output_w, output_h);
+  st->tv = analogtv_allocate(outSize.width, outSize.height);
 
   for (int i = 0; i < MAX_STATIONS; i++)
   {
-    analogtv_input *input=analogtv_input_allocate();
+    analogtv_input *input = analogtv_input_allocate();
     input->client_data = st;
     st->stations.push_back(input);
   }
@@ -396,12 +393,12 @@ static void run(Params params)
   }
 
   st->chanSettings.resize(N_CHANNELS);
-  for (i = 0; i < N_CHANNELS; i++)
+  for (int i = 0; i < N_CHANNELS; i++)
   {
     st->chanSettings[i].noise_level = 0.06;
 
-    int last_station=42;
-    for (int stati=0; stati<MAX_MULTICHAN; stati++)
+    int last_station = 42;
+    for (int stati = 0; stati < MAX_MULTICHAN; stati++)
     {
         analogtv_reception *rec = &st->chanSettings[i].recs[stati];
         int station;
@@ -478,13 +475,13 @@ static void run(Params params)
                   " " + std::to_string(img.cols)+"x" + std::to_string(img.rows) +
                   " in " + std::to_string(MAX_STATIONS) + " channels");
 
-    for (i = 0; i < MAX_STATIONS; i++)
+    for (int i = 0; i < MAX_STATIONS; i++)
     {
       analogtv_input *input = st->stations[i];
       int w = img.cols * 0.815;  /* underscan */
       int h = img.rows * 0.970;
-      int x = (output_w - w) / 2;
-      int y = (output_h - h) / 2;
+      int x = (outSize.width  - w) / 2;
+      int y = (outSize.height - h) / 2;
 
       if (i == 1) {   /* station 0 is the unadulterated image.
                          station 1 is colorbars. */
@@ -501,14 +498,14 @@ static void run(Params params)
     Log::write(2, "initializing " + std::to_string(nFiles) + " files in " +
                   std::to_string(MAX_STATIONS) + " channels");
 
-    for (i = 0; i < MAX_STATIONS; i++)
+    for (int i = 0; i < MAX_STATIONS; i++)
     {
       cv::Mat img = images[i % nFiles];
       analogtv_input *input = st->stations[i];
       int w = img.cols * 0.815;  /* underscan */
       int h = img.rows * 0.970;
-      int x = (output_w - w) / 2;
-      int y = (output_h - h) / 2;
+      int x = (outSize.width  - w) / 2;
+      int y = (outSize.height - h) / 2;
 
       if (! (ya_random() % 8))  /* Some stations are colorbars */
         input->updater = update_smpte_colorbars;
@@ -529,31 +526,42 @@ static void run(Params params)
 
     frames_left--;
     if (frames_left <= 0 &&
-        (!powerp || curticks > POWERUP_DURATION*1000)) {
+        (!params.powerup || curticks > POWERUP_DURATION*1000))
+    {
 
       channel_changes++;
 
-      if (slideshow && channel_changes == 1) {
+      if (slideshow && channel_changes == 1)
+      {
         /* Second channel has short duration, 0.25 to 0.75 sec. */
         frames_left = fps * (0.25 + ya_frand(0.5));
-      } else if (slideshow) {
+      }
+      else if (slideshow)
+      {
         /* 0.5 - 2.0 sec (was 0.5 - 3.0 sec) */
         frames_left = fps * (0.5 + ya_frand(1.5));
-      } else {
+      }
+      else
+      {
         /* 1 - 7 sec */
         frames_left = fps * (1 + ya_frand(6));
       }
 
-      if (slideshow && channel_changes == 2) {
+      if (slideshow && channel_changes == 2)
+      {
         /* Always use the unadulterated image for the third channel:
            So the effect is, plain, brief blip, plain, then random. */
         st->curinputi = 0;
         frames_left += fps * (0.1 + ya_frand(0.5));
 
-      } else if (slideshow && st->curinputi != 0 && ((ya_random() % 100) < 75)) {
+      }
+      else if (slideshow && st->curinputi != 0 && ((ya_random() % 100) < 75))
+      {
         /* Use the unadulterated image 75% of the time (was 33%) */
         st->curinputi = 0;
-      } else {
+      }
+      else
+      {
         /* Otherwise random */
         int prev = st->curinputi;
       AGAIN:
@@ -598,7 +606,7 @@ static void run(Params params)
       }
     }
 
-    for (i=0; i<MAX_MULTICHAN; i++)
+    for (int i = 0; i < MAX_MULTICHAN; i++)
     {
       analogtv_reception *rec = &st->cs->recs[i];
       analogtv_input *inp=rec->input;
@@ -611,12 +619,14 @@ static void run(Params params)
       rec->ofs += rec->freqerr;
     }
 
-    st->tv->powerup=(powerp ? curtime : 9999);
+    st->tv->powerup = (params.powerup ? curtime : 9999);
 
-    for (i=0; i<MAX_MULTICHAN; i++) {
+    for (int i = 0; i < MAX_MULTICHAN; i++)
+    {
       /* Noisy image */
       analogtv_reception *rec = &st->cs->recs[i];
-      if (rec->input) {
+      if (rec->input)
+      {
         analogtv_reception_update(rec);
         recs[rec_count] = rec;
         ++rec_count;
@@ -625,31 +635,35 @@ static void run(Params params)
       analogtv_draw (st->tv, st->cs->noise_level, recs, rec_count);
 
       if (slideshow && st->curinputi == 0 &&
-          (!powerp || curticks > POWERUP_DURATION*1000))
+          (!params.powerup || curticks > POWERUP_DURATION*1000))
       {
         /* Unadulterated image centered on top of border of static */
-        cv::Point tl((output_w - baseImage.cols) / 2, (output_h - baseImage.rows) / 2);
+        cv::Point tl((outSize.width - baseImage.cols) / 2, (outSize.height - baseImage.rows) / 2);
         baseImage.copyTo(st->outBuffer(cv::Rect(tl, baseImage.size())));
       }
     }
 
+    // Send rendered frame to outputs
     for (const auto& o : st->outputs)
     {
       o->send(st->outBuffer);
     }
 
-    if (powerp &&
-        curticks > (unsigned int)((duration*1000) - (POWERDOWN_DURATION*1000))) {
+    if (params.powerup &&
+        curticks > (unsigned int)((duration*1000) - (POWERDOWN_DURATION*1000)))
+    {
       /* Fade out, as there is no power-down animation. */
       double r = ((duration*1000 - curticks) /
                   (double) (POWERDOWN_DURATION*1000));
       static double ob = 9999;
       double min = -1.5;  /* Usable range is something like -0.75 to 1.0 */
-      if (ob == 9999) ob = st->tv->brightness_control;  /* Terrible */
+      if (ob == 9999)
+        ob = st->tv->brightness_control;  /* Terrible */
       st->tv->brightness_control = min + (ob - min) * r;
     }
 
-    if (curtime >= duration) break;
+    if (curtime >= duration)
+      break;
 
     if (slideshow && curtime_sub >= slideshow)
       goto INIT_CHANNELS;
@@ -684,12 +698,10 @@ static void run(Params params)
   if (channel_changes == 0) channel_changes++;
 
   Log::write(2, "channels shown: " + std::to_string(channel_changes));
-  for (i = 0; i < N_CHANNELS; i++)
+  for (int i = 0; i < N_CHANNELS; i++)
   {
     Log::write(2, "  " + std::to_string(i+1) + ":  " + std::to_string(stats[i] * 100 / channel_changes));
   }
-
-  free (stats);
 }
 
 
