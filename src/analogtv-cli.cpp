@@ -901,6 +901,15 @@ std::map<std::string, ArgType> parseCmdArgs(int nArgs, char** argv)
 {
   std::map<std::string, ArgType> usedArgs;
 
+  std::set<std::string> mandatoryArgsToFill;
+  for (const auto& [k, v] : knownArgs)
+  {
+    if (!v.optional)
+    {
+      mandatoryArgsToFill.insert(k);
+    }
+  }
+
   for (int i = 1; i < nArgs; i++)
   {
     std::string arg(argv[i]);
@@ -1010,27 +1019,6 @@ std::map<std::string, ArgType> parseCmdArgs(int nArgs, char** argv)
     usedArgs[name] = value;
   }
 
-  return usedArgs;
-}
-
-
-std::optional<Params> parseParams(int args, char** argv)
-{
-  std::set<std::string> mandatoryArgsToFill;
-  for (const auto& [k, v] : knownArgs)
-  {
-    if (!v.optional)
-    {
-      mandatoryArgsToFill.insert(k);
-    }
-  }
-
-  std::map<std::string, ArgType> usedArgs = parseCmdArgs(args, argv);
-  if (usedArgs.empty())
-  {
-    return { };
-  }
-
   for (const auto& [name, val] : usedArgs)
   {
     if (mandatoryArgsToFill.count(name))
@@ -1047,6 +1035,18 @@ std::optional<Params> parseParams(int args, char** argv)
       std::cout << " " << k;
     }
     std::cout << std::endl;
+    return { };
+  }
+
+  return usedArgs;
+}
+
+
+std::optional<Params> parseParams(int args, char** argv)
+{
+  std::map<std::string, ArgType> usedArgs = parseCmdArgs(args, argv);
+  if (usedArgs.empty())
+  {
     return { };
   }
 
