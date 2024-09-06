@@ -31,7 +31,6 @@
 
 					"--verbose", "2",
 					"--duration", "60",
-					//"--slideshow", "2",
 					"--fixsettings",
 					"--powerup",
 					"--size", "1280", "1024",
