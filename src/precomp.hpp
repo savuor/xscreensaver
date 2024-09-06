@@ -14,6 +14,13 @@
 #include <cstring>
 #include <ctime>
 
+#include <iostream>
+#include <memory>
+#include <set>
+#include <map>
+#include <optional>
+#include <variant>
+
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/stat.h>

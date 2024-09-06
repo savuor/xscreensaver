@@ -23,6 +23,7 @@ add_executable(analogtv-cli
     "./src/yarandom.cpp"
     "./src/aligned_malloc.cpp"
     "./src/thread_util.cpp"
+    "./src/utils.cpp"
 )
 
 target_link_libraries(analogtv-cli ${OpenCV_LIBS})
