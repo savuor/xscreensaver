@@ -392,8 +392,8 @@ static void run(Params params)
         int station;
         while (1)
         {
-          station=ya_random()%(st->stations.size());
-          if (station!=last_station) break;
+          station = ya_random() % (st->stations.size());
+          if (station != last_station) break;
           if ((ya_random()%10)==0) break;
         }
         last_station=station;
