@@ -13,32 +13,10 @@
 
 #include "precomp.hpp"
 
-
-// from jwxyz
-
-struct XImage
-{
-    XImage() :
-        width(),
-        height(),
-        data(),
-        bytes_per_line()
-    { }
-    int width, height;		/* size of image */
-
-    char *data;			/* pointer to image data */
-    // int byte_order;		/* always LSBFirst */
-    // int bitmap_bit_order;	/* always LSBFirst */
-    // int depth;			/* always 32 */
-    int bytes_per_line;		/* accelarator to next line */
-    // int bits_per_pixel;		/* always 32 */
-    // unsigned long red_mask  ; /* always 0x00FF0000L */
-    // unsigned long green_mask; /* always 0x0000FF00L */
-    // unsigned long blue_mask ; /* always 0x000000FFL */
-};
+#include "utils.hpp"
 
 // from analogtv-cli.c
-int custom_XPutImage (XImage *image,
+int custom_XPutImage (const cv::Mat4b& img,
                         int src_x, int src_y, int dest_x, int dest_y,
                         unsigned int w, unsigned int h);
 

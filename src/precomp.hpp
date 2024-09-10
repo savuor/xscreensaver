@@ -27,3 +27,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+// maybe one day this dependency will be removed
+#include <opencv2/core.hpp>
+

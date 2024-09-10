@@ -74,7 +74,7 @@ struct state
   outputs()
   { }
 
-  cv::Mat outBuffer, logoImg, logoMask;
+  cv::Mat4b outBuffer, logoImg, logoMask;
   analogtv *tv;
 
   std::vector<analogtv_input*> stations;
@@ -87,28 +87,7 @@ struct state
 };
 
 //TODO: refactor it
-static cv::Mat globalOutBuffer;
-
-XImage fromCvMat(cv::Mat& m)
-{
-  assert(!m.empty());
-  assert(m.type() == CV_8UC4);
-
-  XImage image;
-  image.width  = m.cols;
-  image.height = m.rows;
-  image.bytes_per_line = m.step;
-  image.data = (char*)m.data;
-
-  return image;
-}
-
-cv::Mat fromXImage(XImage* image)
-{
-  cv::Mat m(image->height, image->width, CV_8UC4, (uchar*)image->data);
-
-  return m;
-}
+static cv::Mat4b globalOutBuffer;
 
 
 /* Since this program does not connect to an X server, or in fact link
@@ -117,12 +96,10 @@ cv::Mat fromXImage(XImage* image)
  */
 
 int
-custom_XPutImage (XImage *image,
+custom_XPutImage (const cv::Mat4b& img,
            int src_x, int src_y, int dest_x, int dest_y,
            unsigned int w, unsigned int h)
 {
-  cv::Mat img = fromXImage(image);
-
   if (src_x < 0)
   {
     w += src_x;
@@ -135,7 +112,7 @@ custom_XPutImage (XImage *image,
     src_x -= dest_x;
     dest_x = 0;
   }
-  w = std::min((int)w, std::min(globalOutBuffer.cols - dest_x, image->width - src_x));
+  w = std::min((int)w, std::min(globalOutBuffer.cols - dest_x, img.cols - src_x));
 
   if (src_y < 0)
   {
@@ -149,7 +126,7 @@ custom_XPutImage (XImage *image,
     src_y -= dest_y;
     dest_y = 0;
   }
-  h = std::min((int)h, std::min(globalOutBuffer.rows - dest_y, image->height - src_y));
+  h = std::min((int)h, std::min(globalOutBuffer.rows - dest_y, img.rows - src_y));
 
   img(cv::Rect(src_x, src_y, w, h)).copyTo(globalOutBuffer(cv::Rect(dest_x, dest_y, w, h)));
 
@@ -193,7 +170,8 @@ update_smpte_colorbars(analogtv_input *input)
 
   analogtv_setup_sync(input, 1, 0);
 
-  for (col=0; col<7; col++) {
+  for (col=0; col<7; col++)
+  {
     analogtv_draw_solid_rel_lcp (input,
                                  col*(1.0/7.0),
                                  (col+1)*(1.0/7.0),
@@ -201,7 +179,7 @@ update_smpte_colorbars(analogtv_input *input)
                                  top_cb_table[col][0], 
                                  top_cb_table[col][1],
                                  top_cb_table[col][2]);
-    
+
     analogtv_draw_solid_rel_lcp(input,
                                 col*(1.0/7.0),
                                 (col+1)*(1.0/7.0),
@@ -233,7 +211,7 @@ update_smpte_colorbars(analogtv_input *input)
     double scale = (aspect > 1 ? 0.35 : 0.6);
     int w2 = st->tv->outbuffer_width  * scale;
     int h2 = st->tv->outbuffer_height * scale * aspect;
-    analogtv_load_ximage (st->tv, input, fromCvMat(st->logoImg), fromCvMat(st->logoMask),
+    analogtv_load_ximage (st->tv, input, st->logoImg, st->logoMask,
                           (st->tv->outbuffer_width - w2) / 2,
                           st->tv->outbuffer_height * 0.20,
                           w2, h2);
@@ -449,7 +427,7 @@ static void run(Params params)
 
   for (int i = 0; i < MAX_STATIONS; i++)
   {
-    cv::Mat img = images[i % nFiles];
+    const cv::Mat& img = images[i % nFiles];
     analogtv_input *input = st->stations[i];
     int w = img.cols * 0.815; /* underscan */
     int h = img.rows * 0.970;
@@ -462,7 +440,7 @@ static void run(Params params)
     }
 
     analogtv_setup_sync(input, 1, (ya_random() % 20) == 0);
-    analogtv_load_ximage(st->tv, input, fromCvMat(img), XImage(), x, y, w, h);
+    analogtv_load_ximage(st->tv, input, img, cv::Mat4b(), x, y, w, h);
   }
 
   /* This is xanalogtv_draw()

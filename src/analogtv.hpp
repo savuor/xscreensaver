@@ -15,6 +15,7 @@
 
 #include "thread_util.hpp"
 #include "fixed-funcs.hpp"
+#include "utils.hpp"
 
 /* To simulate an NTSC CRT monitor with way more scanlines, and thus
    apply an ahistorical tv-like effect to a larger image, increase
@@ -147,9 +148,10 @@ typedef struct analogtv_s {
   // int fakeit_scroll;
   int redraw_all;
 
-  int usewidth,useheight,xrepl,subwidth;
-  XImage *image; /* usewidth * useheight */
-  int screen_xo,screen_yo; /* centers image in window */
+  int usewidth, useheight, xrepl, subwidth;
+  cv::Mat4b image; /* usewidth * useheight */
+
+  int screen_xo, screen_yo; /* centers image in window */
 
   int flutter_horiz_desync;
   //int flutter_tint;
@@ -219,7 +221,7 @@ void analogtv_draw(analogtv *it, double noiselevel,
                    const analogtv_reception *const *recs, unsigned rec_count);
 
 int analogtv_load_ximage(analogtv *it, analogtv_input *input,
-                         XImage pic_im, XImage mask_im,
+                         const cv::Mat4b& pic_im, const cv::Mat4b& mask_im,
                          int xoff, int yoff, int width, int height);
 
 void analogtv_reception_update(analogtv_reception *inp);

@@ -2,8 +2,6 @@
 
 #include "precomp.hpp"
 
-#include <opencv2/core.hpp>
-
 struct Output
 {
   Output() { }

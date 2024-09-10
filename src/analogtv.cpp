@@ -204,38 +204,6 @@ analogtv_set_defaults(analogtv *it)
 
 }
 
-static void
-analogtv_free_image(analogtv *it)
-{
-  if (it->image)
-  {
-    if (it->image->data)
-    {
-      free(it->image->data);
-      it->image->data = NULL;
-    }
-    free(it->image);
-    it->image = NULL;
-  }
-}
-
-static void
-analogtv_alloc_image(analogtv *it)
-{
-  /* On failure, it->image is NULL. */
-
-  unsigned bits_per_pixel = 32;
-  unsigned align = thread_memory_alignment() * 8 - 1;
-  /* Width is in bits. */
-  unsigned width = ((it->usewidth * bits_per_pixel + align) & ~align) / bits_per_pixel;
-
-  it->image = (XImage *) calloc (1, sizeof(XImage));
-  it->image->width = width;
-  it->image->height = it->useheight;
-  it->image->bytes_per_line = width * 4;
-  it->image->data = (char *) calloc(it->useheight, it->image->bytes_per_line);
-}
-
 
 static void
 analogtv_configure(analogtv *it)
@@ -314,17 +282,15 @@ analogtv_configure(analogtv *it)
       Log::write(3, "size: aspect: " + debugPrint1 + debugPrint2 + debugPrint3);
     }
 
-
   height_diff = ((hlim + ANALOGTV_VISLINES/2) % ANALOGTV_VISLINES) - ANALOGTV_VISLINES/2;
   if (height_diff != 0 && abs(height_diff) < hlim * height_snap)
     {
       hlim -= height_diff;
     }
 
-
   /* Most times this doesn't change */
-  if (wlim != oldwidth || hlim != oldheight) {
-
+  if (wlim != oldwidth || hlim != oldheight)
+  {
     it->usewidth=wlim;
     it->useheight=hlim;
 
@@ -332,8 +298,7 @@ analogtv_configure(analogtv *it)
     if (it->xrepl>2) it->xrepl=2;
     it->subwidth=it->usewidth/it->xrepl;
 
-    analogtv_free_image(it);
-    analogtv_alloc_image(it);
+    it->image = cv::Mat4b(it->useheight, it->usewidth);
   }
 
   it->screen_xo = ( it->outbuffer_width  - it->usewidth  )/2;
@@ -1132,23 +1097,26 @@ analogtv_blast_imagerow(const analogtv *it,
                         float *rgbf, float *rgbf_end,
                         int ytop, int ybot)
 {
-  int i,y;
-  float *rpf;
   char *level_copyfrom[3];
   int xrepl=it->xrepl;
   unsigned lineheight = ybot - ytop;
   if (lineheight > ANALOGTV_MAX_LINEHEIGHT) lineheight = ANALOGTV_MAX_LINEHEIGHT;
-  for (i=0; i<3; i++) level_copyfrom[i]=NULL;
+  for (int i=0; i<3; i++)
+  {
+     level_copyfrom[i]=NULL;
+  }
 
-  for (y=ytop; y<ybot; y++) {
-    char *rowdata=it->image->data + y*it->image->bytes_per_line;
+  for (int y=ytop; y<ybot; y++)
+  {
+    char *rowdata = (char*)it->image[y];
     unsigned line = y-ytop;
 
     int level=it->leveltable[lineheight][line].index;
     float levelmult=it->leveltable[lineheight][line].value;
 
-    if (level_copyfrom[level]) {
-      memcpy(rowdata, level_copyfrom[level], it->image->bytes_per_line);
+    if (level_copyfrom[level])
+    {
+      memcpy(rowdata, level_copyfrom[level], it->image.step);
     }
     else {
       level_copyfrom[level] = rowdata;
@@ -1157,7 +1125,8 @@ analogtv_blast_imagerow(const analogtv *it,
         unsigned int *pixelptr=(unsigned int *)rowdata;
         unsigned int pix;
 
-        for (rpf=rgbf; rpf!=rgbf_end; rpf+=3) {
+        for (float* rpf=rgbf; rpf!=rgbf_end; rpf+=3)
+        {
           int ntscri=rpf[0]*levelmult;
           int ntscgi=rpf[1]*levelmult;
           int ntscbi=rpf[2]*levelmult;
@@ -1347,7 +1316,7 @@ analogtv_draw(analogtv *it, double noiselevel,
   int overall_top, overall_bot;
 
   /* AnalogTV isn't very interesting if there isn't enough RAM. */
-  if (!it->image)
+  if (it->image.empty())
     return;
 
   it->rx_signal_level = noiselevel;
@@ -1596,7 +1565,7 @@ inline Color pixToColor(uint32_t p)
 
 int
 analogtv_load_ximage(analogtv *it, analogtv_input *input,
-                     XImage pic_im, XImage mask_im,
+                     const cv::Mat4b& pic_im, const cv::Mat4b& mask_im,
                      int xoff, int yoff, int target_w, int target_h)
 {
   int i,x,y;
@@ -1617,8 +1586,8 @@ analogtv_load_ximage(analogtv *it, analogtv_input *input,
   if (target_w > 0) x_length     = x_length     * target_w / it->outbuffer_width;
   if (target_h > 0) y_scanlength = y_scanlength * target_h / it->outbuffer_height;
 
-  img_w = pic_im.width;
-  img_h = pic_im.height;
+  img_w = pic_im.cols;
+  img_h = pic_im.rows;
   
   xoff = ANALOGTV_PIC_LEN  * xoff / it->outbuffer_width;
   yoff = ANALOGTV_VISLINES * yoff / it->outbuffer_height;
@@ -1633,9 +1602,9 @@ analogtv_load_ximage(analogtv *it, analogtv_input *input,
     int picy1=(y*img_h                 )/y_scanlength;
     int picy2=(y*img_h + y_scanlength/2)/y_scanlength;
 
-    uint32_t* rowIm1 = (uint32_t*)(pic_im.data + picy1 * pic_im.bytes_per_line);
-    uint32_t* rowIm2 = (uint32_t*)(pic_im.data + picy2 * pic_im.bytes_per_line);
-    uint32_t* rowMask1 = mask_im.data ? (uint32_t*)(mask_im.data + picy1 * mask_im.bytes_per_line) : nullptr;
+    uint32_t* rowIm1 = (uint32_t*)(pic_im.data + picy1 * pic_im.step);
+    uint32_t* rowIm2 = (uint32_t*)(pic_im.data + picy2 * pic_im.step);
+    uint32_t* rowMask1 = mask_im.data ? (uint32_t*)(mask_im.data + picy1 * mask_im.step) : nullptr;
     for (x=0; x<x_length; x++)
     {
       int picx=(x*img_w)/x_length;
