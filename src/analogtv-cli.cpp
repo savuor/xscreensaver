@@ -138,7 +138,6 @@ static void
 update_smpte_colorbars(analogtv_input *input)
 {
   struct state *st = (struct state *) input->client_data;
-  int col;
   int black_ntsc[4];
 
   /* 
@@ -170,7 +169,7 @@ update_smpte_colorbars(analogtv_input *input)
 
   analogtv_setup_sync(input, 1, 0);
 
-  for (col=0; col<7; col++)
+  for (int col = 0; col < 7; col++)
   {
     analogtv_draw_solid_rel_lcp (input,
                                  col*(1.0/7.0),
@@ -189,22 +188,15 @@ update_smpte_colorbars(analogtv_input *input)
                                 mid_cb_table[col][2]);
   }
 
-  analogtv_draw_solid_rel_lcp(input, 0.0, 1.0/6.0,
-                              0.75, 1.00, 7, 40, 303);   /* -I */
-  analogtv_draw_solid_rel_lcp(input, 1.0/6.0, 2.0/6.0,
-                              0.75, 1.00, 100, 0, 0);    /* white */
-  analogtv_draw_solid_rel_lcp(input, 2.0/6.0, 3.0/6.0,
-                              0.75, 1.00, 7, 40, 33);    /* +Q */
-  analogtv_draw_solid_rel_lcp(input, 3.0/6.0, 4.0/6.0,
-                              0.75, 1.00, 7, 0, 0);      /* black */
-  analogtv_draw_solid_rel_lcp(input, 12.0/18.0, 13.0/18.0,
-                              0.75, 1.00, 3, 0, 0);      /* black -4 */
-  analogtv_draw_solid_rel_lcp(input, 13.0/18.0, 14.0/18.0,
-                              0.75, 1.00, 7, 0, 0);      /* black */
-  analogtv_draw_solid_rel_lcp(input, 14.0/18.0, 15.0/18.0,
-                              0.75, 1.00, 11, 0, 0);     /* black +4 */
-  analogtv_draw_solid_rel_lcp(input, 5.0/6.0, 6.0/6.0,
-                              0.75, 1.00, 7, 0, 0);      /* black */
+  analogtv_draw_solid_rel_lcp(input,       0.0,   1.0/6.0, 0.75, 1.00,   7, 40, 303);   /* -I       */
+  analogtv_draw_solid_rel_lcp(input,   1.0/6.0,   2.0/6.0, 0.75, 1.00, 100,  0,   0);   /* white    */
+  analogtv_draw_solid_rel_lcp(input,   2.0/6.0,   3.0/6.0, 0.75, 1.00,   7, 40,  33);   /* +Q       */
+  analogtv_draw_solid_rel_lcp(input,   3.0/6.0,   4.0/6.0, 0.75, 1.00,   7,  0,   0);   /* black    */
+  analogtv_draw_solid_rel_lcp(input, 12.0/18.0, 13.0/18.0, 0.75, 1.00,   3,  0,   0);   /* black -4 */
+  analogtv_draw_solid_rel_lcp(input, 13.0/18.0, 14.0/18.0, 0.75, 1.00,   7,  0,   0);   /* black    */
+  analogtv_draw_solid_rel_lcp(input, 14.0/18.0, 15.0/18.0, 0.75, 1.00,  11,  0,   0);   /* black +4 */
+  analogtv_draw_solid_rel_lcp(input,   5.0/6.0,   6.0/6.0, 0.75, 1.00,   7,  0,   0);   /* black    */
+
   if (!st->logoImg.empty())
   {
     double aspect = (double)st->outBuffer.cols / st->outBuffer.rows;
@@ -223,13 +215,6 @@ update_smpte_colorbars(analogtv_input *input)
 
 static void run(Params params)
 {
-  std::vector<const char*> inVec;
-  for (const auto& f : params.sources)
-  {
-    inVec.push_back(f.c_str());
-  }
-  inVec.push_back(nullptr);
-
   int nFiles = params.sources.size();
 
   /* stations should be a multiple of files, but >= 6.
@@ -310,7 +295,7 @@ static void run(Params params)
   state runState;
   state* st = &runState;
 
-  st->outBuffer = cv::Mat(outSize, CV_8UC4, cv::Scalar(0));
+  st->outBuffer = cv::Mat4b(outSize);
   globalOutBuffer = st->outBuffer;
 
   if (!params.logoFname.empty())

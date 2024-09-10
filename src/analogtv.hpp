@@ -226,8 +226,6 @@ int analogtv_load_ximage(analogtv *it, analogtv_input *input,
 
 void analogtv_reception_update(analogtv_reception *inp);
 
-void analogtv_setup_teletext(analogtv_input *input);
-
 
 /* Functions for rendering content into an analogtv_input */
 
@@ -262,13 +260,5 @@ void analogtv_draw_solid_rel_lcp(analogtv_input *input,
   "*geometry:	     800x600", \
   "*fpsSolid:	     True", \
   "*lowrez:	     True", \
-  "*useThreads: True", \
-  "*useSHM:           True",
 
-#define ANALOGTV_OPTIONS \
-  {"-threads",    ".useThreads", XrmoptionNoArg, "True"},      \
-  {"-no-threads", ".useThreads", XrmoptionNoArg, "False"},     \
-  { "-tv-color",        ".TVColor",      XrmoptionSepArg, 0 }, \
-  { "-tv-tint",         ".TVTint",       XrmoptionSepArg, 0 }, \
-  { "-tv-brightness",   ".TVBrightness", XrmoptionSepArg, 0 }, \
-  { "-tv-contrast",     ".TVContrast",   XrmoptionSepArg, 0 },
+

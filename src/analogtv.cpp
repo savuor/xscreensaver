@@ -594,24 +594,6 @@ analogtv_ntsc_to_yiq(const analogtv *it, int lineno, const float *signal,
   }
 }
 
-void
-analogtv_setup_teletext(analogtv_input *input)
-{
-  int x,y;
-  int teletext=ANALOGTV_BLACK_LEVEL;
-
-  /* Teletext goes in line 21. But I suspect there are other things
-     in the vertical retrace interval */
-
-  for (y=19; y<22; y++) {
-    for (x=ANALOGTV_PIC_START; x<ANALOGTV_PIC_END; x++) {
-      if ((x&7)==0) {
-        teletext=(ya_random()&1) ? ANALOGTV_WHITE_LEVEL : ANALOGTV_BLACK_LEVEL;
-      }
-      input->signal[y][x]=teletext;
-    }
-  }
-}
 
 void
 analogtv_setup_frame(analogtv *it)
