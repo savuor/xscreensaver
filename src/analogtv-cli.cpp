@@ -26,7 +26,6 @@
 
 #include "fixed-funcs.hpp"
 #include "yarandom.hpp"
-#include "thread_util.hpp"
 #include "analogtv.hpp"
 #include "utils.hpp"
 
