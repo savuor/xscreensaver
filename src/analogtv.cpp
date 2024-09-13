@@ -114,12 +114,11 @@ static void analogtv_ntsc_to_yiq(const analogtv *it, int lineno, const float *si
 
 static float puramp(const analogtv *it, float tc, float start, float over)
 {
-  float pt=it->powerup-start;
-  float ret;
+  float pt = it->powerup - start;
   if (pt<0.0f) return 0.0f;
   if (pt>900.0f || pt/tc>8.0f) return 1.0f;
 
-  ret=(1.0f-expf(-pt/tc))*over;
+  float ret=(1.0f-expf(-pt/tc))*over;
   if (ret>1.0f) return 1.0f;
   return ret*ret;
 }
@@ -294,6 +293,7 @@ analogtv_configure(analogtv *it)
     it->usewidth=wlim;
     it->useheight=hlim;
 
+    //TODO: fix this behavior
     it->xrepl=1+it->usewidth/640;
     if (it->xrepl>2) it->xrepl=2;
     it->subwidth=it->usewidth/it->xrepl;
@@ -359,14 +359,18 @@ analogtv * analogtv_allocate(int outbuffer_width, int outbuffer_height)
   it=(analogtv *)calloc(1,sizeof(analogtv));
   if (!it) return 0;
   it->threads.count=0;
-  it->rx_signal=NULL;
-  it->signal_subtotals=NULL;
 
+
+  //TODO: vector<float>
+  it->rx_signal=NULL;
   if (thread_malloc((void **)&it->rx_signal, 
                     sizeof(it->rx_signal[0]) * rx_signal_len))
     goto fail;
 
   assert(!(ANALOGTV_SIGNAL_LEN % ANALOGTV_SUBTOTAL_LEN));
+
+  //TODO: vector<float>
+  it->signal_subtotals=NULL;
   if (thread_malloc((void **)&it->signal_subtotals,
                     sizeof(it->signal_subtotals[0]) *
                      (rx_signal_len / ANALOGTV_SUBTOTAL_LEN)))
@@ -841,27 +845,35 @@ analogtv_sync(analogtv *it)
 static void
 analogtv_setup_levels(analogtv *it, double avgheight)
 {
-  int i,height;
-  static const double levelfac[3]={-7.5, 5.5, 24.5};
+  static const double levelfac[3] = {-7.5, 5.5, 24.5};
 
-  for (height=0; height<avgheight+2.0 && height<=ANALOGTV_MAX_LINEHEIGHT; height++) {
 
-    for (i=0; i<height; i++) {
+  for (int height = 0; height < avgheight + 2.0 && height <= ANALOGTV_MAX_LINEHEIGHT; height++)
+  {
+
+    for (int i = 0; i<height; i++)
+    {
       it->leveltable[height][i].index = 2;
     }
     
-    if (avgheight>=3) {
+    if (avgheight >= 3)
+    {
       it->leveltable[height][0].index=0;
     }
-    if (avgheight>=5) {
-      if (height >= 1) it->leveltable[height][height-1].index=0;
+    if (avgheight>=5)
+    {
+      if (height >= 1)
+        it->leveltable[height][height-1].index=0;
     }
-    if (avgheight>=7) {
+    if (avgheight>=7)
+    {
       it->leveltable[height][1].index=1;
-      if (height >= 2) it->leveltable[height][height-2].index=1;
+      if (height >= 2)
+        it->leveltable[height][height-2].index=1;
     }
 
-    for (i=0; i<height; i++) {
+    for (int i=0; i<height; i++)
+    {
       it->leveltable[height][i].value = 
         (40.0 + levelfac[it->leveltable[height][i].index]*puramp(it, 3.0, 6.0, 1.0)) / 256.0;
     }
