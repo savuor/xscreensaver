@@ -1087,57 +1087,51 @@ static int analogtv_get_line(const analogtv *it, int lineno, int *slineno,
 }
 
 static void
-analogtv_blast_imagerow(const analogtv *it,
-                        float *rgbf, float *rgbf_end,
+analogtv_blast_imagerow(analogtv *it,
+                        const std::vector<float>& rgbf,
                         int ytop, int ybot)
 {
-  char *level_copyfrom[3];
+  std::vector<cv::Vec4b*> level_copyfrom(3, nullptr);
+  // 1 or 2
   int xrepl=it->xrepl;
-  unsigned lineheight = ybot - ytop;
-  if (lineheight > ANALOGTV_MAX_LINEHEIGHT) lineheight = ANALOGTV_MAX_LINEHEIGHT;
-  for (int i=0; i<3; i++)
-  {
-     level_copyfrom[i]=NULL;
-  }
 
-  for (int y=ytop; y<ybot; y++)
+  unsigned lineheight = ybot - ytop;
+  if (lineheight > ANALOGTV_MAX_LINEHEIGHT)
+    lineheight = ANALOGTV_MAX_LINEHEIGHT;
+
+  for (int y = ytop; y < ybot; y++)
   {
-    char *rowdata = (char*)it->image[y];
+    cv::Vec4b *rowdata = it->image[y];
     unsigned line = y-ytop;
 
-    int level=it->leveltable[lineheight][line].index;
-    float levelmult=it->leveltable[lineheight][line].value;
+    int   level     = it->leveltable[lineheight][line].index;
+    float levelmult = it->leveltable[lineheight][line].value;
 
     if (level_copyfrom[level])
     {
-      memcpy(rowdata, level_copyfrom[level], it->image.step);
+      memcpy((void*)rowdata, (void*)level_copyfrom[level], it->image.step);
     }
-    else {
+    else
+    {
       level_copyfrom[level] = rowdata;
 
-        /* int is more likely to be 32 bits than long */
-        unsigned int *pixelptr=(unsigned int *)rowdata;
-        unsigned int pix;
+      for (size_t i = 0; i < rgbf.size() / 3; i++)
+      {
 
-        for (float* rpf=rgbf; rpf!=rgbf_end; rpf+=3)
+        int ntscri = it->intensity_values[std::min(int(rgbf[i*3 + 0] * levelmult), ANALOGTV_CV_MAX-1)];
+        int ntscgi = it->intensity_values[std::min(int(rgbf[i*3 + 1] * levelmult), ANALOGTV_CV_MAX-1)];
+        int ntscbi = it->intensity_values[std::min(int(rgbf[i*3 + 2] * levelmult), ANALOGTV_CV_MAX-1)];
+
+        cv::Vec4b v(ntscbi, ntscgi, ntscri, 0);
+
+        rowdata[i*xrepl + 0] = v;
+
+        // 1 or 2
+        if (xrepl >= 2)
         {
-          int ntscri=rpf[0]*levelmult;
-          int ntscgi=rpf[1]*levelmult;
-          int ntscbi=rpf[2]*levelmult;
-          if (ntscri>=ANALOGTV_CV_MAX) ntscri=ANALOGTV_CV_MAX-1;
-          if (ntscgi>=ANALOGTV_CV_MAX) ntscgi=ANALOGTV_CV_MAX-1;
-          if (ntscbi>=ANALOGTV_CV_MAX) ntscbi=ANALOGTV_CV_MAX-1;
-          pix = (it->intensity_values[ntscri] << 16) |
-                (it->intensity_values[ntscgi] <<  8) |
-                (it->intensity_values[ntscbi]);
-
-          pixelptr[0] = pix;
-          if (xrepl>=2) {
-            pixelptr[1] = pix;
-            if (xrepl>=3) pixelptr[2] = pix;
-          }
-          pixelptr+=xrepl;
+          rowdata[i*xrepl + 1] = v;
         }
+      }
     }
   }
 }
@@ -1145,17 +1139,11 @@ analogtv_blast_imagerow(const analogtv *it,
 static void analogtv_thread_draw_lines(void *thread_raw)
 {
   const analogtv_thread *thread = (analogtv_thread *)thread_raw;
-  const analogtv *it = thread->it;
+  analogtv *it = thread->it;
 
   int lineno;
 
-  float *raw_rgb_start;
-  float *raw_rgb_end;
-  raw_rgb_start=(float *)calloc(it->subwidth*3, sizeof(float));
-
-  if (! raw_rgb_start) return;
-
-  raw_rgb_end=raw_rgb_start+3*it->subwidth;
+  std::vector<float> raw_rgb(it->subwidth * 3);
 
   for (lineno=ANALOGTV_TOP + thread->thread_id;
        lineno<ANALOGTV_BOT;
@@ -1216,8 +1204,8 @@ static void analogtv_thread_draw_lines(void *thread_raw)
                                             - it->squish_control)) *65536.0f);
       squishdiv=it->subwidth/15;
 
-      rgb_start=raw_rgb_start+scl*3;
-      rgb_end=raw_rgb_start+scr*3;
+      rgb_start = raw_rgb.data() + scl*3;
+      rgb_end = raw_rgb.data() + scr*3;
 
       assert(scanstart_i>=0);
 
@@ -1287,17 +1275,15 @@ static void analogtv_thread_draw_lines(void *thread_raw)
         i+=pixmultinc;
         rrp+=3;
       }
-      while (rrp != rgb_end) {
+      while (rrp != rgb_end)
+      {
         rrp[0]=rrp[1]=rrp[2]=0.0f;
         rrp+=3;
       }
 
-      analogtv_blast_imagerow(it, raw_rgb_start, raw_rgb_end,
-                              ytop,ybot);
+      analogtv_blast_imagerow(it, raw_rgb, ytop, ybot);
     }
   }
-
-  free(raw_rgb_start);
 }
 
 void
