@@ -1117,12 +1117,17 @@ analogtv_blast_imagerow(analogtv *it,
 
       for (size_t i = 0; i < rgbf.size() / 3; i++)
       {
+        cv::Vec4i rgb;
+        rgb[0] = rgbf[i*3 + 0];
+        rgb[1] = rgbf[i*3 + 1];
+        rgb[2] = rgbf[i*3 + 2];
 
-        int ntscri = it->intensity_values[std::min(int(rgbf[i*3 + 0] * levelmult), ANALOGTV_CV_MAX-1)];
-        int ntscgi = it->intensity_values[std::min(int(rgbf[i*3 + 1] * levelmult), ANALOGTV_CV_MAX-1)];
-        int ntscbi = it->intensity_values[std::min(int(rgbf[i*3 + 2] * levelmult), ANALOGTV_CV_MAX-1)];
+        for (int j = 0; j < 3; j++)
+        {
+          rgb[j] = it->intensity_values[std::min(int(rgb[j] * levelmult), ANALOGTV_CV_MAX-1)];
+        }
 
-        cv::Vec4b v(ntscbi, ntscgi, ntscri, 0);
+        cv::Vec4b v(rgb[2], rgb[1], rgb[0], 0);
 
         rowdata[i*xrepl + 0] = v;
 
