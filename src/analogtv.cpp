@@ -844,7 +844,6 @@ analogtv_setup_levels(analogtv *it, double avgheight)
 {
   static const double levelfac[3] = {-7.5, 5.5, 24.5};
 
-
   for (int height = 0; height < avgheight + 2.0 && height <= ANALOGTV_MAX_LINEHEIGHT; height++)
   {
 
@@ -906,22 +905,21 @@ static unsigned int rnd_seek(unsigned a, unsigned c, unsigned rnd, unsigned dist
 
 static void analogtv_init_signal(const analogtv *it, double noiselevel, unsigned start, unsigned end)
 {
-  float *ps=it->rx_signal + start;
-  float *pe=it->rx_signal + end;
-  float *p=ps;
-  unsigned int fastrnd=rnd_seek(FASTRND_A, FASTRND_C, it->random0, start);
+  unsigned int fastrnd = rnd_seek(FASTRND_A, FASTRND_C, it->random0, start);
   unsigned int fastrnd_offset;
-  float nm1,nm2;
+  float nm1, nm2;
   float noisemul = sqrt(noiselevel*150)/(float)0x7fffffff;
 
   fastrnd_offset = fastrnd - 0x7fffffff;
   nm1 = (fastrnd_offset <= INT_MAX ? (int)fastrnd_offset : -1 - (int)(UINT_MAX - fastrnd_offset)) * noisemul;
-  while (p != pe) {
-    nm2=nm1;
+
+  for (uint32_t i = start; i < end; i++)
+  {
+    nm2 = nm1;
     fastrnd = (fastrnd*FASTRND_A+FASTRND_C) & 0xffffffffu;
     fastrnd_offset = fastrnd - 0x7fffffff;
     nm1 = (fastrnd_offset <= INT_MAX ? (int)fastrnd_offset : -1 - (int)(UINT_MAX - fastrnd_offset)) * noisemul;
-    *p++ = nm1*nm2;
+    it->rx_signal[i] = nm1 * nm2;
   }
 }
 
