@@ -846,8 +846,7 @@ analogtv_setup_levels(analogtv *it, double avgheight)
 
   for (int height = 0; height < avgheight + 2.0 && height <= ANALOGTV_MAX_LINEHEIGHT; height++)
   {
-
-    for (int i = 0; i<height; i++)
+    for (int i = 0; i < height; i++)
     {
       it->leveltable[height][i].index = 2;
     }
@@ -856,19 +855,20 @@ analogtv_setup_levels(analogtv *it, double avgheight)
     {
       it->leveltable[height][0].index=0;
     }
-    if (avgheight>=5)
+
+    if (avgheight >= 5)
     {
       if (height >= 1)
         it->leveltable[height][height-1].index=0;
     }
-    if (avgheight>=7)
+    if (avgheight >= 7)
     {
       it->leveltable[height][1].index=1;
       if (height >= 2)
         it->leveltable[height][height-2].index=1;
     }
 
-    for (int i=0; i<height; i++)
+    for (int i = 0; i<height; i++)
     {
       it->leveltable[height][i].value = 
         (40.0 + levelfac[it->leveltable[height][i].index]*puramp(it, 3.0, 6.0, 1.0)) / 256.0;
