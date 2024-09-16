@@ -1021,14 +1021,10 @@ static void analogtv_thread_add_signals(void *thread_raw)
 {
   const analogtv_thread *thread = (analogtv_thread *)thread_raw;
   const analogtv *it = thread->it;
-  unsigned i, j;
-  unsigned subtotal_end;
-  
+
   unsigned start = thread->signal_start;
   while(start != thread->signal_end)
   {
-    float *p;
-    
     /* Work on 8 KB blocks; these should fit in L1. */
     /* (Though it doesn't seem to help much on my system.) */
     unsigned end = start + 2048;
@@ -1037,24 +1033,12 @@ static void analogtv_thread_add_signals(void *thread_raw)
 
     analogtv_init_signal (it, it->noiselevel, start, end);
 
-    for (i = 0; i != it->rec_count; ++i) {
+    for (uint32_t i = 0; i != it->rec_count; ++i)
+    {
       analogtv_add_signal (it, it->recs[i], start, end,
                            !i ? it->channel_change_cycles : 0);
     }
 
-    assert (!(start % ANALOGTV_SUBTOTAL_LEN));
-    assert (!(end % ANALOGTV_SUBTOTAL_LEN));
-
-    p = it->rx_signal + start;
-    subtotal_end = end / ANALOGTV_SUBTOTAL_LEN;
-    for (i = start / ANALOGTV_SUBTOTAL_LEN; i != subtotal_end; ++i) {
-      float sum = p[0];
-      for (j = 1; j != ANALOGTV_SUBTOTAL_LEN; ++j)
-        sum += p[j];
-      it->signal_subtotals[i] = sum;
-      p += ANALOGTV_SUBTOTAL_LEN;
-    }
-    
     start = end;
   }
 }
@@ -1326,6 +1310,39 @@ analogtv_draw(analogtv *it, double noiselevel,
   it->rec_count = rec_count;
   threadpool_run(&it->threads, analogtv_thread_add_signals);
   threadpool_wait(&it->threads);
+
+  //TODO: refactor it to get rid of subtotals
+  cv::parallel_for_(cv::Range(0, ANALOGTV_SIGNAL_LEN / ANALOGTV_SUBTOTAL_LEN), [it](const cv::Range& r)
+  {
+    uint32_t chunkSigStart = (uint32_t)(r.start * ANALOGTV_SUBTOTAL_LEN);
+    uint32_t chunkSigEnd   = (uint32_t)(r.end   * ANALOGTV_SUBTOTAL_LEN);
+    unsigned start = chunkSigStart;
+
+    while(start != chunkSigEnd)
+    {
+      // Work on 8 KB blocks; these should fit in L1.
+      // (Though it doesn't seem to help much on my system.)
+      unsigned end = start + 2048;
+      if(end > chunkSigEnd)
+        end = chunkSigEnd;
+
+      assert (!(start % ANALOGTV_SUBTOTAL_LEN));
+      assert (!(end % ANALOGTV_SUBTOTAL_LEN));
+
+      float* p = it->rx_signal + start;
+      unsigned subtotal_end = end / ANALOGTV_SUBTOTAL_LEN;
+      for (uint32_t i = start / ANALOGTV_SUBTOTAL_LEN; i != subtotal_end; ++i)
+      {
+        float sum = p[0];
+        for (int j = 1; j != ANALOGTV_SUBTOTAL_LEN; ++j)
+          sum += p[j];
+        it->signal_subtotals[i] = sum;
+        p += ANALOGTV_SUBTOTAL_LEN;
+      }
+      
+      start = end;
+    }
+  });
 
   it->channel_change_cycles=0;
 
