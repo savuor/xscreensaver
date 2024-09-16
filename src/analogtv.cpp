@@ -315,9 +315,6 @@ typedef struct analogtv_thread_s
   size_t signal_start, signal_end;
 } analogtv_thread;
 
-#define SIGNAL_OFFSET(thread_id) \
-  ((ANALOGTV_SIGNAL_LEN * (thread_id) / threads->count) & align)
-
 static int analogtv_thread_create(void *thread_raw, struct threadpool *threads,
                                   unsigned thread_id)
 {
@@ -332,10 +329,10 @@ static int analogtv_thread_create(void *thread_raw, struct threadpool *threads,
     align = 1;
   align = ~(align * ANALOGTV_SUBTOTAL_LEN - 1);
 
-  thread->signal_start = SIGNAL_OFFSET(thread_id);
+  thread->signal_start = (ANALOGTV_SIGNAL_LEN * (thread_id) / threads->count) & align;
   thread->signal_end = thread_id + 1 == threads->count ?
                        ANALOGTV_SIGNAL_LEN :
-                       SIGNAL_OFFSET(thread_id + 1);
+                       ((ANALOGTV_SIGNAL_LEN * (thread_id + 1) / threads->count) & align);
 
   return 0;
 }
