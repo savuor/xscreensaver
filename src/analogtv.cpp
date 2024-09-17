@@ -305,9 +305,6 @@ analogtv_configure(analogtv *it)
   it->screen_yo = ( it->outbuffer_height - it->useheight )/2;
 }
 
-/* Can be any power-of-two <= 32. 16 a slightly better choice for 2-3 threads. */
-#define ANALOGTV_SUBTOTAL_LEN 32
-
 typedef struct analogtv_thread_s
 {
   analogtv *it;
@@ -319,15 +316,11 @@ static int analogtv_thread_create(void *thread_raw, struct threadpool *threads,
                                   unsigned thread_id)
 {
   analogtv_thread *thread = (analogtv_thread *)thread_raw;
-  unsigned align;
 
   thread->it = GET_PARENT_OBJ(analogtv, threads, threads);
   thread->thread_id = thread_id;
 
-  align = thread_memory_alignment() / sizeof(thread->it->signal_subtotals[0]);
-  if (!align)
-    align = 1;
-  align = ~(align * ANALOGTV_SUBTOTAL_LEN - 1);
+  uint32_t align = ~(32 - 1);
 
   thread->signal_start = (ANALOGTV_SIGNAL_LEN * (thread_id) / threads->count) & align;
   thread->signal_end = thread_id + 1 == threads->count ?
@@ -364,15 +357,6 @@ analogtv * analogtv_allocate(int outbuffer_width, int outbuffer_height)
                     sizeof(it->rx_signal[0]) * rx_signal_len))
     goto fail;
 
-  assert(!(ANALOGTV_SIGNAL_LEN % ANALOGTV_SUBTOTAL_LEN));
-
-  //TODO: vector<float>
-  it->signal_subtotals=NULL;
-  if (thread_malloc((void **)&it->signal_subtotals,
-                    sizeof(it->signal_subtotals[0]) *
-                     (rx_signal_len / ANALOGTV_SUBTOTAL_LEN)))
-    goto fail;
-
   if (threadpool_create(&it->threads, &cls, hardware_concurrency()))
     goto fail;
 
@@ -399,7 +383,6 @@ analogtv * analogtv_allocate(int outbuffer_width, int outbuffer_height)
   if (it) {
     if(it->threads.count)
       threadpool_destroy(&it->threads);
-    thread_free(it->signal_subtotals);
     thread_free(it->rx_signal);
     free(it);
   }
@@ -1309,39 +1292,6 @@ analogtv_draw(analogtv *it, double noiselevel,
   threadpool_run(&it->threads, analogtv_thread_add_signals);
   threadpool_wait(&it->threads);
 
-  //TODO: refactor it to get rid of subtotals
-  cv::parallel_for_(cv::Range(0, ANALOGTV_SIGNAL_LEN / ANALOGTV_SUBTOTAL_LEN), [it](const cv::Range& r)
-  {
-    uint32_t chunkSigStart = (uint32_t)(r.start * ANALOGTV_SUBTOTAL_LEN);
-    uint32_t chunkSigEnd   = (uint32_t)(r.end   * ANALOGTV_SUBTOTAL_LEN);
-    unsigned start = chunkSigStart;
-
-    while(start != chunkSigEnd)
-    {
-      // Work on 8 KB blocks; these should fit in L1.
-      // (Though it doesn't seem to help much on my system.)
-      unsigned end = start + 2048;
-      if(end > chunkSigEnd)
-        end = chunkSigEnd;
-
-      assert (!(start % ANALOGTV_SUBTOTAL_LEN));
-      assert (!(end % ANALOGTV_SUBTOTAL_LEN));
-
-      float* p = it->rx_signal + start;
-      unsigned subtotal_end = end / ANALOGTV_SUBTOTAL_LEN;
-      for (uint32_t i = start / ANALOGTV_SUBTOTAL_LEN; i != subtotal_end; ++i)
-      {
-        float sum = p[0];
-        for (int j = 1; j != ANALOGTV_SUBTOTAL_LEN; ++j)
-          sum += p[j];
-        it->signal_subtotals[i] = sum;
-        p += ANALOGTV_SUBTOTAL_LEN;
-      }
-      
-      start = end;
-    }
-  });
-
   it->channel_change_cycles=0;
 
   /* rx_signal has an extra 2 lines at the end, where we copy the
@@ -1350,12 +1300,6 @@ analogtv_draw(analogtv *it, double noiselevel,
   memcpy(&it->rx_signal[ANALOGTV_SIGNAL_LEN],
          &it->rx_signal[0],
          2*ANALOGTV_H*sizeof(it->rx_signal[0]));
-
-  /* Repeat for signal_subtotals. */
-
-  memcpy(&it->signal_subtotals[ANALOGTV_SIGNAL_LEN / ANALOGTV_SUBTOTAL_LEN],
-         &it->signal_subtotals[0],
-         (2*ANALOGTV_H/ANALOGTV_SUBTOTAL_LEN)*sizeof(it->signal_subtotals[0]));
 
   analogtv_sync(it); /* Requires the add_signals be complete. */
 
@@ -1440,33 +1384,14 @@ analogtv_draw(analogtv *it, double noiselevel,
 
     {
       /* This used to be an int, I suspect by mistake. - Dave */
-      float totsignal=0;
-      float ncl/*,diff*/;
-      unsigned frac;
-      size_t end0, end1;
-      const float *p;
-
-      frac = signal_offset & (ANALOGTV_SUBTOTAL_LEN - 1);
-      p = it->rx_signal + (signal_offset & ~(ANALOGTV_SUBTOTAL_LEN - 1));
-      for (i=0; i != (int)frac; i++) {
-        totsignal -= p[i];
-      }
-
-      end0 = (signal_offset + ANALOGTV_PIC_LEN);
-
-      end1 = end0 / ANALOGTV_SUBTOTAL_LEN;
-      for (i=signal_offset / ANALOGTV_SUBTOTAL_LEN; i<(int)end1; i++) {
-        totsignal += it->signal_subtotals[i];
-      }
-
-      frac = end0 & (ANALOGTV_SUBTOTAL_LEN - 1);
-      p = it->rx_signal + (end0 & ~(ANALOGTV_SUBTOTAL_LEN - 1));
-      for (i=0; i != (int)frac; i++) {
-        totsignal += p[i];
+      float totsignal = 0;
+      for (uint32_t i = signal_offset; i < (signal_offset + ANALOGTV_PIC_LEN); i++)
+      {
+        totsignal += it->rx_signal[i];
       }
 
       totsignal *= it->agclevel;
-      ncl = 0.95f * it->crtload[lineno-1] +
+      float ncl = 0.95f * it->crtload[lineno-1] +
         0.05f*(baseload +
                (totsignal-30000)/100000.0f +
                (slineno>184 ? (slineno-184)*(lineno-184)*0.001f * it->squeezebottom

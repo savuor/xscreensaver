@@ -204,8 +204,6 @@ typedef struct analogtv_s {
   const analogtv_reception *const *recs;
   unsigned rec_count;
 
-  float *signal_subtotals;
-
   float puheight;
 } analogtv;
 
