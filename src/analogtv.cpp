@@ -909,29 +909,25 @@ static void analogtv_init_signal(const analogtv *it, double noiselevel, unsigned
 static void analogtv_add_signal(const analogtv *it, const analogtv_reception *rec, unsigned start, unsigned end, int ec)
 {
   analogtv_input *inp=rec->input;
-  float *ps=it->rx_signal + start;
-  float *pe=it->rx_signal + end;
-  float *p=ps;
-  signed char *ss=&inp->signal[0][0];
-  signed char *se=&inp->signal[0][0] + ANALOGTV_SIGNAL_LEN;
-  signed char *s=ss + ((start + (unsigned)rec->ofs) % ANALOGTV_SIGNAL_LEN);
-  signed char *s2;
-  int i;
+
+  signed char *s=&inp->signal[0][0] + ((start + (unsigned)rec->ofs) % ANALOGTV_SIGNAL_LEN);
+
   float level=rec->level;
-  float hfloss=rec->hfloss;
+  
   unsigned int fastrnd=rnd_seek(FASTRND_A, FASTRND_C, it->random1, start);
-  float dp[5];
+
 
   const float noise_decay = 0.99995f;
   float noise_ampl = 1.3f * powf(noise_decay, start);
 
-  if (ec > (int)end)
-    ec = end;
-
   /* assert((se-ss)%4==0 && (se-s)%4==0); */
+  ec = std::min(ec, (int)end);
+  /* Sometimes start > ec. */
 
-  for (i = start; i < ec; i++) { /* Sometimes start > ec. */
 
+  float *p = it->rx_signal + start;
+  for (int i = start; i < ec; i++)
+  {
     /* Do a big noisy transition. We can make the transition noise of
        high constant strength regardless of signal strength.
 
@@ -952,21 +948,31 @@ static void analogtv_add_signal(const analogtv *it, const analogtv_reception *re
 
     p++;
     s++;
-    if (s>=se) s=ss;
+    if (s >= &inp->signal[0][0] + ANALOGTV_SIGNAL_LEN)
+    {
+      s = &inp->signal[0][0];
+    }
   }
 
+  float dp[5];
+
   dp[0]=0.0;
-  s2 = s;
-  for (i=1; i<5; i++) {
+  
+  signed char *s2 = s;
+  for (int i=1; i<5; i++)
+  {
     s2 -= 4;
-    if (s2 < ss)
+    if (s2 < &inp->signal[0][0])
       s2 += ANALOGTV_SIGNAL_LEN;
     dp[i] = (float)((int)s2[0]+(int)s2[1]+(int)s2[2]+(int)s2[3]);
   }
 
-  assert(p <= pe);
-  assert(!((pe - p) % 4));
-  while (p != pe) {
+  assert(p <= it->rx_signal + end);
+  assert(!((it->rx_signal + end - p) % 4));
+
+  float hfloss=rec->hfloss;
+  while (p != it->rx_signal + end)
+  {
     float sig0,sig1,sig2,sig3,sigr;
 
     sig0=(float)s[0];
@@ -992,10 +998,13 @@ static void analogtv_add_signal(const analogtv *it, const analogtv_reception *re
 
     p += 4;
     s += 4;
-    if (s>=se) s = ss + (s-se);
+    if (s >= &inp->signal[0][0] + ANALOGTV_SIGNAL_LEN)
+    {
+      s = &inp->signal[0][0] + (s - &inp->signal[0][0] - ANALOGTV_SIGNAL_LEN);
+    }
   }
 
-  assert(p == pe);
+  assert(p == it->rx_signal + end);
 }
 
 static void analogtv_thread_add_signals(void *thread_raw)
