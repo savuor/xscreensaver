@@ -12,10 +12,6 @@ include_directories(
     ${OpenCV_INCLUDE_DIRS}
 )
 
-link_libraries(
-    "m"
-)
-
 add_executable(analogtv-cli
     "./src/analogtv-cli.cpp"
     "./src/analogtv.cpp"
