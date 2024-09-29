@@ -29,7 +29,7 @@
 #include "analogtv.hpp"
 #include "utils.hpp"
 
-#include <iostream>
+#include <chrono>
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
@@ -227,6 +227,12 @@ static void run(Params params)
 
   int N_CHANNELS = MAX_STATIONS * 2;
 
+  //TODO: use different random
+  if (params.seed == 0)
+  {
+    auto tp = std::chrono::high_resolution_clock::now().time_since_epoch();
+    params.seed = tp.count();
+  }
   ya_rand_init (params.seed);
   cv::Size outSize = params.size;
   int duration = params.duration;

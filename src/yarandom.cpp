@@ -91,30 +91,30 @@ ya_random (void)
 void
 ya_rand_init(unsigned int seed)
 {
-  int i;
-  if (seed == 0)
-    {
-      struct timeval tp;
-      struct timezone tzp;
-      gettimeofday(&tp, &tzp);
-
-      /* Since the multiplications will have a larger effect on the
-         upper bits than the lower bits, after every addition in the
-         seed, perform a bitwise rotate by an odd number, resulting
-         in a better distribution of randomness throughout the bits.
-         -- Brian Carlson, 2010.
-       */
 #define ROT(X,N) (((X)<<(N)) | ((X)>>((sizeof(unsigned int)*8)-(N))))
-      seed = (999U * (unsigned int) tp.tv_sec);
-      seed = ROT (seed, 11);
-      seed += (1001 * (unsigned int) tp.tv_usec);
-      seed = ROT (seed, 7);
-      seed += (1003 * (unsigned int) getpid());
-      seed = ROT (seed, 13);
-    }
+//   if (seed == 0)
+//     {
+//       struct timeval tp;
+//       struct timezone tzp;
+//       gettimeofday(&tp, &tzp);
+
+//       /* Since the multiplications will have a larger effect on the
+//          upper bits than the lower bits, after every addition in the
+//          seed, perform a bitwise rotate by an odd number, resulting
+//          in a better distribution of randomness throughout the bits.
+//          -- Brian Carlson, 2010.
+//        */
+
+//       seed = (999U * (unsigned int) tp.tv_sec);
+//       seed = ROT (seed, 11);
+//       seed += (1001 * (unsigned int) tp.tv_usec);
+//       seed = ROT (seed, 7);
+//       seed += (1003 * (unsigned int) getpid());
+//       seed = ROT (seed, 13);
+//     }
 
   a[0] += seed;
-  for (i = 1; i < VectorSize; i++)
+  for (int i = 1; i < VectorSize; i++)
     {
       seed = seed*999;
       seed = ROT (seed, 9);

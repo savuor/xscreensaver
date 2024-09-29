@@ -21,13 +21,6 @@
 #include <optional>
 #include <variant>
 
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <unistd.h>
-
 // maybe one day this dependency will be removed
 #include <opencv2/core.hpp>
 
