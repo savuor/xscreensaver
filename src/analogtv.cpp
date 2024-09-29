@@ -71,6 +71,7 @@
 
 #include "precomp.hpp"
 
+#include "aligned_malloc.hpp"
 #include "fixed-funcs.hpp"
 #include "analogtv.hpp"
 #include "yarandom.hpp"
@@ -317,8 +318,7 @@ analogtv * analogtv_allocate(int outbuffer_width, int outbuffer_height)
 
   //TODO: vector<float>
   it->rx_signal=NULL;
-  if (thread_malloc((void **)&it->rx_signal, 
-                    sizeof(it->rx_signal[0]) * rx_signal_len))
+  if (aligned_malloc((void **)&it->rx_signal, 0, (sizeof(it->rx_signal[0]) * rx_signal_len)))
     goto fail;
 
   it->shrinkpulse=-1;
@@ -341,7 +341,7 @@ analogtv * analogtv_allocate(int outbuffer_width, int outbuffer_height)
  fail:
   if (it)
   {
-    thread_free(it->rx_signal);
+    aligned_free(it->rx_signal);
     free(it);
   }
   return NULL;
