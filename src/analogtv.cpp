@@ -906,58 +906,51 @@ static void analogtv_init_signal(const analogtv *it, double noiselevel, unsigned
   }
 }
 
-static void analogtv_add_signal(const analogtv *it, const analogtv_reception *rec, unsigned start, unsigned end, int ec)
-{
-  analogtv_input *inp=rec->input;
 
-  int si = (start + (unsigned)rec->ofs) % ANALOGTV_SIGNAL_LEN;
-  signed char* signal = &inp->signal[0][0];
+static void analogtv_transit_channels(const analogtv *it, const analogtv_reception *rec, unsigned start, int skip)
+{
+  signed char* signal = &(rec->input->signal[0][0]);
 
   float level = rec->level;
+
+  /* Do a big noisy transition. We can make the transition noise of
+     high constant strength regardless of signal strength.
+
+     There are two separate state machines. here, One is the noise
+     process and the other is the
+
+     We don't bother with the FIR filter here
+  */
 
   unsigned int fastrnd=rnd_seek(FASTRND_A, FASTRND_C, it->random1, start);
 
   const float noise_decay = 0.99995f;
   float noise_ampl = 1.3f * powf(noise_decay, start);
 
-  /* assert((se-ss)%4==0 && (se-s)%4==0); */
-  ec = std::min(ec, (int)end);
   /* Sometimes start > ec. */
-
-  unsigned int pp = start;
-
-  for (int i = start; i < ec; i++)
+  for (int i = start; i < skip + (int)start; i++)
   {
-    /* Do a big noisy transition. We can make the transition noise of
-       high constant strength regardless of signal strength.
-
-       There are two separate state machines. here, One is the noise
-       process and the other is the
-
-       We don't bother with the FIR filter here
-    */
-
     unsigned int fastrnd_offset = fastrnd - 0x7fffffff;
     float noise = (fastrnd_offset <= INT_MAX ? (int)fastrnd_offset : -1 - (int)(UINT_MAX - fastrnd_offset)) * (50.0f/(float)0x7fffffff);
     fastrnd = (fastrnd*FASTRND_A+FASTRND_C) & 0xffffffffu;
 
-    it->rx_signal[pp] += (float)(signal[si]) * level * (1.0f - noise_ampl) + noise * noise_ampl;
+    it->rx_signal[i] += (float)(signal[(start + (unsigned)rec->ofs + i) % ANALOGTV_SIGNAL_LEN]) * level * (1.0f - noise_ampl) + noise * noise_ampl;
 
     noise_ampl *= noise_decay;
-
-    pp++;
-    si++;
-    if (si >= ANALOGTV_SIGNAL_LEN)
-    {
-      si = 0;
-    }
   }
+}
+
+
+static void analogtv_add_signal(const analogtv *it, const analogtv_reception *rec, unsigned start, unsigned end, int skip)
+{
+  signed char* signal = &(rec->input->signal[0][0]);
+  float level = rec->level;
 
   float dp[5];
   dp[0]=0.0;
 
-  int sii = si;
-  for (int i=1; i<5; i++)
+  int sii = (start + (unsigned)rec->ofs + skip) % ANALOGTV_SIGNAL_LEN;
+  for (int i = 1; i < 5; i++)
   {
     sii -= 4;
     if (sii < 0)
@@ -968,41 +961,36 @@ static void analogtv_add_signal(const analogtv *it, const analogtv_reception *re
                     (int)(signal[sii + 3]));
   }
 
-  assert(pp <= end);
-  assert((end - pp) % 4 == 0);
+  //int pp = start + skip;
+  assert((int)start + skip <= (int)end);
+  assert(((int)end - (int)start - skip) % 4 == 0);
 
   float hfloss=rec->hfloss;
-  while (pp != end)
+  for (int i = (int)start + skip; i < (int)end; i += 4)
   {
     float sig0,sig1,sig2,sig3,sigr;
 
-    sig0 = (float) (signal[si + 0]);
-    sig1 = (float) (signal[si + 1]);
-    sig2 = (float) (signal[si + 2]);
-    sig3 = (float) (signal[si + 3]);
+    int sigIdx = (i + (int)(rec->ofs)) % ANALOGTV_SIGNAL_LEN;
+    sig0 = (float) (signal[sigIdx + 0]);
+    sig1 = (float) (signal[sigIdx + 1]);
+    sig2 = (float) (signal[sigIdx + 2]);
+    sig3 = (float) (signal[sigIdx + 3]);
 
-    dp[0]=sig0+sig1+sig2+sig3;
+    dp[0] = sig0 + sig1 + sig2 + sig3;
 
     /* Get the video out signal, and add some ghosting, typical of RF
        monitor cables. This corresponds to a pretty long cable, but
        looks right to me.
     */
 
-    sigr=(dp[1]*rec->ghostfir[0] + dp[2]*rec->ghostfir[1] +
-          dp[3]*rec->ghostfir[2] + dp[4]*rec->ghostfir[3]);
+    sigr = (dp[1]*rec->ghostfir[0] + dp[2]*rec->ghostfir[1] +
+            dp[3]*rec->ghostfir[2] + dp[4]*rec->ghostfir[3]);
     dp[4]=dp[3]; dp[3]=dp[2]; dp[2]=dp[1]; dp[1]=dp[0];
 
-    it->rx_signal[pp + 0] += (sig0 + sigr + sig2 * hfloss) * level;
-    it->rx_signal[pp + 1] += (sig1 + sigr + sig3 * hfloss) * level;
-    it->rx_signal[pp + 2] += (sig2 + sigr + sig0 * hfloss) * level;
-    it->rx_signal[pp + 3] += (sig3 + sigr + sig1 * hfloss) * level;
-
-    pp += 4;
-    si += 4;
-    if (si >= ANALOGTV_SIGNAL_LEN)
-    {
-      si = si - ANALOGTV_SIGNAL_LEN;
-    }
+    it->rx_signal[i + 0] += (sig0 + sigr + sig2 * hfloss) * level;
+    it->rx_signal[i + 1] += (sig1 + sigr + sig3 * hfloss) * level;
+    it->rx_signal[i + 2] += (sig2 + sigr + sig0 * hfloss) * level;
+    it->rx_signal[i + 3] += (sig3 + sigr + sig1 * hfloss) * level;
   }
 }
 
@@ -1024,8 +1012,12 @@ static void analogtv_thread_add_signals(void *thread_raw)
 
     for (uint32_t i = 0; i != it->rec_count; ++i)
     {
-      analogtv_add_signal (it, it->recs[i], start, end,
-                           !i ? it->channel_change_cycles : 0);
+      /* Sometimes start > ec. */
+      int ec = !i ? it->channel_change_cycles : 0;
+      int skip = ((int)start >= ec) ? 0 : std::min(ec, (int)end) - start;
+
+      analogtv_transit_channels(it, it->recs[i], start, skip);
+      analogtv_add_signal (it, it->recs[i], start, end, skip);
     }
 
     start = end;
