@@ -1071,20 +1071,15 @@ analogtv_blast_imagerow(analogtv *it,
   }
 }
 
-static void analogtv_thread_draw_lines(void *thread_raw)
-{
-  const analogtv_thread *thread = (analogtv_thread *)thread_raw;
-  analogtv *it = thread->it;
 
-  int lineno;
+static void analogtv_parallel_for_draw_lines(analogtv* it, const cv::Range& r)
+{
 
   std::vector<float> raw_rgb(it->subwidth * 3);
 
-  for (lineno=ANALOGTV_TOP + thread->thread_id;
-       lineno<ANALOGTV_BOT;
-       lineno += it->threads.count) {
-    int i;
-
+  // from ANALOGTV_TOP to ANALOGTV_BOT
+  for (int lineno = r.start; lineno < r.end; lineno++)
+  {
     int slineno, ytop, ybot;
     unsigned signal_offset;
 
@@ -1099,8 +1094,7 @@ static void analogtv_thread_draw_lines(void *thread_raw)
 
     struct analogtv_yiq_s yiq[ANALOGTV_PIC_LEN+10];
 
-    if (! analogtv_get_line(it, lineno, &slineno, &ytop, &ybot,
-        &signal_offset))
+    if (! analogtv_get_line(it, lineno, &slineno, &ytop, &ybot, &signal_offset))
       continue;
 
     signal = it->rx_signal + signal_offset;
@@ -1161,13 +1155,16 @@ static void analogtv_thread_draw_lines(void *thread_raw)
       pixbright=it->contrast_control * puramp(it, 1.0f, 0.0f, 1.0f)
         / (0.5f+0.5f*it->puheight) * 1024.0f/100.0f;
       pixmultinc=pixrate;
-      i=scanstart_i; rrp=rgb_start;
-      while (i<0 && rrp!=rgb_end) {
+      int i=scanstart_i;
+      rrp=rgb_start;
+      while (i<0 && rrp!=rgb_end)
+      {
         rrp[0]=rrp[1]=rrp[2]=0;
         i+=pixmultinc;
         rrp+=3;
       }
-      while (i<scanend_i && rrp!=rgb_end) {
+      while (i<scanend_i && rrp!=rgb_end)
+      {
         float pixfrac=(i&0xffff)/65536.0f;
         float invpixfrac=1.0f-pixfrac;
         int pati=i>>16;
@@ -1203,7 +1200,8 @@ static void analogtv_thread_draw_lines(void *thread_raw)
         rrp[1]=g;
         rrp[2]=b;
 
-        if (i>=squishright_i) {
+        if (i>=squishright_i)
+        {
           pixmultinc += pixmultinc/squishdiv;
           pixbright += pixbright/squishdiv/2;
         }
@@ -1220,6 +1218,7 @@ static void analogtv_thread_draw_lines(void *thread_raw)
     }
   }
 }
+
 
 void
 analogtv_draw(analogtv *it, double noiselevel,
@@ -1405,8 +1404,12 @@ analogtv_draw(analogtv *it, double noiselevel,
     }
   }
 
-  threadpool_run(&it->threads, analogtv_thread_draw_lines);
-  threadpool_wait(&it->threads);
+  //threadpool_run(&it->threads, analogtv_thread_draw_lines);
+  //threadpool_wait(&it->threads);
+  cv::parallel_for_(cv::Range(ANALOGTV_TOP, ANALOGTV_BOT), [it](const cv::Range& r)
+  {
+    analogtv_parallel_for_draw_lines(it, r);
+  });
 
 #if 0
   /* poor attempt at visible retrace */
