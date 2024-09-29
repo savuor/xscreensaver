@@ -20,7 +20,6 @@ add_executable(analogtv-cli
     "./src/analogtv-cli.cpp"
     "./src/analogtv.cpp"
     "./src/yarandom.cpp"
-    "./src/aligned_malloc.cpp"
     "./src/utils.cpp"
 )
 

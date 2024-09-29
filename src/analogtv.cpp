@@ -71,7 +71,6 @@
 
 #include "precomp.hpp"
 
-#include "aligned_malloc.hpp"
 #include "fixed-funcs.hpp"
 #include "analogtv.hpp"
 #include "yarandom.hpp"
@@ -311,15 +310,11 @@ analogtv * analogtv_allocate(int outbuffer_width, int outbuffer_height)
 {
   analogtv *it=NULL;
   int i;
-  const size_t rx_signal_len = ANALOGTV_SIGNAL_LEN + 2*ANALOGTV_H;
 
   it=(analogtv *)calloc(1,sizeof(analogtv));
   if (!it) return 0;
 
-  //TODO: vector<float>
-  it->rx_signal=NULL;
-  if (aligned_malloc((void **)&it->rx_signal, 0, (sizeof(it->rx_signal[0]) * rx_signal_len)))
-    goto fail;
+  it->rx_signal.resize(ANALOGTV_SIGNAL_LEN + 2*ANALOGTV_H);
 
   it->shrinkpulse=-1;
 
@@ -337,14 +332,6 @@ analogtv * analogtv_allocate(int outbuffer_width, int outbuffer_height)
   analogtv_configure(it);
 
   return it;
-
- fail:
-  if (it)
-  {
-    aligned_free(it->rx_signal);
-    free(it);
-  }
-  return NULL;
 }
 
 
@@ -427,7 +414,8 @@ analogtv_ntsc_to_yiq(const analogtv *it, int lineno, const float *signal,
   enum {MAXDELAY=32};
   int i;
   const float *sp;
-  int phasecorr=(signal-it->rx_signal)&3;
+
+  int phasecorr = (signal - it->rx_signal.data()) & 3;
   struct analogtv_yiq_s *yiq;
   int colormode;
   float agclevel=it->agclevel;
@@ -666,9 +654,10 @@ analogtv_sync(analogtv *it)
   float cbfc=1.0f/128.0f;
 
 /*  sp = it->rx_signal + lineno*ANALOGTV_H + cur_hsync;*/
-  for (i=-32*ANALOGTV_SCALE; i<32*ANALOGTV_SCALE; i++) {
+  for (i=-32*ANALOGTV_SCALE; i<32*ANALOGTV_SCALE; i++)
+  {
     lineno = (cur_vsync + i + ANALOGTV_V) % ANALOGTV_V;
-    sp = it->rx_signal + lineno*ANALOGTV_H;
+    sp = it->rx_signal.data() + lineno*ANALOGTV_H;
     filt=0.0f;
     for (j=0; j<ANALOGTV_H; j+=ANALOGTV_H/(16*ANALOGTV_SCALE)) {
       filt += sp[j];
@@ -686,7 +675,7 @@ analogtv_sync(analogtv *it)
     if (lineno>5*ANALOGTV_SCALE && lineno<ANALOGTV_V-3*ANALOGTV_SCALE) { /* ignore vsync interval */
       unsigned lineno2 = (lineno + cur_vsync + ANALOGTV_V)%ANALOGTV_V;
       if (!lineno2) lineno2 = ANALOGTV_V;
-      sp = it->rx_signal + lineno2*ANALOGTV_H + cur_hsync;
+      sp = it->rx_signal.data() + lineno2*ANALOGTV_H + cur_hsync;
       for (i=-8*ANALOGTV_SCALE; i<8*ANALOGTV_SCALE; i++) {
         osc = (float)(ANALOGTV_H+i)/(float)ANALOGTV_H;
         filt=(sp[i-3]+sp[i-2]+sp[i-1]+sp[i]) * it->agclevel;
@@ -705,9 +694,11 @@ analogtv_sync(analogtv *it)
        cycles.
     */
 
-    if (lineno>15*ANALOGTV_SCALE) {
-      sp = it->rx_signal + lineno*ANALOGTV_H + (cur_hsync&~3);
-      for (i=ANALOGTV_CB_START+8*ANALOGTV_SCALE; i<ANALOGTV_CB_START+(36-8)*ANALOGTV_SCALE; i++) {
+    if (lineno>15*ANALOGTV_SCALE)
+    {
+      sp = it->rx_signal.data() + lineno*ANALOGTV_H + (cur_hsync&~3);
+      for (i=ANALOGTV_CB_START+8*ANALOGTV_SCALE; i<ANALOGTV_CB_START+(36-8)*ANALOGTV_SCALE; i++)
+      {
         it->cb_phase[i&3] = it->cb_phase[i&3]*(1.0f-cbfc) +
           sp[i]*it->agclevel*cbfc;
       }
@@ -844,7 +835,7 @@ static unsigned int rnd_seek(unsigned a, unsigned c, unsigned rnd, unsigned dist
   return a * rnd + c;
 }
 
-static void analogtv_init_signal(const analogtv *it, double noiselevel, unsigned start, unsigned end)
+static void analogtv_init_signal(analogtv *it, double noiselevel, unsigned start, unsigned end)
 {
   unsigned int fastrnd = rnd_seek(FASTRND_A, FASTRND_C, it->random0, start);
   unsigned int fastrnd_offset;
@@ -865,7 +856,7 @@ static void analogtv_init_signal(const analogtv *it, double noiselevel, unsigned
 }
 
 
-static void analogtv_transit_channels(const analogtv *it, const analogtv_reception *rec, unsigned start, int skip)
+static void analogtv_transit_channels(analogtv *it, const analogtv_reception *rec, unsigned start, int skip)
 {
   signed char* signal = &(rec->input->signal[0][0]);
 
@@ -898,7 +889,7 @@ static void analogtv_transit_channels(const analogtv *it, const analogtv_recepti
 }
 
 
-static void analogtv_add_signal(const analogtv *it, const analogtv_reception *rec, unsigned start, unsigned end, int skip)
+static void analogtv_add_signal(analogtv *it, const analogtv_reception *rec, unsigned start, unsigned end, int skip)
 {
   assert(((int)end - (int)start - skip) % 4 == 0);
 
@@ -1055,7 +1046,7 @@ static void analogtv_parallel_for_draw_lines(analogtv* it, const cv::Range& r)
     if (! analogtv_get_line(it, lineno, &slineno, &ytop, &ybot, &signal_offset))
       continue;
 
-    signal = it->rx_signal + signal_offset;
+    signal = it->rx_signal.data() + signal_offset;
 
     {
 

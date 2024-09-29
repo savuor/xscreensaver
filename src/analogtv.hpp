@@ -188,7 +188,7 @@ typedef struct analogtv_s {
 
   int channel_change_cycles;
   double rx_signal_level;
-  float *rx_signal;
+  std::vector<float> rx_signal;
 
   struct {
     int index;
