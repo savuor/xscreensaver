@@ -927,7 +927,6 @@ static void analogtv_transit_channels(const analogtv *it, const analogtv_recepti
   const float noise_decay = 0.99995f;
   float noise_ampl = 1.3f * powf(noise_decay, start);
 
-  /* Sometimes start > ec. */
   for (int i = start; i < skip + (int)start; i++)
   {
     unsigned int fastrnd_offset = fastrnd - 0x7fffffff;
@@ -943,6 +942,8 @@ static void analogtv_transit_channels(const analogtv *it, const analogtv_recepti
 
 static void analogtv_add_signal(const analogtv *it, const analogtv_reception *rec, unsigned start, unsigned end, int skip)
 {
+  assert(((int)end - (int)start - skip) % 4 == 0);
+
   signed char* signal = &(rec->input->signal[0][0]);
   float level = rec->level;
 
@@ -960,10 +961,6 @@ static void analogtv_add_signal(const analogtv *it, const analogtv_reception *re
                     (int)(signal[sii + 2]) +
                     (int)(signal[sii + 3]));
   }
-
-  //int pp = start + skip;
-  assert((int)start + skip <= (int)end);
-  assert(((int)end - (int)start - skip) % 4 == 0);
 
   float hfloss=rec->hfloss;
   for (int i = (int)start + skip; i < (int)end; i += 4)
@@ -994,35 +991,6 @@ static void analogtv_add_signal(const analogtv *it, const analogtv_reception *re
   }
 }
 
-static void analogtv_thread_add_signals(void *thread_raw)
-{
-  const analogtv_thread *thread = (analogtv_thread *)thread_raw;
-  const analogtv *it = thread->it;
-
-  unsigned start = thread->signal_start;
-  while(start != thread->signal_end)
-  {
-    /* Work on 8 KB blocks; these should fit in L1. */
-    /* (Though it doesn't seem to help much on my system.) */
-    unsigned end = start + 2048;
-    if(end > thread->signal_end)
-      end = thread->signal_end;
-
-    analogtv_init_signal (it, it->noiselevel, start, end);
-
-    for (uint32_t i = 0; i != it->rec_count; ++i)
-    {
-      /* Sometimes start > ec. */
-      int ec = !i ? it->channel_change_cycles : 0;
-      int skip = ((int)start >= ec) ? 0 : std::min(ec, (int)end) - start;
-
-      analogtv_transit_channels(it, it->recs[i], start, skip);
-      analogtv_add_signal (it, it->recs[i], start, end, skip);
-    }
-
-    start = end;
-  }
-}
 
 static int analogtv_get_line(const analogtv *it, int lineno, int *slineno,
                              int *ytop, int *ybot, unsigned *signal_offset)
@@ -1289,8 +1257,42 @@ analogtv_draw(analogtv *it, double noiselevel,
   it->noiselevel = noiselevel;
   it->recs = recs;
   it->rec_count = rec_count;
-  threadpool_run(&it->threads, analogtv_thread_add_signals);
-  threadpool_wait(&it->threads);
+
+  assert (ANALOGTV_SIGNAL_LEN % 4 == 0);
+  cv::parallel_for_(cv::Range(0, ANALOGTV_SIGNAL_LEN), [it](const cv::Range& r)
+  {
+    unsigned start  = r.start;
+    unsigned finish = r.end;
+
+    // align it by 4 for ghost FIR processing
+    start  &= ~3;
+    finish &= ~3;
+
+    while(start != finish)
+    {
+      /* Work on 8 KB blocks; these should fit in L1. */
+      /* (Though it doesn't seem to help much on my system.) */
+      unsigned end = std::min(start + 2048, finish);
+
+      analogtv_init_signal (it, it->noiselevel, start, end);
+
+      for (uint32_t i = 0; i != it->rec_count; ++i)
+      {
+        /* Sometimes start > ec. */
+        int ec = !i ? it->channel_change_cycles : 0;
+        int skip = ((int)start >= ec) ? 0 : std::min(ec, (int)end) - start;
+
+        if (skip > 0)
+        {
+          analogtv_transit_channels(it, it->recs[i], start, skip);
+        }
+        
+        analogtv_add_signal (it, it->recs[i], start, end, skip);
+      }
+
+      start = end;
+    }
+  });
 
   it->channel_change_cycles=0;
 
@@ -1323,7 +1325,8 @@ analogtv_draw(analogtv *it, double noiselevel,
   it->tint_i = -cos((103 + it->tint_control)*M_PI/180);
   it->tint_q = sin((103 + it->tint_control)*M_PI/180);
   
-  for (lineno=ANALOGTV_TOP; lineno<ANALOGTV_BOT; lineno++) {
+  for (lineno=ANALOGTV_TOP; lineno<ANALOGTV_BOT; lineno++)
+  {
     int slineno, ytop, ybot;
     unsigned signal_offset;
     if (! analogtv_get_line(it, lineno, &slineno, &ytop, &ybot, &signal_offset))
