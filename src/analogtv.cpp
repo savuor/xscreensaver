@@ -305,62 +305,21 @@ analogtv_configure(analogtv *it)
   it->screen_yo = ( it->outbuffer_height - it->useheight )/2;
 }
 
-typedef struct analogtv_thread_s
-{
-  analogtv *it;
-  unsigned thread_id;
-  size_t signal_start, signal_end;
-} analogtv_thread;
-
-static int analogtv_thread_create(void *thread_raw, struct threadpool *threads,
-                                  unsigned thread_id)
-{
-  analogtv_thread *thread = (analogtv_thread *)thread_raw;
-
-  thread->it = GET_PARENT_OBJ(analogtv, threads, threads);
-  thread->thread_id = thread_id;
-
-  uint32_t align = ~(32 - 1);
-
-  thread->signal_start = (ANALOGTV_SIGNAL_LEN * (thread_id) / threads->count) & align;
-  thread->signal_end = thread_id + 1 == threads->count ?
-                       ANALOGTV_SIGNAL_LEN :
-                       ((ANALOGTV_SIGNAL_LEN * (thread_id + 1) / threads->count) & align);
-
-  return 0;
-}
-
-static void analogtv_thread_destroy(void *thread_raw)
-{
-}
 
 analogtv * analogtv_allocate(int outbuffer_width, int outbuffer_height)
 {
-  static const struct threadpool_class cls = {
-    sizeof(analogtv_thread),
-    analogtv_thread_create,
-    analogtv_thread_destroy
-  };
-
   analogtv *it=NULL;
   int i;
   const size_t rx_signal_len = ANALOGTV_SIGNAL_LEN + 2*ANALOGTV_H;
 
   it=(analogtv *)calloc(1,sizeof(analogtv));
   if (!it) return 0;
-  it->threads.count=0;
-
 
   //TODO: vector<float>
   it->rx_signal=NULL;
   if (thread_malloc((void **)&it->rx_signal, 
                     sizeof(it->rx_signal[0]) * rx_signal_len))
     goto fail;
-
-  if (threadpool_create(&it->threads, &cls, hardware_concurrency()))
-    goto fail;
-
-  assert(it->threads.count);
 
   it->shrinkpulse=-1;
 
@@ -380,9 +339,8 @@ analogtv * analogtv_allocate(int outbuffer_width, int outbuffer_height)
   return it;
 
  fail:
-  if (it) {
-    if(it->threads.count)
-      threadpool_destroy(&it->threads);
+  if (it)
+  {
     thread_free(it->rx_signal);
     free(it);
   }
@@ -1404,8 +1362,6 @@ analogtv_draw(analogtv *it, double noiselevel,
     }
   }
 
-  //threadpool_run(&it->threads, analogtv_thread_draw_lines);
-  //threadpool_wait(&it->threads);
   cv::parallel_for_(cv::Range(ANALOGTV_TOP, ANALOGTV_BOT), [it](const cv::Range& r)
   {
     analogtv_parallel_for_draw_lines(it, r);
