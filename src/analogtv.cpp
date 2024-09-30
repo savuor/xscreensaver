@@ -427,7 +427,8 @@ analogtv_ntsc_to_yiq(const analogtv *it, int lineno, const float *signal,
 
     colormode = (cb_i * cb_i + cb_q * cb_q) > 2.8;
 
-    if (colormode) {
+    if (colormode)
+    {
       multiq2[0] = (cb_i*it->tint_i - cb_q*it->tint_q) * it->color_control;
       multiq2[1] = (cb_q*it->tint_i + cb_i*it->tint_q) * it->color_control;
       multiq2[2]=-multiq2[0];
@@ -456,11 +457,8 @@ analogtv_ntsc_to_yiq(const analogtv *it, int lineno, const float *signal,
   dp = delay + ANALOGTV_PIC_LEN - MAXDELAY;
   for (int i = 0; i < 24; i++) dp[i]=0.0;
 
-  struct analogtv_yiq_s *yiq = it_yiq + start;
-  const float *sp = signal + start;
-  for (int i = start; i < end; i++, dp--, yiq++, sp++)
+  for (int i = start; i < end; i++, dp--)
   {
-
     /* Now filter them. These are infinite impulse response filters
        calculated by the script at
        http://www-users.cs.york.ac.uk/~fisher/mkfilter. This is
@@ -477,14 +475,14 @@ analogtv_ntsc_to_yiq(const analogtv *it, int lineno, const float *signal,
        mkfilter -Bu -Lp -o 4 -a 2.1428571429e-01 0 -Z 2.5e-01 -l
        Delay about 2 */
 
-    dp[0] = sp[0] * 0.0469904257251935f * agclevel;
+    dp[0] = signal[i] * 0.0469904257251935f * agclevel;
     dp[8] = (+1.0f*(dp[6]+dp[0])
              +4.0f*(dp[5]+dp[1])
              +7.0f*(dp[4]+dp[2])
              +8.0f*(dp[3])
              -0.0176648f*dp[12]
              -0.4860288f*dp[10]);
-    yiq->y = dp[8] + brightadd;
+    it_yiq[i].y = dp[8] + brightadd;
   }
 
   if (colormode)
@@ -492,11 +490,9 @@ analogtv_ntsc_to_yiq(const analogtv *it, int lineno, const float *signal,
     dp=delay+ANALOGTV_PIC_LEN-MAXDELAY;
     for (int i = 0; i < 27; i++) dp[i]=0.0;
 
-    struct analogtv_yiq_s *yiq = it_yiq + start;
-    const float *sp = signal + start;
-    for (int i = start; i < end; i++, dp--, yiq++, sp++)
+    for (int i = start; i < end; i++, dp--)
     {
-      float sig=*sp;
+      float sig = signal[i];
 
       /* Filter I and Q with a 3-pole low-pass Butterworth filter at
          1.5 MHz with an extra zero at 3.5 MHz, from
@@ -520,7 +516,7 @@ analogtv_ntsc_to_yiq(const analogtv *it, int lineno, const float *signal,
   }
   else
   {
-    for (int i = start; i < end; i++, yiq++)
+    for (int i = start; i < end; i++)
     {
       it_yiq[i].i = 0.f;
       it_yiq[i].q = 0.f;
@@ -615,30 +611,33 @@ analogtv_setup_frame(analogtv *it)
 void
 analogtv_setup_sync(analogtv_input *input, int do_cb, int do_ssavi)
 {
-  int i,lineno,vsync;
-  signed char *sig;
-
   int synclevel = do_ssavi ? ANALOGTV_WHITE_LEVEL : ANALOGTV_SYNC_LEVEL;
 
-  for (lineno=0; lineno<ANALOGTV_V; lineno++) {
-    vsync=lineno>=3 && lineno<7;
+  for (int lineno = 0; lineno < ANALOGTV_V; lineno++)
+  {
+    int vsync = lineno >= 3 && lineno < 7;
 
-    sig=input->signal[lineno];
+    signed char *sig = input->signal[lineno];
 
-    i=ANALOGTV_SYNC_START;
-    if (vsync) {
+    int i = ANALOGTV_SYNC_START;
+    if (vsync)
+    {
       while (i<ANALOGTV_BP_START) sig[i++]=ANALOGTV_BLANK_LEVEL;
-      while (i<ANALOGTV_H) sig[i++]=synclevel;
-    } else {
-      while (i<ANALOGTV_BP_START) sig[i++]=synclevel;
+      while (i<ANALOGTV_H)        sig[i++]=synclevel;
+    }
+    else
+    {
+      while (i<ANALOGTV_BP_START)  sig[i++]=synclevel;
       while (i<ANALOGTV_PIC_START) sig[i++]=ANALOGTV_BLANK_LEVEL;
-      while (i<ANALOGTV_FP_START) sig[i++]=ANALOGTV_BLACK_LEVEL;
+      while (i<ANALOGTV_FP_START)  sig[i++]=ANALOGTV_BLACK_LEVEL;
     }
     while (i<ANALOGTV_H) sig[i++]=ANALOGTV_BLANK_LEVEL;
 
-    if (do_cb) {
+    if (do_cb)
+    {
       /* 9 cycles of colorburst */
-      for (i=ANALOGTV_CB_START; i<ANALOGTV_CB_START+36*ANALOGTV_SCALE; i+=4*ANALOGTV_SCALE) {
+      for (int i = ANALOGTV_CB_START; i < ANALOGTV_CB_START + 36*ANALOGTV_SCALE; i+=4*ANALOGTV_SCALE)
+      {
         sig[i+1] += ANALOGTV_CB_LEVEL;
         sig[i+3] -= ANALOGTV_CB_LEVEL;
       }
@@ -652,31 +651,37 @@ analogtv_sync(analogtv *it)
   int cur_hsync=it->cur_hsync;
   int cur_vsync=it->cur_vsync;
   int lineno = 0;
-  int i,j;
+
   float osc,filt;
   float *sp;
   float cbfc=1.0f/128.0f;
 
 /*  sp = it->rx_signal + lineno*ANALOGTV_H + cur_hsync;*/
-  for (i=-32*ANALOGTV_SCALE; i<32*ANALOGTV_SCALE; i++)
+  int vi;
+  for (int i = -32*ANALOGTV_SCALE; i < 32*ANALOGTV_SCALE; i++)
   {
+    vi = i;
     lineno = (cur_vsync + i + ANALOGTV_V) % ANALOGTV_V;
     sp = it->rx_signal.data() + lineno*ANALOGTV_H;
     filt=0.0f;
-    for (j=0; j<ANALOGTV_H; j+=ANALOGTV_H/(16*ANALOGTV_SCALE)) {
+    for (int j = 0; j < ANALOGTV_H; j += ANALOGTV_H/(16*ANALOGTV_SCALE))
+    {
       filt += sp[j];
     }
     filt *= it->agclevel;
 
-    osc = (float)(ANALOGTV_V+i)/(float)ANALOGTV_V;
+    osc = (float)(ANALOGTV_V + i)/(float)ANALOGTV_V;
 
     if (osc >= 1.05f+0.0002f * filt) break;
   }
-  cur_vsync = (cur_vsync + i + ANALOGTV_V) % ANALOGTV_V;
+  cur_vsync = (cur_vsync + vi + ANALOGTV_V) % ANALOGTV_V;
 
-  for (lineno=0; lineno<ANALOGTV_V; lineno++) {
-
-    if (lineno>5*ANALOGTV_SCALE && lineno<ANALOGTV_V-3*ANALOGTV_SCALE) { /* ignore vsync interval */
+  int i;
+  for (lineno=0; lineno<ANALOGTV_V; lineno++)
+  {
+    if (lineno>5*ANALOGTV_SCALE && lineno<ANALOGTV_V-3*ANALOGTV_SCALE)
+    {
+      /* ignore vsync interval */
       unsigned lineno2 = (lineno + cur_vsync + ANALOGTV_V)%ANALOGTV_V;
       if (!lineno2) lineno2 = ANALOGTV_V;
       sp = it->rx_signal.data() + lineno2*ANALOGTV_H + cur_hsync;
