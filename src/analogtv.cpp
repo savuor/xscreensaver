@@ -648,12 +648,10 @@ analogtv_setup_sync(analogtv_input *input, int do_cb, int do_ssavi)
 static void
 analogtv_sync(analogtv *it)
 {
-  int cur_hsync=it->cur_hsync;
-  int cur_vsync=it->cur_vsync;
-  int lineno = 0;
+  int cur_hsync = it->cur_hsync;
+  int cur_vsync = it->cur_vsync;
 
   float osc,filt;
-  float *sp;
   float cbfc=1.0f/128.0f;
 
 /*  sp = it->rx_signal + lineno*ANALOGTV_H + cur_hsync;*/
@@ -661,37 +659,46 @@ analogtv_sync(analogtv *it)
   for (int i = -32*ANALOGTV_SCALE; i < 32*ANALOGTV_SCALE; i++)
   {
     vi = i;
-    lineno = (cur_vsync + i + ANALOGTV_V) % ANALOGTV_V;
-    sp = it->rx_signal.data() + lineno*ANALOGTV_H;
+    int lineno = (cur_vsync + i + ANALOGTV_V) % ANALOGTV_V;
+
     filt=0.0f;
     for (int j = 0; j < ANALOGTV_H; j += ANALOGTV_H/(16*ANALOGTV_SCALE))
     {
-      filt += sp[j];
+      filt += it->rx_signal[lineno * ANALOGTV_H + j];
     }
     filt *= it->agclevel;
 
     osc = (float)(ANALOGTV_V + i)/(float)ANALOGTV_V;
 
-    if (osc >= 1.05f+0.0002f * filt) break;
+    if (osc >= 1.05f+0.0002f * filt)
+      break;
   }
   cur_vsync = (cur_vsync + vi + ANALOGTV_V) % ANALOGTV_V;
 
-  int i;
-  for (lineno=0; lineno<ANALOGTV_V; lineno++)
+  for (int lineno = 0; lineno < ANALOGTV_V; lineno++)
   {
-    if (lineno>5*ANALOGTV_SCALE && lineno<ANALOGTV_V-3*ANALOGTV_SCALE)
+    if (lineno > 5*ANALOGTV_SCALE && lineno < ANALOGTV_V - 3*ANALOGTV_SCALE)
     {
       /* ignore vsync interval */
-      unsigned lineno2 = (lineno + cur_vsync + ANALOGTV_V)%ANALOGTV_V;
-      if (!lineno2) lineno2 = ANALOGTV_V;
-      sp = it->rx_signal.data() + lineno2*ANALOGTV_H + cur_hsync;
-      for (i=-8*ANALOGTV_SCALE; i<8*ANALOGTV_SCALE; i++) {
-        osc = (float)(ANALOGTV_H+i)/(float)ANALOGTV_H;
-        filt=(sp[i-3]+sp[i-2]+sp[i-1]+sp[i]) * it->agclevel;
+      unsigned lineno2 = (lineno + cur_vsync + ANALOGTV_V) % ANALOGTV_V;
+      if (!lineno2)
+        lineno2 = ANALOGTV_V;
 
-        if (osc >= 1.005f + 0.0001f*filt) break;
+      int sidx = lineno2*ANALOGTV_H + cur_hsync;
+      int hi;
+      for (int i = -8*ANALOGTV_SCALE;  i < 8*ANALOGTV_SCALE; i++)
+      {
+        hi = i;
+        osc = (float)(ANALOGTV_H + i) / (float)ANALOGTV_H;
+        filt = ( it->rx_signal[sidx + i - 3] +
+                 it->rx_signal[sidx + i - 2] +
+                 it->rx_signal[sidx + i - 1] +
+                 it->rx_signal[sidx + i - 0] ) * it->agclevel;
+
+        if (osc >= 1.005f + 0.0001f*filt)
+          break;
       }
-      cur_hsync = (cur_hsync + i + ANALOGTV_H) % ANALOGTV_H;
+      cur_hsync = (cur_hsync + hi + ANALOGTV_H) % ANALOGTV_H;
     }
 
     it->line_hsync[lineno]=(cur_hsync + ANALOGTV_PIC_START +
@@ -703,13 +710,12 @@ analogtv_sync(analogtv *it)
        cycles.
     */
 
-    if (lineno>15*ANALOGTV_SCALE)
+    if (lineno > 15*ANALOGTV_SCALE)
     {
-      sp = it->rx_signal.data() + lineno*ANALOGTV_H + (cur_hsync&~3);
-      for (i=ANALOGTV_CB_START+8*ANALOGTV_SCALE; i<ANALOGTV_CB_START+(36-8)*ANALOGTV_SCALE; i++)
+      for (int i = ANALOGTV_CB_START + 8*ANALOGTV_SCALE; i < ANALOGTV_CB_START + (36-8)*ANALOGTV_SCALE; i++)
       {
-        it->cb_phase[i&3] = it->cb_phase[i&3]*(1.0f-cbfc) +
-          sp[i]*it->agclevel*cbfc;
+        it->cb_phase[i&3] = it->cb_phase[i&3] * (1.0f - cbfc) +
+                            it->rx_signal[lineno*ANALOGTV_H + (cur_hsync&~3) + i] * it->agclevel * cbfc;
       }
     }
 
@@ -717,13 +723,15 @@ analogtv_sync(analogtv *it)
       float tot=0.1f;
       float cbgain;
 
-      for (i=0; i<4; i++) {
+      for (int i = 0; i < 4; i++)
+      {
         tot += it->cb_phase[i]*it->cb_phase[i];
       }
       cbgain = 32.0f/sqrtf(tot);
 
-      for (i=0; i<4; i++) {
-        it->line_cb_phase[lineno][i]=it->cb_phase[i]*cbgain;
+      for (int i = 0; i < 4; i++)
+      {
+        it->line_cb_phase[lineno][i] = it->cb_phase[i]*cbgain;
       }
     }
 
@@ -1182,7 +1190,6 @@ void
 analogtv_draw(analogtv *it, double noiselevel,
               const analogtv_reception *const *recs, unsigned rec_count)
 {
-  int i,lineno;
   /*  int bigloadchange,drawcount;*/
   double baseload;
   int overall_top, overall_bot;
@@ -1192,7 +1199,8 @@ analogtv_draw(analogtv *it, double noiselevel,
     return;
 
   it->rx_signal_level = noiselevel;
-  for (i = 0; i != (int)rec_count; ++i) {
+  for (int i = 0; i != (int)rec_count; ++i)
+  {
     const analogtv_reception *rec = recs[i];
     double level = rec->level;
     analogtv_input *inp=rec->input;
@@ -1281,15 +1289,16 @@ analogtv_draw(analogtv *it, double noiselevel,
    */
   it->tint_i = -cos((103 + it->tint_control)*M_PI/180);
   it->tint_q = sin((103 + it->tint_control)*M_PI/180);
-  
-  for (lineno=ANALOGTV_TOP; lineno<ANALOGTV_BOT; lineno++)
+
+  for (int lineno = ANALOGTV_TOP; lineno < ANALOGTV_BOT; lineno++)
   {
     int slineno, ytop, ybot;
     unsigned signal_offset;
     if (! analogtv_get_line(it, lineno, &slineno, &ytop, &ybot, &signal_offset))
       continue;
 
-    if (lineno==it->shrinkpulse) {
+    if (lineno == it->shrinkpulse)
+    {
       baseload += 0.4;
       /*bigloadchange=1;*/
       it->shrinkpulse=-1;
@@ -1396,7 +1405,8 @@ analogtv_draw(analogtv *it, double noiselevel,
   if (overall_top<0) overall_top=0;
   if (overall_bot>it->useheight) overall_bot=it->useheight;
 
-  if (overall_bot > overall_top) {
+  if (overall_bot > overall_top)
+  {
       custom_XPutImage (it->image,
                    0, overall_top,
                    it->screen_xo, it->screen_yo+overall_top,
