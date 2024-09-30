@@ -109,8 +109,6 @@ do { \
 #define FASTRND_C 12345
 #define FASTRND (fastrnd = fastrnd*FASTRND_A+FASTRND_C)
 
-static void analogtv_ntsc_to_yiq(const analogtv *it, int lineno, const float *signal,
-                                 int start, int end, struct analogtv_yiq_s *it_yiq);
 
 static float puramp(const analogtv *it, float tc, float start, float over)
 {
@@ -309,7 +307,6 @@ analogtv_configure(analogtv *it)
 analogtv * analogtv_allocate(int outbuffer_width, int outbuffer_height)
 {
   analogtv *it=NULL;
-  int i;
 
   it=(analogtv *)calloc(1,sizeof(analogtv));
   if (!it) return 0;
@@ -321,7 +318,7 @@ analogtv * analogtv_allocate(int outbuffer_width, int outbuffer_height)
   it->outbuffer_width  = outbuffer_width;
   it->outbuffer_height = outbuffer_height;
 
-  for (i = 0; i < ANALOGTV_CV_MAX; i++)
+  for (int i = 0; i < ANALOGTV_CV_MAX; i++)
   {
     int intensity = pow(i / 256.0, 0.8) * 65535.0; /* gamma correction */
     if (intensity > 65535)
@@ -412,11 +409,9 @@ analogtv_ntsc_to_yiq(const analogtv *it, int lineno, const float *signal,
                      int start, int end, struct analogtv_yiq_s *it_yiq)
 {
   enum {MAXDELAY=32};
-  int i;
-  const float *sp;
 
   int phasecorr = (signal - it->rx_signal.data()) & 3;
-  struct analogtv_yiq_s *yiq;
+
   int colormode;
   float agclevel=it->agclevel;
   float brightadd=it->brightness_control*100.0 - ANALOGTV_BLACK_LEVEL;
@@ -452,17 +447,19 @@ analogtv_ntsc_to_yiq(const analogtv *it, int lineno, const float *signal,
   }
 #endif
 
-  dp=delay+ANALOGTV_PIC_LEN-MAXDELAY;
-  for (i=0; i<5; i++) dp[i]=0.0f;
+  dp = delay + ANALOGTV_PIC_LEN - MAXDELAY;
+  for (int i = 0; i < 5; i++) dp[i]=0.0f;
 
-  assert(start>=0);
-  assert(end < ANALOGTV_PIC_LEN+10);
+  assert(start >= 0);
+  assert(end < ANALOGTV_PIC_LEN + 10);
 
-  dp=delay+ANALOGTV_PIC_LEN-MAXDELAY;
-  for (i=0; i<24; i++) dp[i]=0.0;
-  for (i=start, yiq=it_yiq+start, sp=signal+start;
-       i<end;
-       i++, dp--, yiq++, sp++) {
+  dp = delay + ANALOGTV_PIC_LEN - MAXDELAY;
+  for (int i = 0; i < 24; i++) dp[i]=0.0;
+
+  struct analogtv_yiq_s *yiq = it_yiq + start;
+  const float *sp = signal + start;
+  for (int i = start; i < end; i++, dp--, yiq++, sp++)
+  {
 
     /* Now filter them. These are infinite impulse response filters
        calculated by the script at
@@ -490,13 +487,15 @@ analogtv_ntsc_to_yiq(const analogtv *it, int lineno, const float *signal,
     yiq->y = dp[8] + brightadd;
   }
 
-  if (colormode) {
+  if (colormode)
+  {
     dp=delay+ANALOGTV_PIC_LEN-MAXDELAY;
-    for (i=0; i<27; i++) dp[i]=0.0;
+    for (int i = 0; i < 27; i++) dp[i]=0.0;
 
-    for (i=start, yiq=it_yiq+start, sp=signal+start;
-         i<end;
-         i++, dp--, yiq++, sp++) {
+    struct analogtv_yiq_s *yiq = it_yiq + start;
+    const float *sp = signal + start;
+    for (int i = start; i < end; i++, dp--, yiq++, sp++)
+    {
       float sig=*sp;
 
       /* Filter I and Q with a 3-pole low-pass Butterworth filter at
@@ -506,20 +505,25 @@ analogtv_ntsc_to_yiq(const analogtv *it, int lineno, const float *signal,
       */
 
       dp[0] = sig*multiq2[i&3] * 0.0833333333333f;
-      yiq->i=dp[8] = (dp[5] + dp[0]
-                      +3.0f*(dp[4] + dp[1])
-                      +4.0f*(dp[3] + dp[2])
-                      -0.3333333333f * dp[10]);
+      it_yiq[i].i = dp[8] = (dp[5] + dp[0]
+                            +3.0f*(dp[4] + dp[1])
+                            +4.0f*(dp[3] + dp[2])
+                            -0.3333333333f * dp[10]);
 
       dp[16] = sig*multiq2[(i+3)&3] * 0.0833333333333f;
-      yiq->q=dp[24] = (dp[16+5] + dp[16+0]
-                       +3.0f*(dp[16+4] + dp[16+1])
-                       +4.0f*(dp[16+3] + dp[16+2])
-                       -0.3333333333f * dp[24+2]);
+
+      it_yiq[i].q = dp[24] = (dp[16+5] + dp[16+0]
+                             +3.0f*(dp[16+4] + dp[16+1])
+                             +4.0f*(dp[16+3] + dp[16+2])
+                             -0.3333333333f * dp[24+2]);
     }
-  } else {
-    for (i=start, yiq=it_yiq+start; i<end; i++, yiq++) {
-      yiq->i = yiq->q = 0.0f;
+  }
+  else
+  {
+    for (int i = start; i < end; i++, yiq++)
+    {
+      it_yiq[i].i = 0.f;
+      it_yiq[i].q = 0.f;
     }
   }
 }
