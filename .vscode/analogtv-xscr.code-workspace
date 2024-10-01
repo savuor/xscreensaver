@@ -30,7 +30,7 @@
 			        // "--logo", "/home/savuor/code/xscreensaver/hacks/images/amiga.png",
 					// //"--slideshow", "2",
 
-					"--verbose", "2",
+					"--verbose", "3",
 					"--duration", "60",
 					"--fixsettings",
 					"--powerup",

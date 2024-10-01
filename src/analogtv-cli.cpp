@@ -438,7 +438,8 @@ static void run(Params params)
       analogtv_input *inp=rec->input;
       if (!inp) continue;
 
-      if (inp->updater) {
+      if (inp->updater)
+      {
         inp->next_update_time = curtime;
         (inp->updater)(inp);
       }

@@ -226,7 +226,7 @@ analogtv_configure(analogtv *it)
   else if (ratio > min_ratio && ratio < max_ratio)
     {
       // debug mode
-      Log::write(3, "size: close enough:" + debugPrint1 + debugPrint3);
+      Log::write(3, "size: close enough: " + debugPrint1 + debugPrint3);
     }
   else if (ratio >= max_ratio)
     {
