@@ -148,8 +148,6 @@ typedef struct analogtv_s {
   cv::Mat4b image; /* usewidth * useheight */
   cv::Mat4b outBuffer;
 
-  int screen_xo, screen_yo; /* centers image in window */
-
   int flutter_horiz_desync;
   //int flutter_tint;
 

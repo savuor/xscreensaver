@@ -178,9 +178,9 @@ analogtv_set_defaults(analogtv *it)
          it->horiz_desync, it->flutter_horiz_desync);
   printf("  hashnoise rpm: %g\n",
          it->hashnoise_rpm);
-  printf("  size: %d %d  %d %d  xrepl=%d\n",
+  printf("  size: %d %d xrepl=%d\n",
          it->usewidth, it->useheight,
-         it->screen_xo, it->screen_yo, it->xrepl);
+         it->xrepl);
 
   printf("    ANALOGTV_V=%d\n",ANALOGTV_V);
   printf("    ANALOGTV_TOP=%d\n",ANALOGTV_TOP);
@@ -297,9 +297,6 @@ analogtv_configure(analogtv *it)
 
     it->image = cv::Mat4b(it->useheight, it->usewidth);
   }
-
-  it->screen_xo = ( it->outbuffer_width  - it->usewidth  )/2;
-  it->screen_yo = ( it->outbuffer_height - it->useheight )/2;
 }
 
 
@@ -1192,7 +1189,6 @@ analogtv_draw(analogtv *it, double noiselevel,
 {
   /*  int bigloadchange,drawcount;*/
   double baseload;
-  int overall_top, overall_bot;
 
   /* AnalogTV isn't very interesting if there isn't enough RAM. */
   if (it->image.empty())
@@ -1399,8 +1395,8 @@ analogtv_draw(analogtv *it, double noiselevel,
     the y-dimension is > 2400, note ANALOGTV_MAX_LINEHEIGHT.
   */
 
-  overall_top=(int)(it->useheight*(1-it->puheight)/2);
-  overall_bot=(int)(it->useheight*(1+it->puheight)/2);
+  int overall_top = (int)(it->useheight*(1-it->puheight)/2);
+  int overall_bot = (int)(it->useheight*(1+it->puheight)/2);
 
   if (overall_top<0) overall_top=0;
   if (overall_bot>it->useheight) overall_bot=it->useheight;
@@ -1408,38 +1404,29 @@ analogtv_draw(analogtv *it, double noiselevel,
   if (overall_bot > overall_top)
   {
       {
-        int src_x = 0, src_y = overall_top, dest_x = it->screen_xo, dest_y = it->screen_yo + overall_top;
+
+        int screen_xo = ( it->outBuffer.cols - it->usewidth  )/2;
+        int screen_yo = ( it->outBuffer.rows - it->useheight )/2;
+
+        int /* dest_x = screen_xo, */ dest_y = screen_yo + overall_top;
         unsigned w = it->usewidth, h = overall_bot - overall_top;
 
-        if (src_x < 0)
+        if (screen_xo < 0)
         {
-          w += src_x;
-          dest_x -= src_x;
-          src_x = 0;
+          w += screen_xo;
+          screen_xo = 0;
         }
-        if (dest_x < 0)
-        {
-          w += dest_x;
-          src_x -= dest_x;
-          dest_x = 0;
-        }
-        w = std::min((int)w, std::min(it->outBuffer.cols - dest_x, it->image.cols - src_x));
+        w = std::min((int)w, std::min(it->outBuffer.cols - screen_xo, it->image.cols));
 
-        if (src_y < 0)
-        {
-          h += src_y;
-          dest_y -= src_y;
-          src_y = 0;
-        }
         if (dest_y < 0)
         {
           h += dest_y;
-          src_y -= dest_y;
+          overall_top -= dest_y;
           dest_y = 0;
         }
-        h = std::min((int)h, std::min(it->outBuffer.rows - dest_y, it->image.rows - src_y));
+        h = std::min((int)h, std::min(it->outBuffer.rows - dest_y, it->image.rows - overall_top));
 
-        it->image(cv::Rect(src_x, src_y, w, h)).copyTo(it->outBuffer(cv::Rect(dest_x, dest_y, w, h)));
+        it->image(cv::Rect(0, overall_top, w, h)).copyTo(it->outBuffer(cv::Rect(screen_xo, dest_y, w, h)));
       }
   }
 }
