@@ -75,34 +75,7 @@
 #include "yarandom.hpp"
 #include "utils.hpp"
 
-
 /* #define DEBUG 1 */
-
-#if defined(DEBUG) && (defined(__linux) || defined(__FreeBSD__))
-/* only works on linux + freebsd */
-#include <machine/cpufunc.h>
-
-#define DTIME_DECL u_int64_t dtimes[100]; int n_dtimes
-#define DTIME_START do {n_dtimes=0; dtimes[n_dtimes++]=rdtsc(); } while (0)
-#define DTIME dtimes[n_dtimes++]=rdtsc()
-#define DTIME_SHOW(DIV) \
-do { \
-  double _dtime_div=(DIV); \
-  printf("time/%.1f: ",_dtime_div); \
-  for (i=1; i<n_dtimes; i++) \
-    printf(" %0.9f",(dtimes[i]-dtimes[i-1])* 1e-9 / _dtime_div); \
-  printf("\n"); \
-} while (0)
-
-#else
-
-#define DTIME_DECL
-#define DTIME_START  do { } while (0)
-#define DTIME  do { } while (0)
-#define DTIME_SHOW(DIV)  do { } while (0)
-
-#endif
-
 
 #define FASTRND_A 1103515245
 #define FASTRND_C 12345
