@@ -82,19 +82,30 @@ enum {
 
 };
 
-typedef struct analogtv_input_s {
+
+struct AnalogInput
+{
+  //TODO: use cv::Mat
   signed char signal[ANALOGTV_V+1][ANALOGTV_H];
 
-  /* for client use */
-  void (*updater)(struct analogtv_input_s *inp);
-  void *client_data;
-  double next_update_time;
+  //TODO: refactor it
+  int inputId;
 
-} analogtv_input;
+  void setup_sync(int do_cb, int do_ssavi);
+
+  void draw_solid(int left, int right, int top, int bot, int ntsc[4]);
+
+  void draw_solid_rel_lcp(double left, double right,
+                          double top, double bot,
+                          double luma, double chroma, double phase);
+
+};
 
 typedef struct analogtv_reception_s {
 
-  analogtv_input *input;
+  //TODO: refactor it
+  AnalogInput* input;
+
   double ofs;
   double level;
   double multipath;
@@ -204,36 +215,23 @@ typedef struct analogtv_s {
 
 
 analogtv * analogtv_allocate(cv::Mat4b outBuffer);
-analogtv_input *analogtv_input_allocate(void);
 
 
 void analogtv_set_defaults(analogtv *it);
 void analogtv_setup_frame(analogtv *it);
-void analogtv_setup_sync(analogtv_input *input, int do_cb, int do_ssavi);
+
 void analogtv_draw(analogtv *it, double noiselevel,
                    const analogtv_reception *const *recs, unsigned rec_count);
 
-int analogtv_load_ximage(analogtv *it, analogtv_input *input,
+int analogtv_load_ximage(analogtv *it, AnalogInput& input,
                          const cv::Mat4b& pic_im, const cv::Mat4b& mask_im,
                          int xoff, int yoff, int width, int height);
 
 void analogtv_reception_update(analogtv_reception *inp);
 
 
-/* Functions for rendering content into an analogtv_input */
-
 void analogtv_lcp_to_ntsc(double luma, double chroma, double phase,
                           int ntsc[4]);
-
-
-void analogtv_draw_solid(analogtv_input *input,
-                         int left, int right, int top, int bot,
-                         int ntsc[4]);
-
-void analogtv_draw_solid_rel_lcp(analogtv_input *input,
-                                 double left, double right,
-                                 double top, double bot,
-                                 double luma, double chroma, double phase);
 
 /* Brightness: useful range is around -75 to 100.
    Contrast:   useful range is around 0 - 500.

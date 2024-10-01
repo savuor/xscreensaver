@@ -75,7 +75,7 @@ struct state
   cv::Mat4b outBuffer, logoImg, logoMask;
   analogtv *tv;
 
-  std::vector<analogtv_input*> stations;
+  std::vector<AnalogInput> stations;
 
   int curinputi;
   std::vector<chansetting> chanSettings;
@@ -84,10 +84,11 @@ struct state
   std::vector<std::shared_ptr<Output>> outputs;
 };
 
-static void
-update_smpte_colorbars(analogtv_input *input)
+//TODO: refactor it to something else
+const int INPUT_BARS = -1;
+
+static void update_smpte_colorbars(state *st, AnalogInput& input)
 {
-  struct state *st = (struct state *) input->client_data;
   int black_ntsc[4];
 
   /* 
@@ -117,35 +118,33 @@ update_smpte_colorbars(analogtv_input *input)
 
   analogtv_lcp_to_ntsc(0.0, 0.0, 0.0, black_ntsc);
 
-  analogtv_setup_sync(input, 1, 0);
+  input.setup_sync(1, 0);
 
   for (int col = 0; col < 7; col++)
   {
-    analogtv_draw_solid_rel_lcp (input,
-                                 col*(1.0/7.0),
-                                 (col+1)*(1.0/7.0),
-                                 0.00, 0.68, 
-                                 top_cb_table[col][0], 
-                                 top_cb_table[col][1],
-                                 top_cb_table[col][2]);
+    input.draw_solid_rel_lcp(col*(1.0/7.0),
+                             (col+1)*(1.0/7.0),
+                             0.00, 0.68,
+                             top_cb_table[col][0],
+                             top_cb_table[col][1],
+                             top_cb_table[col][2]);
 
-    analogtv_draw_solid_rel_lcp(input,
-                                col*(1.0/7.0),
-                                (col+1)*(1.0/7.0),
-                                0.68, 0.75, 
-                                mid_cb_table[col][0], 
-                                mid_cb_table[col][1],
-                                mid_cb_table[col][2]);
+    input.draw_solid_rel_lcp(col*(1.0/7.0),
+                             (col+1)*(1.0/7.0),
+                             0.68, 0.75,
+                             mid_cb_table[col][0],
+                             mid_cb_table[col][1],
+                             mid_cb_table[col][2]);
   }
 
-  analogtv_draw_solid_rel_lcp(input,       0.0,   1.0/6.0, 0.75, 1.00,   7, 40, 303);   /* -I       */
-  analogtv_draw_solid_rel_lcp(input,   1.0/6.0,   2.0/6.0, 0.75, 1.00, 100,  0,   0);   /* white    */
-  analogtv_draw_solid_rel_lcp(input,   2.0/6.0,   3.0/6.0, 0.75, 1.00,   7, 40,  33);   /* +Q       */
-  analogtv_draw_solid_rel_lcp(input,   3.0/6.0,   4.0/6.0, 0.75, 1.00,   7,  0,   0);   /* black    */
-  analogtv_draw_solid_rel_lcp(input, 12.0/18.0, 13.0/18.0, 0.75, 1.00,   3,  0,   0);   /* black -4 */
-  analogtv_draw_solid_rel_lcp(input, 13.0/18.0, 14.0/18.0, 0.75, 1.00,   7,  0,   0);   /* black    */
-  analogtv_draw_solid_rel_lcp(input, 14.0/18.0, 15.0/18.0, 0.75, 1.00,  11,  0,   0);   /* black +4 */
-  analogtv_draw_solid_rel_lcp(input,   5.0/6.0,   6.0/6.0, 0.75, 1.00,   7,  0,   0);   /* black    */
+  input.draw_solid_rel_lcp(      0.0,   1.0/6.0, 0.75, 1.00,   7, 40, 303);   /* -I       */
+  input.draw_solid_rel_lcp(  1.0/6.0,   2.0/6.0, 0.75, 1.00, 100,  0,   0);   /* white    */
+  input.draw_solid_rel_lcp(  2.0/6.0,   3.0/6.0, 0.75, 1.00,   7, 40,  33);   /* +Q       */
+  input.draw_solid_rel_lcp(  3.0/6.0,   4.0/6.0, 0.75, 1.00,   7,  0,   0);   /* black    */
+  input.draw_solid_rel_lcp(12.0/18.0, 13.0/18.0, 0.75, 1.00,   3,  0,   0);   /* black -4 */
+  input.draw_solid_rel_lcp(13.0/18.0, 14.0/18.0, 0.75, 1.00,   7,  0,   0);   /* black    */
+  input.draw_solid_rel_lcp(14.0/18.0, 15.0/18.0, 0.75, 1.00,  11,  0,   0);   /* black +4 */
+  input.draw_solid_rel_lcp(  5.0/6.0,   6.0/6.0, 0.75, 1.00,   7,  0,   0);   /* black    */
 
   if (!st->logoImg.empty())
   {
@@ -158,8 +157,6 @@ update_smpte_colorbars(analogtv_input *input)
                           st->tv->outbuffer_height * 0.20,
                           w2, h2);
   }
-
-  input->next_update_time += 1.0;
 }
 
 
@@ -269,9 +266,7 @@ static void run(Params params)
 
   for (int i = 0; i < MAX_STATIONS; i++)
   {
-    analogtv_input *input = analogtv_input_allocate();
-    input->client_data = st;
-    st->stations.push_back(input);
+    st->stations.push_back(AnalogInput());
   }
 
   analogtv_set_defaults(st->tv);
@@ -315,7 +310,7 @@ static void run(Params params)
           if ((ya_random()%10)==0) break;
         }
         last_station=station;
-        rec->input = st->stations[station];
+        rec->input = &st->stations[station];
         if (fixSettings)
         {
           rec->level = 0.3;
@@ -368,7 +363,8 @@ static void run(Params params)
   for (int i = 0; i < MAX_STATIONS; i++)
   {
     const cv::Mat& img = images[i % nFiles];
-    analogtv_input *input = st->stations[i];
+    AnalogInput& input = st->stations[i];
+
     int w = img.cols * 0.815; /* underscan */
     int h = img.rows * 0.970;
     int x = (outSize.width  - w) / 2;
@@ -376,10 +372,11 @@ static void run(Params params)
 
     if (!(ya_random() % 8)) /* Some stations are colorbars */
     {
-      input->updater = update_smpte_colorbars;
+      input.inputId = INPUT_BARS;
     }
 
-    analogtv_setup_sync(input, 1, (ya_random() % 20) == 0);
+    input.setup_sync(1, (ya_random() % 20) == 0);
+
     analogtv_load_ximage(st->tv, input, img, cv::Mat4b(), x, y, w, h);
   }
 
@@ -435,13 +432,13 @@ static void run(Params params)
     for (int i = 0; i < MAX_MULTICHAN; i++)
     {
       analogtv_reception *rec = &st->cs->recs[i];
-      analogtv_input *inp=rec->input;
+      AnalogInput* inp = rec->input;
       if (!inp) continue;
 
-      if (inp->updater)
+      //TODO: refactor it
+      if (inp->inputId == INPUT_BARS)
       {
-        inp->next_update_time = curtime;
-        (inp->updater)(inp);
+        update_smpte_colorbars(st, *inp);
       }
       rec->ofs += rec->freqerr;
     }

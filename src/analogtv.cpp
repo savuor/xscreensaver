@@ -578,8 +578,7 @@ analogtv_setup_frame(analogtv *it)
 #endif
 }
 
-void
-analogtv_setup_sync(analogtv_input *input, int do_cb, int do_ssavi)
+void AnalogInput::setup_sync(int do_cb, int do_ssavi)
 {
   int synclevel = do_ssavi ? ANALOGTV_WHITE_LEVEL : ANALOGTV_SYNC_LEVEL;
 
@@ -587,7 +586,7 @@ analogtv_setup_sync(analogtv_input *input, int do_cb, int do_ssavi)
   {
     int vsync = lineno >= 3 && lineno < 7;
 
-    signed char *sig = input->signal[lineno];
+    signed char *sig = this->signal[lineno];
 
     int i = ANALOGTV_SYNC_START;
     if (vsync)
@@ -1172,7 +1171,7 @@ analogtv_draw(analogtv *it, double noiselevel,
   {
     const analogtv_reception *rec = recs[i];
     double level = rec->level;
-    analogtv_input *inp=rec->input;
+    AnalogInput *inp = rec->input;
 
     it->rx_signal_level =
       sqrt(it->rx_signal_level * it->rx_signal_level +
@@ -1404,13 +1403,6 @@ analogtv_draw(analogtv *it, double noiselevel,
   }
 }
 
-analogtv_input *
-analogtv_input_allocate(void)
-{
-  analogtv_input *ret=(analogtv_input *)calloc(1,sizeof(analogtv_input));
-
-  return ret;
-}
 
 /*
   This takes a screen image and encodes it as a video camera would,
@@ -1448,7 +1440,7 @@ inline Color pixToColor(uint32_t p)
 }
 
 int
-analogtv_load_ximage(analogtv *it, analogtv_input *input,
+analogtv_load_ximage(analogtv *it, AnalogInput& input,
                      const cv::Mat4b& pic_im, const cv::Mat4b& mask_im,
                      int xoff, int yoff, int target_w, int target_h)
 {
@@ -1563,7 +1555,7 @@ analogtv_load_ximage(analogtv *it, analogtv_input *input,
       if (composite>125) composite=125;
       if (composite<0) composite=0;
 
-      input->signal[y-y_overscan+ANALOGTV_TOP+yoff][x+ANALOGTV_PIC_START+xoff] = composite;
+      input.signal[y-y_overscan+ANALOGTV_TOP+yoff][x+ANALOGTV_PIC_START+xoff] = composite;
     }
   }
 
@@ -1675,34 +1667,31 @@ analogtv_lcp_to_ntsc(double luma, double chroma, double phase, int ntsc[4])
   }
 }
 
-void
-analogtv_draw_solid(analogtv_input *input,
-                    int left, int right, int top, int bot,
-                    int ntsc[4])
+void AnalogInput::draw_solid(int left, int right, int top, int bot, int ntsc[4])
 {
   if (right-left<4) right=left+4;
   if (bot-top<1) bot=top+1;
 
-  for (int y=top; y<bot; y++) {
-    for (int x=left; x<right; x++) {
-      input->signal[y][x] = ntsc[x&3];
+  for (int y=top; y<bot; y++)
+  {
+    for (int x=left; x<right; x++)
+    {
+      this->signal[y][x] = ntsc[x&3];
     }
   }
 }
 
 
-void
-analogtv_draw_solid_rel_lcp(analogtv_input *input,
-                            double left, double right, double top, double bot,
-                            double luma, double chroma, double phase)
+void AnalogInput::draw_solid_rel_lcp(double left, double right, double top, double bot,
+                                     double luma, double chroma, double phase)
 {
   int ntsc[4];
 
-  int topi=(int)(ANALOGTV_TOP + ANALOGTV_VISLINES*top);
-  int boti=(int)(ANALOGTV_TOP + ANALOGTV_VISLINES*bot);
-  int lefti=(int)(ANALOGTV_VIS_START + ANALOGTV_VIS_LEN*left);
-  int righti=(int)(ANALOGTV_VIS_START + ANALOGTV_VIS_LEN*right);
+  int topi   = (int)(ANALOGTV_TOP + ANALOGTV_VISLINES*top);
+  int boti   = (int)(ANALOGTV_TOP + ANALOGTV_VISLINES*bot);
+  int lefti  = (int)(ANALOGTV_VIS_START + ANALOGTV_VIS_LEN*left);
+  int righti = (int)(ANALOGTV_VIS_START + ANALOGTV_VIS_LEN*right);
 
   analogtv_lcp_to_ntsc(luma, chroma, phase, ntsc);
-  analogtv_draw_solid(input, lefti, righti, topi, boti, ntsc);
+  this->draw_solid(lefti, righti, topi, boti, ntsc);
 }
