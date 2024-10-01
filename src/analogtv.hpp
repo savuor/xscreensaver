@@ -13,7 +13,6 @@
 
 #include "precomp.hpp"
 
-#include "fixed-funcs.hpp"
 #include "utils.hpp"
 
 /* To simulate an NTSC CRT monitor with way more scanlines, and thus
@@ -147,6 +146,7 @@ typedef struct analogtv_s {
 
   int usewidth, useheight, xrepl, subwidth;
   cv::Mat4b image; /* usewidth * useheight */
+  cv::Mat4b outBuffer;
 
   int screen_xo, screen_yo; /* centers image in window */
 
@@ -205,7 +205,7 @@ typedef struct analogtv_s {
 } analogtv;
 
 
-analogtv *analogtv_allocate(int outbuffer_width, int outbuffer_height);
+analogtv * analogtv_allocate(cv::Mat4b outBuffer);
 analogtv_input *analogtv_input_allocate(void);
 
 

@@ -8,7 +8,8 @@
 		"cmake.cmakePath": "/home/savuor/installs/cmake-3.27.7-linux-x86_64/bin/cmake",
 		"cmake.buildDirectory": "${userHome}/builds/analogtv-xscr/${buildType}",
 		"cmake.configureSettings": {
-			"OpenCV_DIR" : "/home/savuor/builds/ocv/4.x/Release/install/lib/cmake/opencv4"
+			//"OpenCV_DIR" : "/home/savuor/builds/ocv/4.x/Release/install/lib/cmake/opencv4"
+			"OpenCV_DIR" : "/home/savuor/builds/ocv/4.x/Debug/install/lib/cmake/opencv4"
 		}
 	},
 	"launch": {

@@ -71,7 +71,6 @@
 
 #include "precomp.hpp"
 
-#include "fixed-funcs.hpp"
 #include "analogtv.hpp"
 #include "yarandom.hpp"
 #include "utils.hpp"
@@ -304,7 +303,7 @@ analogtv_configure(analogtv *it)
 }
 
 
-analogtv * analogtv_allocate(int outbuffer_width, int outbuffer_height)
+analogtv * analogtv_allocate(cv::Mat4b outBuffer)
 {
   analogtv *it=NULL;
 
@@ -315,8 +314,9 @@ analogtv * analogtv_allocate(int outbuffer_width, int outbuffer_height)
 
   it->shrinkpulse=-1;
 
-  it->outbuffer_width  = outbuffer_width;
-  it->outbuffer_height = outbuffer_height;
+  it->outBuffer = outBuffer;
+  it->outbuffer_width  = outBuffer.cols;
+  it->outbuffer_height = outBuffer.rows;
 
   for (int i = 0; i < ANALOGTV_CV_MAX; i++)
   {
@@ -1407,10 +1407,40 @@ analogtv_draw(analogtv *it, double noiselevel,
 
   if (overall_bot > overall_top)
   {
-      custom_XPutImage (it->image,
-                   0, overall_top,
-                   it->screen_xo, it->screen_yo+overall_top,
-                   it->usewidth, overall_bot - overall_top);
+      {
+        int src_x = 0, src_y = overall_top, dest_x = it->screen_xo, dest_y = it->screen_yo + overall_top;
+        unsigned w = it->usewidth, h = overall_bot - overall_top;
+
+        if (src_x < 0)
+        {
+          w += src_x;
+          dest_x -= src_x;
+          src_x = 0;
+        }
+        if (dest_x < 0)
+        {
+          w += dest_x;
+          src_x -= dest_x;
+          dest_x = 0;
+        }
+        w = std::min((int)w, std::min(it->outBuffer.cols - dest_x, it->image.cols - src_x));
+
+        if (src_y < 0)
+        {
+          h += src_y;
+          dest_y -= src_y;
+          src_y = 0;
+        }
+        if (dest_y < 0)
+        {
+          h += dest_y;
+          src_y -= dest_y;
+          dest_y = 0;
+        }
+        h = std::min((int)h, std::min(it->outBuffer.rows - dest_y, it->image.rows - src_y));
+
+        it->image(cv::Rect(src_x, src_y, w, h)).copyTo(it->outBuffer(cv::Rect(dest_x, dest_y, w, h)));
+      }
   }
 }
 

@@ -24,7 +24,6 @@
 
 #include "precomp.hpp"
 
-#include "fixed-funcs.hpp"
 #include "yarandom.hpp"
 #include "analogtv.hpp"
 #include "utils.hpp"
@@ -84,54 +83,6 @@ struct state
 
   std::vector<std::shared_ptr<Output>> outputs;
 };
-
-//TODO: refactor it
-static cv::Mat4b globalOutBuffer;
-
-
-/* Since this program does not connect to an X server, or in fact link
-   with Xlib, we need stubs for the few X11 routines that analogtv.c calls.
-   Most are unused. It seems like I am forever implementing subsets of X11.
- */
-
-int
-custom_XPutImage (const cv::Mat4b& img,
-           int src_x, int src_y, int dest_x, int dest_y,
-           unsigned int w, unsigned int h)
-{
-  if (src_x < 0)
-  {
-    w += src_x;
-    dest_x -= src_x;
-    src_x = 0;
-  }
-  if (dest_x < 0)
-  {
-    w += dest_x;
-    src_x -= dest_x;
-    dest_x = 0;
-  }
-  w = std::min((int)w, std::min(globalOutBuffer.cols - dest_x, img.cols - src_x));
-
-  if (src_y < 0)
-  {
-    h += src_y;
-    dest_y -= src_y;
-    src_y = 0;
-  }
-  if (dest_y < 0)
-  {
-    h += dest_y;
-    src_y -= dest_y;
-    dest_y = 0;
-  }
-  h = std::min((int)h, std::min(globalOutBuffer.rows - dest_y, img.rows - src_y));
-
-  img(cv::Rect(src_x, src_y, w, h)).copyTo(globalOutBuffer(cv::Rect(dest_x, dest_y, w, h)));
-
-  return 0;
-}
-
 
 static void
 update_smpte_colorbars(analogtv_input *input)
@@ -301,7 +252,6 @@ static void run(Params params)
   state* st = &runState;
 
   st->outBuffer = cv::Mat4b(outSize);
-  globalOutBuffer = st->outBuffer;
 
   if (!params.logoFname.empty())
   {
@@ -315,7 +265,7 @@ static void run(Params params)
     cv::merge(std::vector<cv::Mat> {z, z, z, logoCh[3]}, st->logoMask);
   }
 
-  st->tv = analogtv_allocate(outSize.width, outSize.height);
+  st->tv = analogtv_allocate(st->outBuffer);
 
   for (int i = 0; i < MAX_STATIONS; i++)
   {
