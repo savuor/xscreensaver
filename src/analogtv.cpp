@@ -500,8 +500,6 @@ analogtv_setup_frame(analogtv *it)
 {
   /*  int i,x,y;*/
 
-  it->redraw_all=0;
-
   if (it->flutter_horiz_desync) {
     /* Horizontal sync during vertical sync instability. */
     it->horiz_desync += -0.10*(it->horiz_desync-3.0) +
@@ -1186,11 +1184,9 @@ analogtv_draw(analogtv *it, double noiselevel, const std::vector<AnalogReception
 
   it->random0 = ya_random();
   it->random1 = ya_random();
-  it->noiselevel = noiselevel;
-  it->receptions = receptions;
 
   assert (ANALOGTV_SIGNAL_LEN % 4 == 0);
-  cv::parallel_for_(cv::Range(0, ANALOGTV_SIGNAL_LEN), [it](const cv::Range& r)
+  cv::parallel_for_(cv::Range(0, ANALOGTV_SIGNAL_LEN), [it, &receptions, noiselevel](const cv::Range& r)
   {
     unsigned start  = r.start;
     unsigned finish = r.end;
@@ -1205,9 +1201,9 @@ analogtv_draw(analogtv *it, double noiselevel, const std::vector<AnalogReception
       /* (Though it doesn't seem to help much on my system.) */
       unsigned end = std::min(start + 2048, finish);
 
-      analogtv_init_signal (it, it->noiselevel, start, end);
+      analogtv_init_signal (it, noiselevel, start, end);
 
-      for (uint32_t i = 0; i < it->receptions.size(); ++i)
+      for (uint32_t i = 0; i < receptions.size(); ++i)
       {
         /* Sometimes start > ec. */
         int ec = !i ? it->channel_change_cycles : 0;
@@ -1215,10 +1211,10 @@ analogtv_draw(analogtv *it, double noiselevel, const std::vector<AnalogReception
 
         if (skip > 0)
         {
-          analogtv_transit_channels(it, it->receptions[i], start, skip);
+          analogtv_transit_channels(it, receptions[i], start, skip);
         }
         
-        analogtv_add_signal (it, it->receptions[i], start, end, skip);
+        analogtv_add_signal (it, receptions[i], start, end, skip);
       }
 
       start = end;
@@ -1273,7 +1269,7 @@ analogtv_draw(analogtv *it, double noiselevel, const std::vector<AnalogReception
 #if 0
     if (it->hashnoise_rpm>0.0 &&
         !(bigloadchange ||
-          it->redraw_all ||
+         // it->redraw_all ||
           (slineno<20 && it->flutter_horiz_desync) ||
           it->gaussiannoise_level>30 ||
           ((it->gaussiannoise_level>2.0 ||

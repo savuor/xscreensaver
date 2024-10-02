@@ -155,7 +155,7 @@ typedef struct analogtv_s {
   // int fakeit_top;
   // int fakeit_bot;
   // int fakeit_scroll;
-  int redraw_all;
+  // int redraw_all;
 
   int usewidth, useheight, xrepl, subwidth;
   cv::Mat4b image; /* usewidth * useheight */
@@ -184,11 +184,6 @@ typedef struct analogtv_s {
 
   unsigned int intensity_values[ANALOGTV_CV_MAX];
 
-  unsigned long colors[256];
-  int cmap_y_levels;
-  int cmap_i_levels;
-  int cmap_q_levels;
-
   float tint_i, tint_q;
   
   int cur_hsync;
@@ -208,8 +203,6 @@ typedef struct analogtv_s {
 
   /* Only valid during draw. */
   unsigned random0, random1;
-  double noiselevel;
-  std::vector<AnalogReception> receptions;
 
   float puheight;
 } analogtv;
