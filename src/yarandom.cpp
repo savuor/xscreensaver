@@ -78,8 +78,7 @@ static unsigned int a[VectorSize] = {
 
 static int i1, i2;
 
-unsigned int
-ya_random (void)
+unsigned int ya_random()
 {
   int ret = a[i1] + a[i2];
   a[i1] = ret;
@@ -88,8 +87,7 @@ ya_random (void)
   return ret;
 }
 
-void
-ya_rand_init(unsigned int seed)
+void ya_rand_init(unsigned int seed)
 {
 #define ROT(X,N) (((X)<<(N)) | ((X)>>((sizeof(unsigned int)*8)-(N))))
 //   if (seed == 0)

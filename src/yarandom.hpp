@@ -13,25 +13,11 @@
 
 #include "precomp.hpp"
 
-extern unsigned int ya_random (void);
-extern void ya_rand_init (unsigned int);
+unsigned int ya_random ();
+void ya_rand_init (unsigned int);
 
-#if defined (__GNUC__) && (__GNUC__ >= 2)
- /* Implement frand using GCC's statement-expression extension. */
-
-# define ya_frand(f)							\
-  __extension__								\
-  ({ double tmp = ((((double) random()) * ((double) (f))) /		\
-		   ((double) ((unsigned int)~0)));			\
-     tmp < 0 ? (-tmp) : tmp; })
-
-#else /* not GCC2 - implement frand using a global variable.*/
-
-static double _ya_frand_tmp_;
-# define ya_frand(f)							\
-  (_ya_frand_tmp_ = ((((double) random()) * ((double) (f))) /		\
-		  ((double) ((unsigned int)~0))),			\
-   _ya_frand_tmp_ < 0 ? (-_ya_frand_tmp_) : _ya_frand_tmp_)
-
-#endif /* not GCC2 */
-
+inline double ya_frand(double f)
+{
+  const double scale = (double)((unsigned int)~0);
+  return std::abs(double(ya_random()) * f / scale);
+}
