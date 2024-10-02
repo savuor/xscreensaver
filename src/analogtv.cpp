@@ -177,10 +177,6 @@ analogtv_set_defaults(analogtv *it)
 static void
 analogtv_configure(analogtv *it)
 {
-  int oldwidth=it->usewidth;
-  int oldheight=it->useheight;
-  int wlim,hlim,height_diff;
-
   /* If the window is very small, don't let the image we draw get lower
      than the actual TV resolution (266x200.)
 
@@ -202,8 +198,8 @@ analogtv_configure(analogtv *it)
   float ratio;
   float height_snap=0.025;
 
-  hlim = it->outbuffer_height;
-  wlim = it->outbuffer_width;
+  int hlim = it->outbuffer_height;
+  int wlim = it->outbuffer_width;
   ratio = wlim / (float) hlim;
 
 // NO_CONSTRAIN_RATIO is defined
@@ -251,14 +247,14 @@ analogtv_configure(analogtv *it)
       Log::write(3, "size: aspect: " + debugPrint1 + debugPrint2 + debugPrint3);
     }
 
-  height_diff = ((hlim + ANALOGTV_VISLINES/2) % ANALOGTV_VISLINES) - ANALOGTV_VISLINES/2;
+  int height_diff = ((hlim + ANALOGTV_VISLINES/2) % ANALOGTV_VISLINES) - ANALOGTV_VISLINES/2;
   if (height_diff != 0 && abs(height_diff) < hlim * height_snap)
     {
       hlim -= height_diff;
     }
 
   /* Most times this doesn't change */
-  if (wlim != oldwidth || hlim != oldheight)
+  if (wlim != it->usewidth || hlim != it->useheight)
   {
     it->usewidth=wlim;
     it->useheight=hlim;
@@ -382,14 +378,10 @@ analogtv_ntsc_to_yiq(const analogtv *it, int lineno, const float *signal,
 
   int phasecorr = (signal - it->rx_signal.data()) & 3;
 
-  int colormode;
-  float agclevel=it->agclevel;
-  float brightadd=it->brightness_control*100.0 - ANALOGTV_BLACK_LEVEL;
-  float delay[MAXDELAY+ANALOGTV_PIC_LEN], *dp;
   float multiq2[4];
 
+  bool colormode;
   {
-
     double cb_i=(it->line_cb_phase[lineno][(2+phasecorr)&3]-
                  it->line_cb_phase[lineno][(0+phasecorr)&3])/16.0;
     double cb_q=(it->line_cb_phase[lineno][(3+phasecorr)&3]-
@@ -401,8 +393,8 @@ analogtv_ntsc_to_yiq(const analogtv *it, int lineno, const float *signal,
     {
       multiq2[0] = (cb_i*it->tint_i - cb_q*it->tint_q) * it->color_control;
       multiq2[1] = (cb_q*it->tint_i + cb_i*it->tint_q) * it->color_control;
-      multiq2[2]=-multiq2[0];
-      multiq2[3]=-multiq2[1];
+      multiq2[2] = -multiq2[0];
+      multiq2[3] = -multiq2[1];
     }
   }
 
@@ -418,6 +410,9 @@ analogtv_ntsc_to_yiq(const analogtv *it, int lineno, const float *signal,
   }
 #endif
 
+  //TODO: no ptr arithmetics, use idx
+  float delay[MAXDELAY + ANALOGTV_PIC_LEN], *dp;
+
   dp = delay + ANALOGTV_PIC_LEN - MAXDELAY;
   for (int i = 0; i < 5; i++) dp[i]=0.0f;
 
@@ -426,6 +421,9 @@ analogtv_ntsc_to_yiq(const analogtv *it, int lineno, const float *signal,
 
   dp = delay + ANALOGTV_PIC_LEN - MAXDELAY;
   for (int i = 0; i < 24; i++) dp[i]=0.0;
+
+  float agclevel  = it->agclevel;
+  float brightadd = it->brightness_control*100.0 - ANALOGTV_BLACK_LEVEL;
 
   for (int i = start; i < end; i++, dp--)
   {
@@ -457,7 +455,7 @@ analogtv_ntsc_to_yiq(const analogtv *it, int lineno, const float *signal,
 
   if (colormode)
   {
-    dp=delay+ANALOGTV_PIC_LEN-MAXDELAY;
+    dp = delay + ANALOGTV_PIC_LEN - MAXDELAY;
     for (int i = 0; i < 27; i++) dp[i]=0.0;
 
     for (int i = start; i < end; i++, dp--)
@@ -500,12 +498,13 @@ analogtv_setup_frame(analogtv *it)
 {
   /*  int i,x,y;*/
 
-  if (it->flutter_horiz_desync) {
+  if (it->flutter_horiz_desync)
+  {
     /* Horizontal sync during vertical sync instability. */
     it->horiz_desync += -0.10*(it->horiz_desync-3.0) +
-      ((int)(ya_random()&0xff)-0x80) *
-      ((int)(ya_random()&0xff)-0x80) *
-      ((int)(ya_random()&0xff)-0x80) * 0.000001;
+                        ((int)(ya_random()&0xff)-0x80) *
+                        ((int)(ya_random()&0xff)-0x80) *
+                        ((int)(ya_random()&0xff)-0x80) * 0.000001;
   }
 
   /* it wasn't used
@@ -515,13 +514,16 @@ analogtv_setup_frame(analogtv *it)
   */
 
   /* let's leave it to process shrinkpulse */
-  if (it->hashnoise_enable && !it->hashnoise_on) {
-    if (ya_random()%10000==0) {
+  if (it->hashnoise_enable && !it->hashnoise_on)
+  {
+    if (ya_random()%10000==0)
+    {
       it->hashnoise_on=1;
       it->shrinkpulse=ya_random()%ANALOGTV_V;
     }
   }
-  if (ya_random()%1000==0) {
+  if (ya_random()%1000==0)
+  {
     it->hashnoise_on=0;
   }
 
@@ -589,14 +591,14 @@ void AnalogInput::setup_sync(int do_cb, int do_ssavi)
     int i = ANALOGTV_SYNC_START;
     if (vsync)
     {
-      while (i<ANALOGTV_BP_START) sig[i++]=ANALOGTV_BLANK_LEVEL;
-      while (i<ANALOGTV_H)        sig[i++]=synclevel;
+      while (i<ANALOGTV_BP_START) sig[i++] = ANALOGTV_BLANK_LEVEL;
+      while (i<ANALOGTV_H)        sig[i++] = synclevel;
     }
     else
     {
-      while (i<ANALOGTV_BP_START)  sig[i++]=synclevel;
-      while (i<ANALOGTV_PIC_START) sig[i++]=ANALOGTV_BLANK_LEVEL;
-      while (i<ANALOGTV_FP_START)  sig[i++]=ANALOGTV_BLACK_LEVEL;
+      while (i<ANALOGTV_BP_START)  sig[i++] = synclevel;
+      while (i<ANALOGTV_PIC_START) sig[i++] = ANALOGTV_BLANK_LEVEL;
+      while (i<ANALOGTV_FP_START)  sig[i++] = ANALOGTV_BLACK_LEVEL;
     }
     while (i<ANALOGTV_H) sig[i++]=ANALOGTV_BLANK_LEVEL;
 
@@ -618,8 +620,7 @@ analogtv_sync(analogtv *it)
   int cur_hsync = it->cur_hsync;
   int cur_vsync = it->cur_vsync;
 
-  float osc,filt;
-  float cbfc=1.0f/128.0f;
+  float osc, filt;
 
 /*  sp = it->rx_signal + lineno*ANALOGTV_H + cur_hsync;*/
   int vi;
@@ -681,8 +682,8 @@ analogtv_sync(analogtv *it)
     {
       for (int i = ANALOGTV_CB_START + 8*ANALOGTV_SCALE; i < ANALOGTV_CB_START + (36-8)*ANALOGTV_SCALE; i++)
       {
-        it->cb_phase[i&3] = it->cb_phase[i&3] * (1.0f - cbfc) +
-                            it->rx_signal[lineno*ANALOGTV_H + (cur_hsync&~3) + i] * it->agclevel * cbfc;
+        it->cb_phase[i&3] = it->cb_phase[i&3] * (1.0f - 1.0f/128.0f) +
+                            it->rx_signal[lineno*ANALOGTV_H + (cur_hsync&~3) + i] * it->agclevel * (1.0f/128.0f);
       }
     }
 
@@ -844,8 +845,6 @@ static void analogtv_transit_channels(analogtv *it, const AnalogReception& rec, 
 {
   signed char* signal = &(rec.input->signal[0][0]);
 
-  float level = rec.level;
-
   /* Do a big noisy transition. We can make the transition noise of
      high constant strength regardless of signal strength.
 
@@ -855,11 +854,12 @@ static void analogtv_transit_channels(analogtv *it, const AnalogReception& rec, 
      We don't bother with the FIR filter here
   */
 
-  unsigned int fastrnd=rnd_seek(FASTRND_A, FASTRND_C, it->random1, start);
+  unsigned int fastrnd = rnd_seek(FASTRND_A, FASTRND_C, it->random1, start);
 
   const float noise_decay = 0.99995f;
   float noise_ampl = 1.3f * powf(noise_decay, start);
 
+  float level = rec.level;
   for (int i = start; i < skip + (int)start; i++)
   {
     unsigned int fastrnd_offset = fastrnd - 0x7fffffff;
@@ -928,11 +928,9 @@ static void analogtv_add_signal(analogtv *it, const AnalogReception& rec, unsign
 static int analogtv_get_line(const analogtv *it, int lineno, int *slineno,
                              int *ytop, int *ybot, unsigned *signal_offset)
 {
-  *slineno=lineno-ANALOGTV_TOP;
-  *ytop=(int)((*slineno*it->useheight/ANALOGTV_VISLINES -
-                  it->useheight/2)*it->puheight) + it->useheight/2;
-  *ybot=(int)(((*slineno+1)*it->useheight/ANALOGTV_VISLINES -
-                  it->useheight/2)*it->puheight) + it->useheight/2;
+  *slineno = lineno - ANALOGTV_TOP;
+  *ytop = (int)(((lineno - ANALOGTV_TOP  )*it->useheight/ANALOGTV_VISLINES - it->useheight/2)*it->puheight) + it->useheight/2;
+  *ybot = (int)(((lineno - ANALOGTV_TOP+1)*it->useheight/ANALOGTV_VISLINES - it->useheight/2)*it->puheight) + it->useheight/2;
 #if 0
   int linesig=analogtv_line_signature(input,lineno)
     + it->hashnoise_times[lineno];
@@ -940,12 +938,12 @@ static int analogtv_get_line(const analogtv *it, int lineno, int *slineno,
   *signal_offset = ((lineno+it->cur_vsync+ANALOGTV_V) % ANALOGTV_V) * ANALOGTV_H +
                     it->line_hsync[lineno];
 
-  if (*ytop==*ybot) return 0;
-  if (*ybot<0 || *ytop>it->useheight) return 0;
-  if (*ytop<0) *ytop=0;
-  if (*ybot>it->useheight) *ybot=it->useheight;
+  if (*ytop == *ybot) return 0;
+  if (*ybot < 0 || *ytop > it->useheight) return 0;
 
-  if (*ybot > *ytop+ANALOGTV_MAX_LINEHEIGHT) *ybot=*ytop+ANALOGTV_MAX_LINEHEIGHT;
+  *ytop = std::max(0, *ytop);
+
+  *ybot = std::min(*ybot, std::min(it->useheight, *ytop + ANALOGTV_MAX_LINEHEIGHT));
   return 1;
 }
 
