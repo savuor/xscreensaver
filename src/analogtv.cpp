@@ -131,7 +131,7 @@ analogtv_set_defaults(analogtv *it)
   it->squish_control = 0.0;
   it->powerup=1000.0;
 
-  it->hashnoise_rpm=0;
+  //it->hashnoise_rpm=0;
   it->hashnoise_on=0;
   it->hashnoise_enable=1;
 

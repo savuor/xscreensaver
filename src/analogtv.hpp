@@ -164,7 +164,6 @@ typedef struct analogtv_s {
   int flutter_horiz_desync;
   //int flutter_tint;
 
-  struct timeval last_display_time;
 
   /* Add hash (in the radio sense, not the programming sense.) These
      are the small white streaks that appear in quasi-regular patterns
@@ -172,10 +171,10 @@ typedef struct analogtv_s {
      the blender. We also set shrinkpulse for one period which
      squishes the image horizontally to simulate the temporary line
      voltate drop when someone turns on a big motor */
-  double hashnoise_rpm;
-  int hashnoise_counter;
-  int hashnoise_times[ANALOGTV_V];
-  int hashnoise_signal[ANALOGTV_V];
+ // double hashnoise_rpm;
+ // int hashnoise_counter;
+ // int hashnoise_times[ANALOGTV_V];
+ // int hashnoise_signal[ANALOGTV_V];
   int hashnoise_on;
   int hashnoise_enable;
   int shrinkpulse;
@@ -185,7 +184,7 @@ typedef struct analogtv_s {
   unsigned int intensity_values[ANALOGTV_CV_MAX];
 
   float tint_i, tint_q;
-  
+
   int cur_hsync;
   int line_hsync[ANALOGTV_V];
   int cur_vsync;
