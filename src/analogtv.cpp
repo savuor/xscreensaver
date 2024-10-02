@@ -842,11 +842,11 @@ static void analogtv_init_signal(analogtv *it, double noiselevel, unsigned start
 }
 
 
-static void analogtv_transit_channels(analogtv *it, const analogtv_reception *rec, unsigned start, int skip)
+static void analogtv_transit_channels(analogtv *it, const AnalogReception& rec, unsigned start, int skip)
 {
-  signed char* signal = &(rec->input->signal[0][0]);
+  signed char* signal = &(rec.input->signal[0][0]);
 
-  float level = rec->level;
+  float level = rec.level;
 
   /* Do a big noisy transition. We can make the transition noise of
      high constant strength regardless of signal strength.
@@ -868,24 +868,24 @@ static void analogtv_transit_channels(analogtv *it, const analogtv_reception *re
     float noise = (fastrnd_offset <= INT_MAX ? (int)fastrnd_offset : -1 - (int)(UINT_MAX - fastrnd_offset)) * (50.0f/(float)0x7fffffff);
     fastrnd = (fastrnd*FASTRND_A+FASTRND_C) & 0xffffffffu;
 
-    it->rx_signal[i] += (float)(signal[(start + (unsigned)rec->ofs + i) % ANALOGTV_SIGNAL_LEN]) * level * (1.0f - noise_ampl) + noise * noise_ampl;
+    it->rx_signal[i] += (float)(signal[(start + (unsigned)rec.ofs + i) % ANALOGTV_SIGNAL_LEN]) * level * (1.0f - noise_ampl) + noise * noise_ampl;
 
     noise_ampl *= noise_decay;
   }
 }
 
 
-static void analogtv_add_signal(analogtv *it, const analogtv_reception *rec, unsigned start, unsigned end, int skip)
+static void analogtv_add_signal(analogtv *it, const AnalogReception& rec, unsigned start, unsigned end, int skip)
 {
   assert(((int)end - (int)start - skip) % 4 == 0);
 
-  signed char* signal = &(rec->input->signal[0][0]);
-  float level = rec->level;
+  signed char* signal = &(rec.input->signal[0][0]);
+  float level = rec.level;
 
   float dp[5];
   dp[0]=0.0;
 
-  int sii = (start + (unsigned)rec->ofs + skip) % ANALOGTV_SIGNAL_LEN;
+  int sii = (start + (unsigned)rec.ofs + skip) % ANALOGTV_SIGNAL_LEN;
   for (int i = 1; i < 5; i++)
   {
     sii -= 4;
@@ -897,12 +897,12 @@ static void analogtv_add_signal(analogtv *it, const analogtv_reception *rec, uns
                     (int)(signal[sii + 3]));
   }
 
-  float hfloss=rec->hfloss;
+  float hfloss=rec.hfloss;
   for (int i = (int)start + skip; i < (int)end; i += 4)
   {
     float sig0,sig1,sig2,sig3,sigr;
 
-    int sigIdx = (i + (int)(rec->ofs)) % ANALOGTV_SIGNAL_LEN;
+    int sigIdx = (i + (int)(rec.ofs)) % ANALOGTV_SIGNAL_LEN;
     sig0 = (float) (signal[sigIdx + 0]);
     sig1 = (float) (signal[sigIdx + 1]);
     sig2 = (float) (signal[sigIdx + 2]);
@@ -915,8 +915,8 @@ static void analogtv_add_signal(analogtv *it, const analogtv_reception *rec, uns
        looks right to me.
     */
 
-    sigr = (dp[1]*rec->ghostfir[0] + dp[2]*rec->ghostfir[1] +
-            dp[3]*rec->ghostfir[2] + dp[4]*rec->ghostfir[3]);
+    sigr = (dp[1]*rec.ghostfir[0] + dp[2]*rec.ghostfir[1] +
+            dp[3]*rec.ghostfir[2] + dp[4]*rec.ghostfir[3]);
     dp[4]=dp[3]; dp[3]=dp[2]; dp[2]=dp[1]; dp[1]=dp[0];
 
     it->rx_signal[i + 0] += (sig0 + sigr + sig2 * hfloss) * level;
@@ -1156,8 +1156,7 @@ static void analogtv_parallel_for_draw_lines(analogtv* it, const cv::Range& r)
 
 
 void
-analogtv_draw(analogtv *it, double noiselevel,
-              const analogtv_reception *const *recs, unsigned rec_count)
+analogtv_draw(analogtv *it, double noiselevel, const std::vector<AnalogReception>& receptions)
 {
   /*  int bigloadchange,drawcount;*/
   double baseload;
@@ -1167,16 +1166,16 @@ analogtv_draw(analogtv *it, double noiselevel,
     return;
 
   it->rx_signal_level = noiselevel;
-  for (int i = 0; i != (int)rec_count; ++i)
+  for (int i = 0; i < (int)receptions.size(); ++i)
   {
-    const analogtv_reception *rec = recs[i];
-    double level = rec->level;
-    AnalogInput *inp = rec->input;
+    const AnalogReception& rec = receptions[i];
+    double level = rec.level;
+    AnalogInput *inp = rec.input;
 
     it->rx_signal_level =
       sqrt(it->rx_signal_level * it->rx_signal_level +
-           (level * level * (1.0 + 4.0*(rec->ghostfir[0] + rec->ghostfir[1] +
-                                        rec->ghostfir[2] + rec->ghostfir[3]))));
+           (level * level * (1.0 + 4.0*(rec.ghostfir[0] + rec.ghostfir[1] +
+                                        rec.ghostfir[2] + rec.ghostfir[3]))));
 
     /* duplicate the first line into the Nth line to ease wraparound computation */
     memcpy(inp->signal[ANALOGTV_V], inp->signal[0],
@@ -1188,8 +1187,7 @@ analogtv_draw(analogtv *it, double noiselevel,
   it->random0 = ya_random();
   it->random1 = ya_random();
   it->noiselevel = noiselevel;
-  it->recs = recs;
-  it->rec_count = rec_count;
+  it->receptions = receptions;
 
   assert (ANALOGTV_SIGNAL_LEN % 4 == 0);
   cv::parallel_for_(cv::Range(0, ANALOGTV_SIGNAL_LEN), [it](const cv::Range& r)
@@ -1209,7 +1207,7 @@ analogtv_draw(analogtv *it, double noiselevel,
 
       analogtv_init_signal (it, it->noiselevel, start, end);
 
-      for (uint32_t i = 0; i != it->rec_count; ++i)
+      for (uint32_t i = 0; i < it->receptions.size(); ++i)
       {
         /* Sometimes start > ec. */
         int ec = !i ? it->channel_change_cycles : 0;
@@ -1217,10 +1215,10 @@ analogtv_draw(analogtv *it, double noiselevel,
 
         if (skip > 0)
         {
-          analogtv_transit_channels(it, it->recs[i], start, skip);
+          analogtv_transit_channels(it, it->receptions[i], start, skip);
         }
         
-        analogtv_add_signal (it, it->recs[i], start, end, skip);
+        analogtv_add_signal (it, it->receptions[i], start, end, skip);
       }
 
       start = end;
@@ -1619,36 +1617,34 @@ void analogtv_channel_noise(analogtv_input *it, analogtv_input *s2)
 #endif
 
 
-void
-analogtv_reception_update(analogtv_reception *rec)
+void AnalogReception::update()
 {
-  if (rec->multipath > 0.0)
+  if (this->multipath > 0.0)
   {
     for (int i=0; i<ANALOGTV_GHOSTFIR_LEN; i++)
     {
-      rec->ghostfir2[i] += -(rec->ghostfir2[i]/16.0) + rec->multipath * (ya_frand(0.02)-0.01);
+      this->ghostfir2[i] += -(this->ghostfir2[i]/16.0) + this->multipath * (ya_frand(0.02)-0.01);
     }
     if (ya_random()%20==0)
     {
-      rec->ghostfir2[ya_random()%(ANALOGTV_GHOSTFIR_LEN)] = rec->multipath * (ya_frand(0.08)-0.04);
+      this->ghostfir2[ya_random()%(ANALOGTV_GHOSTFIR_LEN)] = this->multipath * (ya_frand(0.08)-0.04);
     }
     for (int i=0; i<ANALOGTV_GHOSTFIR_LEN; i++)
     {
-      rec->ghostfir[i] = 0.8*rec->ghostfir[i] + 0.2*rec->ghostfir2[i];
+      this->ghostfir[i] = 0.8*this->ghostfir[i] + 0.2*this->ghostfir2[i];
     }
 
     if (0)
     {
-      rec->hfloss2 += -(rec->hfloss2/16.0) + rec->multipath * (ya_frand(0.08)-0.04);
-      rec->hfloss = 0.5*rec->hfloss + 0.5*rec->hfloss2;
+      this->hfloss2 += -(this->hfloss2/16.0) + this->multipath * (ya_frand(0.08)-0.04);
+      this->hfloss = 0.5*this->hfloss + 0.5*this->hfloss2;
     }
   }
   else
   {
     for (int i=0; i<ANALOGTV_GHOSTFIR_LEN; i++)
     {
-      rec->ghostfir[i] = (i>=ANALOGTV_GHOSTFIR_LEN/2) ? ((i&1) ? +0.04 : -0.08) /ANALOGTV_GHOSTFIR_LEN
-        : 0.0;
+      this->ghostfir[i] = (i>=ANALOGTV_GHOSTFIR_LEN/2) ? ((i&1) ? +0.04 : -0.08) /ANALOGTV_GHOSTFIR_LEN : 0.0;
     }
   }
 }

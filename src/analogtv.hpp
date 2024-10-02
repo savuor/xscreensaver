@@ -101,7 +101,8 @@ struct AnalogInput
 
 };
 
-typedef struct analogtv_reception_s {
+struct AnalogReception
+{
 
   //TODO: refactor it
   AnalogInput* input;
@@ -117,7 +118,8 @@ typedef struct analogtv_reception_s {
   double hfloss;
   double hfloss2;
 
-} analogtv_reception;
+  void update();
+};
 
 /*
   The rest of this should be considered mostly opaque to the analogtv module.
@@ -207,8 +209,7 @@ typedef struct analogtv_s {
   /* Only valid during draw. */
   unsigned random0, random1;
   double noiselevel;
-  const analogtv_reception *const *recs;
-  unsigned rec_count;
+  std::vector<AnalogReception> receptions;
 
   float puheight;
 } analogtv;
@@ -221,14 +222,11 @@ void analogtv_set_defaults(analogtv *it);
 void analogtv_setup_frame(analogtv *it);
 
 void analogtv_draw(analogtv *it, double noiselevel,
-                   const analogtv_reception *const *recs, unsigned rec_count);
+                   const std::vector<AnalogReception>& receptions);
 
 int analogtv_load_ximage(analogtv *it, AnalogInput& input,
                          const cv::Mat4b& pic_im, const cv::Mat4b& mask_im,
                          int xoff, int yoff, int width, int height);
-
-void analogtv_reception_update(analogtv_reception *inp);
-
 
 void analogtv_lcp_to_ntsc(double luma, double chroma, double phase,
                           int ntsc[4]);

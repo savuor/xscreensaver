@@ -53,10 +53,16 @@ struct Params
 #define POWERUP_DURATION   6  /* Hardcoded in analogtv.c */
 #define POWERDOWN_DURATION 1  /* Only used here */
 
-typedef struct chansetting_s {
-  analogtv_reception recs[MAX_MULTICHAN];
+struct ChanSetting
+{
+  ChanSetting() :
+    receptions(),
+    noise_level(0)
+  { }
+
+  std::vector<AnalogReception> receptions;
   double noise_level;
-} chansetting;
+};
 
 struct state
 {
@@ -68,7 +74,6 @@ struct state
   stations(),
   curinputi(),
   chanSettings(),
-  cs(),
   outputs()
   { }
 
@@ -78,8 +83,7 @@ struct state
   std::vector<AnalogInput> stations;
 
   int curinputi;
-  std::vector<chansetting> chanSettings;
-  chansetting *cs;
+  std::vector<ChanSetting> chanSettings;
 
   std::vector<std::shared_ptr<Output>> outputs;
 };
@@ -182,6 +186,7 @@ static void run(Params params)
     params.seed = tp.count();
   }
   ya_rand_init (params.seed);
+
   cv::Size outSize = params.size;
   int duration = params.duration;
 
@@ -296,55 +301,58 @@ static void run(Params params)
   st->chanSettings.resize(N_CHANNELS);
   for (int i = 0; i < N_CHANNELS; i++)
   {
-    st->chanSettings[i].noise_level = 0.06;
+    ChanSetting& channel = st->chanSettings[i];
+    channel.noise_level = 0.06;
 
     int last_station = 42;
     for (int stati = 0; stati < MAX_MULTICHAN; stati++)
     {
-        analogtv_reception *rec = &st->chanSettings[i].recs[stati];
-        int station;
+        int stationId;
         while (1)
         {
-          station = ya_random() % (st->stations.size());
-          if (station != last_station) break;
+          stationId = ya_random() % (st->stations.size());
+          if (stationId != last_station) break;
           if ((ya_random()%10)==0) break;
         }
-        last_station=station;
-        rec->input = &st->stations[station];
+        last_station = stationId;
+
+        AnalogReception rec;
+        rec.input = &st->stations[stationId];
         if (fixSettings)
         {
-          rec->level = 0.3;
-          rec->ofs=0;
-          rec->multipath=0.0;
-          rec->freqerr = 0;
+          rec.level = 0.3;
+          rec.ofs=0;
+          rec.multipath=0.0;
+          rec.freqerr = 0;
         }
         else
         {
-          rec->level = pow(ya_frand(1.0), 3.0) * 2.0 + 0.05;
-          rec->ofs = ya_random()%ANALOGTV_SIGNAL_LEN;
+          rec.level = pow(ya_frand(1.0), 3.0) * 2.0 + 0.05;
+          rec.ofs   = ya_random() % ANALOGTV_SIGNAL_LEN;
           if (ya_random()%3)
           {
-            rec->multipath = ya_frand(1.0);
+            rec.multipath = ya_frand(1.0);
           }
           else
           {
-            rec->multipath=0.0;
+            rec.multipath=0.0;
           }
           if (stati)
           {
             /* We only set a frequency error for ghosting stations,
               because it doesn't matter otherwise */
-            rec->freqerr = (ya_frand(2.0)-1.0) * 3.0;
+            rec.freqerr = (ya_frand(2.0)-1.0) * 3.0;
           }
         }
 
-        if (rec->level > 0.3) break;
+        channel.receptions.push_back(rec);
+
+        if (rec.level > 0.3) break;
         if (ya_random()%4) break;
     }
   }
 
-  st->curinputi=0;
-  st->cs = &st->chanSettings[st->curinputi];
+  st->curinputi = 0;
 
   for (const auto& s : params.outputs)
   {
@@ -384,8 +392,6 @@ static void run(Params params)
    */
   while (1)
   {
-    const analogtv_reception *recs[MAX_MULTICHAN];
-    unsigned rec_count = 0;
     double curtime = curticks * 0.001;
 
     frames_left--;
@@ -401,7 +407,6 @@ static void run(Params params)
       st->curinputi = 1 + (ya_random() % (N_CHANNELS - 1));
 
       stats[st->curinputi]++;
-      st->cs = &st->chanSettings[st->curinputi];
       /* Set channel change noise flag */
       st->tv->channel_change_cycles=200000;
 
@@ -429,34 +434,30 @@ static void run(Params params)
       }
     }
 
-    for (int i = 0; i < MAX_MULTICHAN; i++)
-    {
-      analogtv_reception *rec = &st->cs->recs[i];
-      AnalogInput* inp = rec->input;
-      if (!inp) continue;
-
-      //TODO: refactor it
-      if (inp->inputId == INPUT_BARS)
-      {
-        update_smpte_colorbars(st, *inp);
-      }
-      rec->ofs += rec->freqerr;
-    }
-
     st->tv->powerup = (params.powerup ? curtime : 9999);
 
-    for (int i = 0; i < MAX_MULTICHAN; i++)
+    for (AnalogReception& rec : st->chanSettings[st->curinputi].receptions)
     {
-      /* Noisy image */
-      analogtv_reception *rec = &st->cs->recs[i];
-      if (rec->input)
+      if (!rec.input) continue;
+
+      //TODO: refactor it
+      if (rec.input->inputId == INPUT_BARS)
       {
-        analogtv_reception_update(rec);
-        recs[rec_count] = rec;
-        ++rec_count;
+        update_smpte_colorbars(st, *rec.input);
       }
 
-      analogtv_draw (st->tv, st->cs->noise_level, recs, rec_count);
+      rec.ofs += rec.freqerr;
+    }
+
+    for (AnalogReception& rec : st->chanSettings[st->curinputi].receptions)
+    {
+      /* Noisy image */
+      if (rec.input)
+      {
+        rec.update();
+      }
+
+      analogtv_draw (st->tv, st->chanSettings[st->curinputi].noise_level, st->chanSettings[st->curinputi].receptions);
     }
 
     // Send rendered frame to outputs
