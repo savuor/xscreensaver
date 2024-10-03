@@ -954,7 +954,7 @@ analogtv_blast_imagerow(analogtv *it,
 {
   std::vector<cv::Vec4b*> level_copyfrom(3, nullptr);
   // 1 or 2
-  int xrepl=it->xrepl;
+  int xrepl = it->xrepl;
 
   unsigned lineheight = ybot - ytop;
   if (lineheight > ANALOGTV_MAX_LINEHEIGHT)
@@ -1005,7 +1005,6 @@ analogtv_blast_imagerow(analogtv *it,
 
 static void analogtv_parallel_for_draw_lines(analogtv* it, const cv::Range& r)
 {
-
   std::vector<float> raw_rgb(it->subwidth * 3);
 
   // from ANALOGTV_TOP to ANALOGTV_BOT
@@ -1013,61 +1012,32 @@ static void analogtv_parallel_for_draw_lines(analogtv* it, const cv::Range& r)
   {
     int slineno, ytop, ybot;
     unsigned signal_offset;
-
-    const float *signal;
-
-    int scanstart_i,scanend_i,squishright_i,squishdiv,pixrate;
-    float *rgb_start, *rgb_end;
-    float pixbright;
-    int pixmultinc;
-
-    float *rrp;
-
-    struct analogtv_yiq_s yiq[ANALOGTV_PIC_LEN+10];
-
     if (! analogtv_get_line(it, lineno, &slineno, &ytop, &ybot, &signal_offset))
       continue;
 
-    signal = it->rx_signal.data() + signal_offset;
+    float bloomthisrow = std::clamp(-10.0f * it->crtload[lineno], -10.f, 2.0f);
 
-    {
+    float shiftthisrow = (slineno < 16) ? it->horiz_desync * (expf(-0.17f * slineno) * (0.7f + cosf(slineno*0.6f))) : 0.f;
 
-      float bloomthisrow,shiftthisrow;
-      float viswidth,middle;
-      float scanwidth;
-      int scw,scl,scr;
+    float viswidth = ANALOGTV_PIC_LEN * 0.79f - 5.0f * bloomthisrow;
+    float middle = ANALOGTV_PIC_LEN/2 - shiftthisrow;
 
-      bloomthisrow = -10.0f * it->crtload[lineno];
-      if (bloomthisrow<-10.0f) bloomthisrow=-10.0f;
-      if (bloomthisrow>2.0f) bloomthisrow=2.0f;
-      if (slineno<16) {
-        shiftthisrow=it->horiz_desync * (expf(-0.17f*slineno) *
-                                         (0.7f+cosf(slineno*0.6f)));
-      } else {
-        shiftthisrow=0.0f;
-      }
+    float scanwidth = it->width_control * puramp(it, 0.5f, 0.3f, 1.0f);
 
-      viswidth=ANALOGTV_PIC_LEN * 0.79f - 5.0f*bloomthisrow;
-      middle=ANALOGTV_PIC_LEN/2 - shiftthisrow;
+    int scw = it->subwidth*scanwidth;
+    if (scw > it->subwidth)
+        scw = it->usewidth;
 
-      scanwidth=it->width_control * puramp(it, 0.5f, 0.3f, 1.0f);
+    int scl = it->subwidth/2 - scw/2;
+    int scr = it->subwidth/2 + scw/2;
 
-      scw=it->subwidth*scanwidth;
-      if (scw>it->subwidth) scw=it->usewidth;
-      scl=it->subwidth/2 - scw/2;
-      scr=it->subwidth/2 + scw/2;
+    int pixrate = (int)((viswidth*65536.0f*1.0f)/it->subwidth)/scanwidth;
+    int scanstart_i = (int)((middle-viswidth*0.5f)*65536.0f);
+    int scanend_i = (ANALOGTV_PIC_LEN-1)*65536;
+    int squishright_i = (int)((middle+viswidth*(0.25f + 0.25f*puramp(it, 2.0f, 0.0f, 1.1f) - it->squish_control)) *65536.0f);
+    int squishdiv = it->subwidth/15;
 
-      pixrate=(int)((viswidth*65536.0f*1.0f)/it->subwidth)/scanwidth;
-      scanstart_i=(int)((middle-viswidth*0.5f)*65536.0f);
-      scanend_i=(ANALOGTV_PIC_LEN-1)*65536;
-      squishright_i=(int)((middle+viswidth*(0.25f + 0.25f*puramp(it, 2.0f, 0.0f, 1.1f)
-                                            - it->squish_control)) *65536.0f);
-      squishdiv=it->subwidth/15;
-
-      rgb_start = raw_rgb.data() + scl*3;
-      rgb_end = raw_rgb.data() + scr*3;
-
-      assert(scanstart_i>=0);
+    assert(scanstart_i>=0);
 
 #ifdef DEBUG
       if (0) printf("scan %d: %0.3f %0.3f %0.3f scl=%d scr=%d scw=%d\n",
@@ -1077,76 +1047,74 @@ static void analogtv_parallel_for_draw_lines(analogtv* it, const cv::Range& r)
                     scanend_i/65536.0f,
                     scl,scr,scw);
 #endif
-    }
 
+    const float *signal = it->rx_signal.data() + signal_offset;
+
+    struct analogtv_yiq_s yiq[ANALOGTV_PIC_LEN+10];
+    analogtv_ntsc_to_yiq(it, lineno, signal, (scanstart_i>>16)-10, (scanend_i>>16)+10, yiq);
+
+    float pixbright = it->contrast_control * puramp(it, 1.0f, 0.0f, 1.0f) / (0.5f+0.5f*it->puheight) * 1024.0f/100.0f;
+    int pixmultinc = pixrate;
+    int i = scanstart_i;
+    float* rrp = raw_rgb.data() + scl*3;
+    while (i < 0 && rrp != raw_rgb.data() + scr*3)
     {
-      analogtv_ntsc_to_yiq(it, lineno, signal,
-                           (scanstart_i>>16)-10, (scanend_i>>16)+10, yiq);
-
-      pixbright=it->contrast_control * puramp(it, 1.0f, 0.0f, 1.0f)
-        / (0.5f+0.5f*it->puheight) * 1024.0f/100.0f;
-      pixmultinc=pixrate;
-      int i=scanstart_i;
-      rrp=rgb_start;
-      while (i<0 && rrp!=rgb_end)
-      {
-        rrp[0]=rrp[1]=rrp[2]=0;
-        i+=pixmultinc;
-        rrp+=3;
-      }
-      while (i<scanend_i && rrp!=rgb_end)
-      {
-        float pixfrac=(i&0xffff)/65536.0f;
-        float invpixfrac=1.0f-pixfrac;
-        int pati=i>>16;
-        float r,g,b;
-
-        float interpy=(yiq[pati].y*invpixfrac + yiq[pati+1].y*pixfrac);
-        float interpi=(yiq[pati].i*invpixfrac + yiq[pati+1].i*pixfrac);
-        float interpq=(yiq[pati].q*invpixfrac + yiq[pati+1].q*pixfrac);
-
-        /*
-          According to the NTSC spec, Y,I,Q are generated as:
-
-          y=0.30 r + 0.59 g + 0.11 b
-          i=0.60 r - 0.28 g - 0.32 b
-          q=0.21 r - 0.52 g + 0.31 b
-
-          So if you invert the implied 3x3 matrix you get what standard
-          televisions implement with a bunch of resistors (or directly in the
-          CRT -- don't ask):
-
-          r = y + 0.948 i + 0.624 q
-          g = y - 0.276 i - 0.639 q
-          b = y - 1.105 i + 1.729 q
-        */
-
-        r=(interpy + 0.948f*interpi + 0.624f*interpq) * pixbright;
-        g=(interpy - 0.276f*interpi - 0.639f*interpq) * pixbright;
-        b=(interpy - 1.105f*interpi + 1.729f*interpq) * pixbright;
-        if (r<0.0f) r=0.0f;
-        if (g<0.0f) g=0.0f;
-        if (b<0.0f) b=0.0f;
-        rrp[0]=r;
-        rrp[1]=g;
-        rrp[2]=b;
-
-        if (i>=squishright_i)
-        {
-          pixmultinc += pixmultinc/squishdiv;
-          pixbright += pixbright/squishdiv/2;
-        }
-        i+=pixmultinc;
-        rrp+=3;
-      }
-      while (rrp != rgb_end)
-      {
-        rrp[0]=rrp[1]=rrp[2]=0.0f;
-        rrp+=3;
-      }
-
-      analogtv_blast_imagerow(it, raw_rgb, ytop, ybot);
+      rrp[0]=rrp[1]=rrp[2]=0;
+      i+=pixmultinc;
+      rrp+=3;
     }
+    while (i < scanend_i && rrp != raw_rgb.data() + scr*3)
+    {
+      float pixfrac=(i&0xffff)/65536.0f;
+      float invpixfrac=1.0f-pixfrac;
+      int pati=i>>16;
+      float r,g,b;
+
+      float interpy = yiq[pati].y*invpixfrac + yiq[pati+1].y*pixfrac;
+      float interpi = yiq[pati].i*invpixfrac + yiq[pati+1].i*pixfrac;
+      float interpq = yiq[pati].q*invpixfrac + yiq[pati+1].q*pixfrac;
+
+      /*
+        According to the NTSC spec, Y,I,Q are generated as:
+
+        y=0.30 r + 0.59 g + 0.11 b
+        i=0.60 r - 0.28 g - 0.32 b
+        q=0.21 r - 0.52 g + 0.31 b
+
+        So if you invert the implied 3x3 matrix you get what standard
+        televisions implement with a bunch of resistors (or directly in the
+        CRT -- don't ask):
+
+        r = y + 0.948 i + 0.624 q
+        g = y - 0.276 i - 0.639 q
+        b = y - 1.105 i + 1.729 q
+      */
+
+      r=(interpy + 0.948f*interpi + 0.624f*interpq) * pixbright;
+      g=(interpy - 0.276f*interpi - 0.639f*interpq) * pixbright;
+      b=(interpy - 1.105f*interpi + 1.729f*interpq) * pixbright;
+      if (r<0.0f) r=0.0f;
+      if (g<0.0f) g=0.0f;
+      if (b<0.0f) b=0.0f;
+      rrp[0]=r;
+      rrp[1]=g;
+      rrp[2]=b;
+
+      if (i>=squishright_i)
+      {
+        pixmultinc += pixmultinc/squishdiv;
+        pixbright += pixbright/squishdiv/2;
+      }
+      i+=pixmultinc;
+      rrp+=3;
+    }
+    while (rrp != raw_rgb.data() + scr*3)
+    {
+      rrp[0]=rrp[1]=rrp[2]=0.0f;
+      rrp += 3;
+    }
+
+    analogtv_blast_imagerow(it, raw_rgb, ytop, ybot);
   }
 }
 
@@ -1155,7 +1123,6 @@ void
 analogtv_draw(analogtv *it, double noiselevel, const std::vector<AnalogReception>& receptions)
 {
   /*  int bigloadchange,drawcount;*/
-  double baseload;
 
   /* AnalogTV isn't very interesting if there isn't enough RAM. */
   if (it->image.empty())
@@ -1230,14 +1197,13 @@ analogtv_draw(analogtv *it, double noiselevel, const std::vector<AnalogReception
 
   analogtv_sync(it); /* Requires the add_signals be complete. */
 
-  baseload=0.5;
+  double baseload = 0.5;
   /* if (it->hashnoise_on) baseload=0.5; */
 
   /*bigloadchange=1;
     drawcount=0;*/
-  it->crtload[ANALOGTV_TOP-1]=baseload;
-  it->puheight = puramp(it, 2.0, 1.0, 1.3) * it->height_control *
-    (1.125 - 0.125*puramp(it, 2.0, 2.0, 1.1));
+  it->crtload[ANALOGTV_TOP-1] = baseload;
+  it->puheight = puramp(it, 2.0, 1.0, 1.3) * it->height_control * (1.125 - 0.125*puramp(it, 2.0, 2.0, 1.1));
 
   analogtv_setup_levels(it, it->puheight * (double)it->useheight/(double)ANALOGTV_VISLINES);
 
@@ -1248,7 +1214,7 @@ analogtv_draw(analogtv *it, double noiselevel, const std::vector<AnalogReception
      and saturated, so apparently that's not right.  -- jwz, Nov 2020.
    */
   it->tint_i = -cos((103 + it->tint_control)*M_PI/180);
-  it->tint_q = sin((103 + it->tint_control)*M_PI/180);
+  it->tint_q =  sin((103 + it->tint_control)*M_PI/180);
 
   for (int lineno = ANALOGTV_TOP; lineno < ANALOGTV_BOT; lineno++)
   {
@@ -1321,10 +1287,10 @@ analogtv_draw(analogtv *it, double noiselevel, const std::vector<AnalogReception
 
       totsignal *= it->agclevel;
       float ncl = 0.95f * it->crtload[lineno-1] +
-        0.05f*(baseload +
-               (totsignal-30000)/100000.0f +
-               (slineno>184 ? (slineno-184)*(lineno-184)*0.001f * it->squeezebottom
-                : 0.0f));
+                  0.05f*(baseload +
+                        (totsignal-30000)/100000.0f +
+                        (slineno>184 ? (slineno-184)*(lineno-184)*0.001f * it->squeezebottom
+                          : 0.0f));
       /*diff=ncl - it->crtload[lineno];*/
       /*bigloadchange = (diff>0.01 || diff<-0.01);*/
       it->crtload[lineno]=ncl;
@@ -1362,36 +1328,33 @@ analogtv_draw(analogtv *it, double noiselevel, const std::vector<AnalogReception
   int overall_top = (int)(it->useheight*(1-it->puheight)/2);
   int overall_bot = (int)(it->useheight*(1+it->puheight)/2);
 
-  if (overall_top<0) overall_top=0;
-  if (overall_bot>it->useheight) overall_bot=it->useheight;
+  overall_top = std::max(overall_top, 0);
+  overall_bot = std::min(overall_bot, it->useheight);
 
   if (overall_bot > overall_top)
   {
-      {
+    int screen_xo = ( it->outBuffer.cols - it->usewidth  )/2;
+    int screen_yo = ( it->outBuffer.rows - it->useheight )/2;
 
-        int screen_xo = ( it->outBuffer.cols - it->usewidth  )/2;
-        int screen_yo = ( it->outBuffer.rows - it->useheight )/2;
+    int /* dest_x = screen_xo, */ dest_y = screen_yo + overall_top;
+    unsigned w = it->usewidth, h = overall_bot - overall_top;
 
-        int /* dest_x = screen_xo, */ dest_y = screen_yo + overall_top;
-        unsigned w = it->usewidth, h = overall_bot - overall_top;
+    if (screen_xo < 0)
+    {
+      w += screen_xo;
+      screen_xo = 0;
+    }
+    w = std::min((int)w, std::min(it->outBuffer.cols - screen_xo, it->image.cols));
 
-        if (screen_xo < 0)
-        {
-          w += screen_xo;
-          screen_xo = 0;
-        }
-        w = std::min((int)w, std::min(it->outBuffer.cols - screen_xo, it->image.cols));
+    if (dest_y < 0)
+    {
+      h += dest_y;
+      overall_top -= dest_y;
+      dest_y = 0;
+    }
+    h = std::min((int)h, std::min(it->outBuffer.rows - dest_y, it->image.rows - overall_top));
 
-        if (dest_y < 0)
-        {
-          h += dest_y;
-          overall_top -= dest_y;
-          dest_y = 0;
-        }
-        h = std::min((int)h, std::min(it->outBuffer.rows - dest_y, it->image.rows - overall_top));
-
-        it->image(cv::Rect(0, overall_top, w, h)).copyTo(it->outBuffer(cv::Rect(screen_xo, dest_y, w, h)));
-      }
+    it->image(cv::Rect(0, overall_top, w, h)).copyTo(it->outBuffer(cv::Rect(screen_xo, dest_y, w, h)));
   }
 }
 
