@@ -61,6 +61,7 @@ struct ChanSetting
   { }
 
   std::vector<AnalogReception> receptions;
+  std::vector<int> stationIds;
   double noise_level;
 };
 
@@ -89,7 +90,7 @@ struct state
 };
 
 //TODO: refactor it to something else
-const int INPUT_BARS = -1;
+const int INPUT_BARS = 1;
 
 static void update_smpte_colorbars(state *st, AnalogInput& input)
 {
@@ -346,6 +347,7 @@ static void run(Params params)
         }
 
         channel.receptions.push_back(rec);
+        channel.stationIds.push_back(stationId);
 
         if (rec.level > 0.3) break;
         if (ya_random()%4) break;
@@ -368,6 +370,7 @@ static void run(Params params)
   Log::write(2, "initializing " + std::to_string(nFiles) + " files in " +
                 std::to_string(MAX_STATIONS) + " channels");
 
+  std::vector<int> inputTypes;
   for (int i = 0; i < MAX_STATIONS; i++)
   {
     const cv::Mat& img = images[i % nFiles];
@@ -378,10 +381,12 @@ static void run(Params params)
     int x = (outSize.width  - w) / 2;
     int y = (outSize.height - h) / 2;
 
+    int inputType = 0;
     if (!(ya_random() % 8)) /* Some stations are colorbars */
     {
-      input.inputId = INPUT_BARS;
+      inputType = INPUT_BARS;
     }
+    inputTypes.push_back(inputType);
 
     input.setup_sync(1, (ya_random() % 20) == 0);
 
@@ -436,12 +441,13 @@ static void run(Params params)
 
     st->tv->powerup = (params.powerup ? curtime : 9999);
 
-    for (AnalogReception& rec : st->chanSettings[st->curinputi].receptions)
+    ChanSetting& curChannel = st->chanSettings[st->curinputi];
+    for (size_t i = 0; i < curChannel.receptions.size(); i++)
     {
+      AnalogReception& rec = curChannel.receptions[i];
       if (!rec.input) continue;
-
       //TODO: refactor it
-      if (rec.input->inputId == INPUT_BARS)
+      if (inputTypes[curChannel.stationIds[i]] == INPUT_BARS)
       {
         update_smpte_colorbars(st, *rec.input);
       }
@@ -449,7 +455,7 @@ static void run(Params params)
       rec.ofs += rec.freqerr;
     }
 
-    for (AnalogReception& rec : st->chanSettings[st->curinputi].receptions)
+    for (AnalogReception& rec : curChannel.receptions)
     {
       /* Noisy image */
       if (rec.input)
@@ -457,7 +463,7 @@ static void run(Params params)
         rec.update();
       }
 
-      analogtv_draw (st->tv, st->chanSettings[st->curinputi].noise_level, st->chanSettings[st->curinputi].receptions);
+      analogtv_draw (st->tv, curChannel.noise_level, curChannel.receptions);
     }
 
     // Send rendered frame to outputs

@@ -88,9 +88,6 @@ struct AnalogInput
   //TODO: use cv::Mat
   signed char signal[ANALOGTV_V+1][ANALOGTV_H];
 
-  //TODO: refactor it
-  int inputId;
-
   void setup_sync(int do_cb, int do_ssavi);
 
   void draw_solid(int left, int right, int top, int bot, int ntsc[4]);
