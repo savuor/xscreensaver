@@ -370,6 +370,10 @@ analogtv_line_signature(analogtv_input *input, int lineno)
 
 */
 
+struct analogtv_yiq_s {
+  float y,i,q;
+} /*yiq[ANALOGTV_PIC_LEN+10] */;
+
 static void
 analogtv_ntsc_to_yiq(const analogtv *it, int lineno, unsigned int signal_offset,
                      int start, int end, struct analogtv_yiq_s *it_yiq)

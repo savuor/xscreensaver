@@ -95,12 +95,10 @@ struct AnalogInput
   void draw_solid_rel_lcp(double left, double right,
                           double top, double bot,
                           double luma, double chroma, double phase);
-
 };
 
 struct AnalogReception
 {
-
   //TODO: refactor it
   AnalogInput* input;
 
@@ -121,10 +119,6 @@ struct AnalogReception
 /*
   The rest of this should be considered mostly opaque to the analogtv module.
  */
-
-struct analogtv_yiq_s {
-  float y,i,q;
-} /*yiq[ANALOGTV_PIC_LEN+10] */;
 
 typedef struct analogtv_s {
   int outbuffer_width;
