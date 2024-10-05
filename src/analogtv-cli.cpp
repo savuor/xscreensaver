@@ -420,7 +420,8 @@ static void run(Params params)
       /* Turn the knobs every now and then */
       if (!fixSettings && !(ya_random() % 5))
       {
-        if (ya_random()%4==0) {
+        if (ya_random()%4==0) 
+        {
           st->tv->tint_control += pow(ya_frand(2.0)-1.0, 7) * 180.0 * ((ya_random() & 1) ? 1 : -1);
         }
         if (1)
@@ -429,10 +430,12 @@ static void run(Params params)
         }
         if (0) //(darkp)
         {
-          if (ya_random()%4==0) {
+          if (ya_random()%4==0)
+          {
             st->tv->brightness_control += ya_frand(0.15);
           }
-          if (ya_random()%4==0) {
+          if (ya_random()%4==0)
+          {
             st->tv->contrast_control += ya_frand(0.2) * ((ya_random() & 1) ? 1 : -1);
           }
         }
@@ -462,7 +465,7 @@ static void run(Params params)
       {
         rec.update();
       }
-
+      // why so?...
       analogtv_draw (st->tv, curChannel.noise_level, curChannel.receptions);
     }
 
