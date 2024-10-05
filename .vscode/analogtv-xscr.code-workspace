@@ -9,7 +9,8 @@
 		"cmake.buildDirectory": "${userHome}/builds/analogtv-xscr/${buildType}",
 		"cmake.configureSettings": {
 			//"OpenCV_DIR" : "/home/savuor/builds/ocv/4.x/Release/install/lib/cmake/opencv4"
-			"OpenCV_DIR" : "/home/savuor/builds/ocv/4.x/Debug/install/lib/cmake/opencv4"
+			"OpenCV_DIR" : "/home/savuor/builds/ocv/4.x/Debug/install/lib/cmake/opencv4",
+			"wxWidgets_DIR" : "/home/savuor/builds/wxWidgets/install/lib/cmake/wxWidgets/"
 		}
 	},
 	"launch": {

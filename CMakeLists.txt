@@ -6,10 +6,12 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wall -Wno-overlength-strings 
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_CXX_FLAGS} -O2")
 
 find_package(OpenCV)
+find_package(wxWidgets REQUIRED COMPONENTS net core base CONFIG)
 
 include_directories(
     "./src"
     ${OpenCV_INCLUDE_DIRS}
+    ${wxWidgets_USE_FILE}
 )
 
 add_executable(analogtv-cli
@@ -19,4 +21,4 @@ add_executable(analogtv-cli
     "./src/utils.cpp"
 )
 
-target_link_libraries(analogtv-cli ${OpenCV_LIBS})
+target_link_libraries(analogtv-cli ${OpenCV_LIBS} ${wxWidgets_LIBRARIES})

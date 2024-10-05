@@ -33,6 +33,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 
+#include "wx/wx.h"
 
 struct Params
 {
@@ -648,6 +649,10 @@ int main (int argc, char **argv)
 
   Log::setProgName(progName);
   Log::setVerbosity(oparams.value().verbosity);
+
+  // Check that wxWidgets builds and works
+  wxPuts(wxT("TODO: implement a real GUI instead"));
+
 
   run(oparams.value());
 
