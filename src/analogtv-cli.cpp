@@ -156,11 +156,11 @@ static void update_smpte_colorbars(state *st, AnalogInput& input)
   {
     double aspect = (double)st->outBuffer.cols / st->outBuffer.rows;
     double scale = (aspect > 1 ? 0.35 : 0.6);
-    int w2 = st->tv->outbuffer_width  * scale;
-    int h2 = st->tv->outbuffer_height * scale * aspect;
+    int w2 = st->tv->outBuffer.cols  * scale;
+    int h2 = st->tv->outBuffer.rows * scale * aspect;
     analogtv_load_ximage (st->tv, input, st->logoImg, st->logoMask,
-                          (st->tv->outbuffer_width - w2) / 2,
-                          st->tv->outbuffer_height * 0.20,
+                          (st->tv->outBuffer.cols - w2) / 2,
+                          st->tv->outBuffer.rows * 0.20,
                           w2, h2);
   }
 }

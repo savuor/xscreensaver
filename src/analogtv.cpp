@@ -198,8 +198,8 @@ analogtv_configure(analogtv *it)
   float ratio;
   float height_snap=0.025;
 
-  int hlim = it->outbuffer_height;
-  int wlim = it->outbuffer_width;
+  int hlim = it->outBuffer.rows;
+  int wlim = it->outBuffer.cols;
   ratio = wlim / (float) hlim;
 
 // NO_CONSTRAIN_RATIO is defined
@@ -210,7 +210,7 @@ analogtv_configure(analogtv *it)
 //#endif
 
   std::string debugPrint1 = std::to_string(wlim) + "x" + std::to_string(hlim);
-  std::string debugPrint2 = " in " + std::to_string(it->outbuffer_width) + "x" + std::to_string(it->outbuffer_height);
+  std::string debugPrint2 = " in " + std::to_string(it->outBuffer.cols) + "x" + std::to_string(it->outBuffer.rows);
   std::string debugPrint3 = " (" + std::to_string(min_ratio) + " < " + std::to_string(ratio) + " < " + std::to_string(max_ratio) + ")";
   if (wlim < 266 || hlim < 200)
     {
@@ -240,9 +240,9 @@ analogtv_configure(analogtv *it)
   if (ratio < crazy_min_ratio || ratio > crazy_max_ratio)
     {
       if (ratio < crazy_min_ratio)
-        hlim = it->outbuffer_height;
+        hlim = it->outBuffer.rows;
       else
-        wlim = it->outbuffer_width;
+        wlim = it->outBuffer.cols;
       // debug mode
       Log::write(3, "size: aspect: " + debugPrint1 + debugPrint2 + debugPrint3);
     }
@@ -281,8 +281,6 @@ analogtv * analogtv_allocate(cv::Mat4b outBuffer)
   it->shrinkpulse=-1;
 
   it->outBuffer = outBuffer;
-  it->outbuffer_width  = outBuffer.cols;
-  it->outbuffer_height = outBuffer.rows;
 
   for (int i = 0; i < ANALOGTV_CV_MAX; i++)
   {
@@ -1422,14 +1420,14 @@ analogtv_load_ximage(analogtv *it, AnalogInput& input,
   int y_overscan=5*ANALOGTV_SCALE; /* overscan this much top and bottom */
   int y_scanlength=ANALOGTV_VISLINES+2*y_overscan;
 
-  if (target_w > 0) x_length     = x_length     * target_w / it->outbuffer_width;
-  if (target_h > 0) y_scanlength = y_scanlength * target_h / it->outbuffer_height;
+  if (target_w > 0) x_length     = x_length     * target_w / it->outBuffer.cols;
+  if (target_h > 0) y_scanlength = y_scanlength * target_h / it->outBuffer.rows;
 
   img_w = pic_im.cols;
   img_h = pic_im.rows;
-  
-  xoff = ANALOGTV_PIC_LEN  * xoff / it->outbuffer_width;
-  yoff = ANALOGTV_VISLINES * yoff / it->outbuffer_height;
+
+  xoff = ANALOGTV_PIC_LEN  * xoff / it->outBuffer.cols;
+  yoff = ANALOGTV_VISLINES * yoff / it->outBuffer.rows;
 
   for (int i=0; i<x_length+4; i++)
   {

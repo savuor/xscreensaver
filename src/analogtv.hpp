@@ -121,9 +121,6 @@ struct AnalogReception
  */
 
 typedef struct analogtv_s {
-  int outbuffer_width;
-  int outbuffer_height;
-
 #if 0
   unsigned int onscreen_signature[ANALOGTV_V];
 #endif
