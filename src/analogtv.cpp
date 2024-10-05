@@ -1401,10 +1401,9 @@ inline Color pixToColor(uint32_t p)
   return c;
 }
 
-int
-analogtv_load_ximage(analogtv *it, AnalogInput& input,
-                     const cv::Mat4b& pic_im, const cv::Mat4b& mask_im,
-                     int xoff, int yoff, int target_w, int target_h)
+void analogtv_load_ximage(analogtv *it, AnalogInput& input,
+                          const cv::Mat4b& pic_im, const cv::Mat4b& mask_im,
+                          int xoff, int yoff, int target_w, int target_h)
 {
   int img_w,img_h;
   int fyx[7],fyy[7];
@@ -1520,8 +1519,6 @@ analogtv_load_ximage(analogtv *it, AnalogInput& input,
       input.signal[y-y_overscan+ANALOGTV_TOP+yoff][x+ANALOGTV_PIC_START+xoff] = composite;
     }
   }
-
-  return 1;
 }
 
 #if 0

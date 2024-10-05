@@ -204,9 +204,9 @@ void analogtv_setup_frame(analogtv *it);
 void analogtv_draw(analogtv *it, double noiselevel,
                    const std::vector<AnalogReception>& receptions);
 
-int analogtv_load_ximage(analogtv *it, AnalogInput& input,
-                         const cv::Mat4b& pic_im, const cv::Mat4b& mask_im,
-                         int xoff, int yoff, int width, int height);
+void analogtv_load_ximage(analogtv *it, AnalogInput& input,
+                          const cv::Mat4b& pic_im, const cv::Mat4b& mask_im,
+                          int xoff, int yoff, int width, int height);
 
 void analogtv_lcp_to_ntsc(double luma, double chroma, double phase,
                           int ntsc[4]);
