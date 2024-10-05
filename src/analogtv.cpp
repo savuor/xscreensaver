@@ -868,7 +868,8 @@ static void analogtv_transit_channels(analogtv *it, const AnalogReception& rec, 
     float noise = (fastrnd_offset <= INT_MAX ? (int)fastrnd_offset : -1 - (int)(UINT_MAX - fastrnd_offset)) * (50.0f/(float)0x7fffffff);
     fastrnd = (fastrnd*FASTRND_A+FASTRND_C) & 0xffffffffu;
 
-    it->rx_signal[i] += (float)(signal[(start + (unsigned)rec.ofs + i) % ANALOGTV_SIGNAL_LEN]) * level * (1.0f - noise_ampl) + noise * noise_ampl;
+    int idx = (start + (unsigned)rec.ofs + i) % ANALOGTV_SIGNAL_LEN;
+    it->rx_signal[i] += (float)(signal[idx]) * level * (1.0f - noise_ampl) + noise * noise_ampl;
 
     noise_ampl *= noise_decay;
   }
