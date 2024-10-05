@@ -371,12 +371,13 @@ analogtv_line_signature(analogtv_input *input, int lineno)
 */
 
 static void
-analogtv_ntsc_to_yiq(const analogtv *it, int lineno, const float *signal,
+analogtv_ntsc_to_yiq(const analogtv *it, int lineno, unsigned int signal_offset,
                      int start, int end, struct analogtv_yiq_s *it_yiq)
 {
   enum {MAXDELAY=32};
 
-  int phasecorr = (signal - it->rx_signal.data()) & 3;
+  const float *signal = it->rx_signal.data() + signal_offset;
+  int phasecorr = signal_offset & 3;
 
   float multiq2[4];
 
@@ -443,7 +444,8 @@ analogtv_ntsc_to_yiq(const analogtv *it, int lineno, const float *signal,
        mkfilter -Bu -Lp -o 4 -a 2.1428571429e-01 0 -Z 2.5e-01 -l
        Delay about 2 */
 
-    dp[0] = signal[i] * 0.0469904257251935f * agclevel;
+    float sig = signal[i];
+    dp[0] = sig * 0.0469904257251935f * agclevel;
     dp[8] = (+1.0f*(dp[6]+dp[0])
              +4.0f*(dp[5]+dp[1])
              +7.0f*(dp[4]+dp[2])
@@ -1048,22 +1050,22 @@ static void analogtv_parallel_for_draw_lines(analogtv* it, const cv::Range& r)
                     scl,scr,scw);
 #endif
 
-    const float *signal = it->rx_signal.data() + signal_offset;
-
     struct analogtv_yiq_s yiq[ANALOGTV_PIC_LEN+10];
-    analogtv_ntsc_to_yiq(it, lineno, signal, (scanstart_i>>16)-10, (scanend_i>>16)+10, yiq);
+    analogtv_ntsc_to_yiq(it, lineno, signal_offset, (scanstart_i>>16)-10, (scanend_i>>16)+10, yiq);
 
     float pixbright = it->contrast_control * puramp(it, 1.0f, 0.0f, 1.0f) / (0.5f+0.5f*it->puheight) * 1024.0f/100.0f;
     int pixmultinc = pixrate;
     int i = scanstart_i;
-    float* rrp = raw_rgb.data() + scl*3;
-    while (i < 0 && rrp != raw_rgb.data() + scr*3)
+    int rrpIdx = scl*3;
+    while (i < 0 && rrpIdx != scr*3)
     {
-      rrp[0]=rrp[1]=rrp[2]=0;
+      raw_rgb[rrpIdx + 0] = 0;
+      raw_rgb[rrpIdx + 1] = 0;
+      raw_rgb[rrpIdx + 2] = 0;
       i+=pixmultinc;
-      rrp+=3;
+      rrpIdx += 3;
     }
-    while (i < scanend_i && rrp != raw_rgb.data() + scr*3)
+    while (i < scanend_i && rrpIdx != scr*3)
     {
       float pixfrac=(i&0xffff)/65536.0f;
       float invpixfrac=1.0f-pixfrac;
@@ -1090,15 +1092,15 @@ static void analogtv_parallel_for_draw_lines(analogtv* it, const cv::Range& r)
         b = y - 1.105 i + 1.729 q
       */
 
-      r=(interpy + 0.948f*interpi + 0.624f*interpq) * pixbright;
-      g=(interpy - 0.276f*interpi - 0.639f*interpq) * pixbright;
-      b=(interpy - 1.105f*interpi + 1.729f*interpq) * pixbright;
+      r = (interpy + 0.948f*interpi + 0.624f*interpq) * pixbright;
+      g = (interpy - 0.276f*interpi - 0.639f*interpq) * pixbright;
+      b = (interpy - 1.105f*interpi + 1.729f*interpq) * pixbright;
       if (r<0.0f) r=0.0f;
       if (g<0.0f) g=0.0f;
       if (b<0.0f) b=0.0f;
-      rrp[0]=r;
-      rrp[1]=g;
-      rrp[2]=b;
+      raw_rgb[rrpIdx + 0] = r;
+      raw_rgb[rrpIdx + 1] = g;
+      raw_rgb[rrpIdx + 2] = b;
 
       if (i>=squishright_i)
       {
@@ -1106,12 +1108,14 @@ static void analogtv_parallel_for_draw_lines(analogtv* it, const cv::Range& r)
         pixbright += pixbright/squishdiv/2;
       }
       i+=pixmultinc;
-      rrp+=3;
+      rrpIdx += 3;
     }
-    while (rrp != raw_rgb.data() + scr*3)
+    while (rrpIdx != scr*3)
     {
-      rrp[0]=rrp[1]=rrp[2]=0.0f;
-      rrp += 3;
+      raw_rgb[rrpIdx + 0] = 0;
+      raw_rgb[rrpIdx + 1] = 0;
+      raw_rgb[rrpIdx + 2] = 0;
+      rrpIdx += 3;
     }
 
     analogtv_blast_imagerow(it, raw_rgb, ytop, ybot);
