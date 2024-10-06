@@ -590,7 +590,7 @@ void AnalogInput::setup_sync(int do_cb, int do_ssavi)
   {
     int vsync = lineno >= 3 && lineno < 7;
 
-    signed char *sig = this->signal[lineno];
+    signed char *sig = this->sigMat.ptr<int8_t>(lineno);
 
     int i = ANALOGTV_SYNC_START;
     if (vsync)
@@ -847,7 +847,7 @@ static void analogtv_init_signal(analogtv *it, double noiselevel, unsigned start
 
 static void analogtv_transit_channels(analogtv *it, const AnalogReception& rec, unsigned start, int skip)
 {
-  signed char* signal = &(rec.input->signal[0][0]);
+  signed char* signal = rec.input->sigMat.ptr<int8_t>(0);
 
   /* Do a big noisy transition. We can make the transition noise of
      high constant strength regardless of signal strength.
@@ -882,7 +882,7 @@ static void analogtv_add_signal(analogtv *it, const AnalogReception& rec, unsign
 {
   assert(((int)end - (int)start - skip) % 4 == 0);
 
-  signed char* signal = &(rec.input->signal[0][0]);
+  signed char* signal = rec.input->sigMat.ptr<int8_t>(0);
   float level = rec.level;
 
   float dp[5];
@@ -1140,7 +1140,6 @@ analogtv_draw(analogtv *it, double noiselevel, const std::vector<AnalogReception
   {
     const AnalogReception& rec = receptions[i];
     double level = rec.level;
-    AnalogInput *inp = rec.input;
 
     it->rx_signal_level =
       sqrt(it->rx_signal_level * it->rx_signal_level +
@@ -1148,8 +1147,7 @@ analogtv_draw(analogtv *it, double noiselevel, const std::vector<AnalogReception
                                         rec.ghostfir[2] + rec.ghostfir[3]))));
 
     /* duplicate the first line into the Nth line to ease wraparound computation */
-    memcpy(inp->signal[ANALOGTV_V], inp->signal[0],
-           ANALOGTV_H * sizeof(inp->signal[0][0]));
+    rec.input->sigMat.row(0).copyTo(rec.input->sigMat.row(ANALOGTV_V));
   }
 
   analogtv_setup_frame(it);
@@ -1435,7 +1433,7 @@ void analogtv_load_ximage(analogtv *it, AnalogInput& input,
     multiq[i]=(int)(-cos(M_PI/180.0*(phase-303)) * 4096.0 * ampl);
   }
 
-  for (int y=0; y<y_scanlength; y++)
+  for (int y = 0; y < y_scanlength; y++)
   {
     int picy1=(y*img_h                 )/y_scanlength;
     int picy2=(y*img_h + y_scanlength/2)/y_scanlength;
@@ -1443,9 +1441,9 @@ void analogtv_load_ximage(analogtv *it, AnalogInput& input,
     uint32_t* rowIm1 = (uint32_t*)(pic_im.data + picy1 * pic_im.step);
     uint32_t* rowIm2 = (uint32_t*)(pic_im.data + picy2 * pic_im.step);
     uint32_t* rowMask1 = mask_im.data ? (uint32_t*)(mask_im.data + picy1 * mask_im.step) : nullptr;
-    for (int x=0; x<x_length; x++)
+    for (int x = 0; x < x_length; x++)
     {
-      int picx=(x*img_w)/x_length;
+      int picx = (x*img_w) / x_length;
       col1[x] = pixToColor(rowIm1[picx]);
       col2[x] = pixToColor(rowIm2[picx]);
       if (rowMask1)
@@ -1457,7 +1455,8 @@ void analogtv_load_ximage(analogtv *it, AnalogInput& input,
     for (int i=0; i<7; i++) fyx[i]=fyy[i]=0;
     for (int i=0; i<4; i++) fix[i]=fiy[i]=fqx[i]=fqy[i]=0.0;
 
-    for (int x=0; x<x_length; x++)
+    signed char* sigRow = input.sigMat.ptr<int8_t>(y-y_overscan+ANALOGTV_TOP+yoff);
+    for (int x = 0; x < x_length; x++)
     {
       int rawy,rawi,rawq;
       int filty,filti,filtq;
@@ -1516,7 +1515,7 @@ void analogtv_load_ximage(analogtv *it, AnalogInput& input,
       if (composite>125) composite=125;
       if (composite<0) composite=0;
 
-      input.signal[y-y_overscan+ANALOGTV_TOP+yoff][x+ANALOGTV_PIC_START+xoff] = composite;
+      sigRow[x+ANALOGTV_PIC_START+xoff] = composite;
     }
   }
 }
@@ -1626,14 +1625,20 @@ analogtv_lcp_to_ntsc(double luma, double chroma, double phase, int ntsc[4])
 
 void AnalogInput::draw_solid(int left, int right, int top, int bot, int ntsc[4])
 {
-  if (right-left<4) right=left+4;
-  if (bot-top<1) bot=top+1;
+  left  = left  / 4;
+  right = right / 4;
 
-  for (int y=top; y<bot; y++)
+  right = std::max(right, left+1);
+  bot   = std::max(bot,   top+1);
+
+  typedef cv::Vec<int8_t, 4> Vec4c;
+  Vec4c v(ntsc[0], ntsc[1], ntsc[2], ntsc[3]);
+  for (int y = top; y < bot; y++)
   {
-    for (int x=left; x<right; x++)
+    Vec4c* sigRow = this->sigMat.ptr<Vec4c>(y);
+    for (int x = left; x < right; x++)
     {
-      this->signal[y][x] = ntsc[x&3];
+      sigRow[x] = v;
     }
   }
 }
