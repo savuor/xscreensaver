@@ -11,11 +11,13 @@ wxWidgets will be used for GUI.
 
 Build:
 * Get OpenCV, wxWidgets and CMake
-* Run CMake with `-DOpenCV_DIR=<path_to_OpenCV_installation>` flag
+* Run CMake with the flags:
+  - `-DOpenCV_DIR=<path_to_OpenCV_installation>`
+  - `-DwxWidgets_DIR=<path_to_wxWidgets_installation>`
 * Build it
 
 TODO:
-* strip platform-dependent threads
+* make some kind of GUI to switch channels and rotate knobs
 * rewrite non-calculating code to proper c++
 * fix channel issue
 * transform this code to a platform-independent shader-like filter
