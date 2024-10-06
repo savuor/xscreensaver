@@ -82,14 +82,16 @@
 #define FASTRND (fastrnd = fastrnd*FASTRND_A+FASTRND_C)
 
 
-static float puramp(const analogtv *it, float tc, float start, float over)
+float AnalogTV::puramp(float tc, float start, float over) const
 {
-  float pt = it->powerup - start;
-  if (pt<0.0f) return 0.0f;
-  if (pt>900.0f || pt/tc>8.0f) return 1.0f;
+  float pt = this->powerup - start;
 
-  float ret=(1.0f-expf(-pt/tc))*over;
-  if (ret>1.0f) return 1.0f;
+  if (pt < 0.0f) return 0.0f;
+  if (pt > 900.0f || pt / tc > 8.0f) return 1.0f;
+
+  float ret = (1.0f-expf(-pt/tc))*over;
+
+  if (ret > 1.0f) return 1.0f;
   return ret*ret;
 }
 
@@ -118,42 +120,41 @@ static float puramp(const analogtv *it, float tc, float start, float over)
 
 static const double float_low8_ofs=8388608.0;
 
-void
-analogtv_set_defaults(analogtv *it)
+void AnalogTV::set_defaults()
 {
   // values taken from analogtv-cli
-  it->tint_control = 5; // 270 (almost) fixes the color issue!
-  it->color_control = 70/100.0;
-  it->brightness_control = 2 / 100.0;
-  it->contrast_control = 150 / 100.0;
-  it->height_control = 1.0;
-  it->width_control = 1.0;
-  it->squish_control = 0.0;
-  it->powerup=1000.0;
+  this->tint_control = 5; // 270 (almost) fixes the color issue!
+  this->color_control = 70/100.0;
+  this->brightness_control = 2 / 100.0;
+  this->contrast_control = 150 / 100.0;
+  this->height_control = 1.0;
+  this->width_control = 1.0;
+  this->squish_control = 0.0;
+  this->powerup=1000.0;
 
   //it->hashnoise_rpm=0;
-  it->hashnoise_on=0;
-  it->hashnoise_enable=1;
+  this->hashnoise_on=0;
+  this->hashnoise_enable=1;
 
-  it->horiz_desync=ya_frand(10.0)-5.0;
-  it->squeezebottom=ya_frand(5.0)-1.0;
+  this->horiz_desync=ya_frand(10.0)-5.0;
+  this->squeezebottom=ya_frand(5.0)-1.0;
 
   //TODO: make logs
 #ifdef DEBUG
   printf("analogtv: prefix=%s\n",prefix);
   printf("  use: color=1\n");
   printf("  controls: tint=%g color=%g brightness=%g contrast=%g\n",
-         it->tint_control, it->color_control, it->brightness_control,
-         it->contrast_control);
+         this->tint_control, this->color_control, this->brightness_control,
+         this->contrast_control);
 /*  printf("  freq_error %g: %g %d\n",
-         it->freq_error, it->freq_error_inc, it->flutter_tint); */
+         this->freq_error, this->freq_error_inc, this->flutter_tint); */
   printf("  desync: %g %d\n",
-         it->horiz_desync, it->flutter_horiz_desync);
+         this->horiz_desync, this->flutter_horiz_desync);
   printf("  hashnoise rpm: %g\n",
-         it->hashnoise_rpm);
+         this->hashnoise_rpm);
   printf("  size: %d %d xrepl=%d\n",
-         it->usewidth, it->useheight,
-         it->xrepl);
+         this->usewidth, this->useheight,
+         this->xrepl);
 
   printf("    ANALOGTV_V=%d\n",ANALOGTV_V);
   printf("    ANALOGTV_TOP=%d\n",ANALOGTV_TOP);
@@ -174,8 +175,7 @@ analogtv_set_defaults(analogtv *it)
 }
 
 
-static void
-analogtv_configure(analogtv *it)
+void AnalogTV::configure()
 {
   /* If the window is very small, don't let the image we draw get lower
      than the actual TV resolution (266x200.)
@@ -198,8 +198,8 @@ analogtv_configure(analogtv *it)
   float ratio;
   float height_snap=0.025;
 
-  int hlim = it->outBuffer.rows;
-  int wlim = it->outBuffer.cols;
+  int hlim = this->outBuffer.rows;
+  int wlim = this->outBuffer.cols;
   ratio = wlim / (float) hlim;
 
 // NO_CONSTRAIN_RATIO is defined
@@ -210,7 +210,7 @@ analogtv_configure(analogtv *it)
 //#endif
 
   std::string debugPrint1 = std::to_string(wlim) + "x" + std::to_string(hlim);
-  std::string debugPrint2 = " in " + std::to_string(it->outBuffer.cols) + "x" + std::to_string(it->outBuffer.rows);
+  std::string debugPrint2 = " in " + std::to_string(this->outBuffer.cols) + "x" + std::to_string(this->outBuffer.rows);
   std::string debugPrint3 = " (" + std::to_string(min_ratio) + " < " + std::to_string(ratio) + " < " + std::to_string(max_ratio) + ")";
   if (wlim < 266 || hlim < 200)
     {
@@ -240,9 +240,9 @@ analogtv_configure(analogtv *it)
   if (ratio < crazy_min_ratio || ratio > crazy_max_ratio)
     {
       if (ratio < crazy_min_ratio)
-        hlim = it->outBuffer.rows;
+        hlim = this->outBuffer.rows;
       else
-        wlim = it->outBuffer.cols;
+        wlim = this->outBuffer.cols;
       // debug mode
       Log::write(3, "size: aspect: " + debugPrint1 + debugPrint2 + debugPrint3);
     }
@@ -254,48 +254,93 @@ analogtv_configure(analogtv *it)
     }
 
   /* Most times this doesn't change */
-  if (wlim != it->usewidth || hlim != it->useheight)
+  if (wlim != this->usewidth || hlim != this->useheight)
   {
-    it->usewidth=wlim;
-    it->useheight=hlim;
+    this->usewidth=wlim;
+    this->useheight=hlim;
 
     //TODO: fix this behavior
-    it->xrepl=1+it->usewidth/640;
-    if (it->xrepl>2) it->xrepl=2;
-    it->subwidth=it->usewidth/it->xrepl;
+    this->xrepl = 1 + this->usewidth/640;
+    if (this->xrepl>2) this->xrepl=2;
+    this->subwidth = this->usewidth / this->xrepl;
 
-    it->image = cv::Mat4b(it->useheight, it->usewidth);
+    this->image = cv::Mat4b(this->useheight, this->usewidth);
   }
 }
 
+AnalogTV::AnalogTV() :
+  agclevel(),
+  tint_control(),
+  color_control(),
+  brightness_control(),
+  contrast_control(),
+  height_control(),
+  width_control(),
+  squish_control(),
+  horiz_desync(),
+  squeezebottom(),
+  powerup(),
 
-analogtv * analogtv_allocate(cv::Mat4b outBuffer)
+  usewidth(),
+  useheight(),
+  xrepl(),
+  subwidth(),
+  image(),
+  outBuffer(),
+
+  flutter_horiz_desync(),
+  hashnoise_on(),
+  hashnoise_enable(),
+
+  tint_i(),
+  tint_q(),
+
+  cur_hsync(),
+  line_hsync(),
+  cur_vsync(),
+  cb_phase(),
+  line_cb_phase(),
+
+  channel_change_cycles(),
+  rx_signal_level(),
+  rx_signal(),
+
+  random0(),
+  random1(),
+
+  puheight()
 {
-  analogtv *it=NULL;
+  // float crtload[ANALOGTV_V];
 
-  it=(analogtv *)calloc(1,sizeof(analogtv));
-  if (!it) return 0;
+  // int line_hsync[ANALOGTV_V];
+  // double cb_phase[4];
+  // double line_cb_phase[ANALOGTV_V][4];
 
-  it->rx_signal.resize(ANALOGTV_SIGNAL_LEN + 2*ANALOGTV_H);
+  // struct {
+  //   int index;
+  //   double value;
+  // } leveltable[ANALOGTV_MAX_LINEHEIGHT+1][ANALOGTV_MAX_LINEHEIGHT+1];
 
-  it->shrinkpulse=-1;
+  this->rx_signal.resize(ANALOGTV_SIGNAL_LEN + 2*ANALOGTV_H);
 
-  it->outBuffer = outBuffer;
+  this->shrinkpulse = -1;
 
   for (int i = 0; i < ANALOGTV_CV_MAX; i++)
   {
     int intensity = pow(i / 256.0, 0.8) * 65535.0; /* gamma correction */
     if (intensity > 65535)
       intensity = 65535;
-    it->intensity_values[i] = intensity >> 8;
+    this->intensity_values[i] = intensity >> 8;
   }
-
-  analogtv_configure(it);
-
-  return it;
 }
 
 
+void AnalogTV::set_buffer(cv::Mat4b outBuffer)
+{
+  this->outBuffer = outBuffer;
+
+  this->configure();
+}
 
 
 /*
@@ -372,30 +417,28 @@ struct analogtv_yiq_s {
   float y,i,q;
 } /*yiq[ANALOGTV_PIC_LEN+10] */;
 
-static void
-analogtv_ntsc_to_yiq(const analogtv *it, int lineno, unsigned int signal_offset,
-                     int start, int end, struct analogtv_yiq_s *it_yiq)
+void AnalogTV::ntsc_to_yiq(int lineno, unsigned int signal_offset, int start, int end, struct analogtv_yiq_s *it_yiq) const
 {
   enum {MAXDELAY=32};
 
-  const float *signal = it->rx_signal.data() + signal_offset;
+  const float *signal = this->rx_signal.data() + signal_offset;
   int phasecorr = signal_offset & 3;
 
   float multiq2[4];
 
   bool colormode;
   {
-    double cb_i=(it->line_cb_phase[lineno][(2+phasecorr)&3]-
-                 it->line_cb_phase[lineno][(0+phasecorr)&3])/16.0;
-    double cb_q=(it->line_cb_phase[lineno][(3+phasecorr)&3]-
-                 it->line_cb_phase[lineno][(1+phasecorr)&3])/16.0;
+    double cb_i=(this->line_cb_phase[lineno][(2+phasecorr)&3]-
+                 this->line_cb_phase[lineno][(0+phasecorr)&3])/16.0;
+    double cb_q=(this->line_cb_phase[lineno][(3+phasecorr)&3]-
+                 this->line_cb_phase[lineno][(1+phasecorr)&3])/16.0;
 
     colormode = (cb_i * cb_i + cb_q * cb_q) > 2.8;
 
     if (colormode)
     {
-      multiq2[0] = (cb_i*it->tint_i - cb_q*it->tint_q) * it->color_control;
-      multiq2[1] = (cb_q*it->tint_i + cb_i*it->tint_q) * it->color_control;
+      multiq2[0] = (cb_i * this->tint_i - cb_q * this->tint_q) * this->color_control;
+      multiq2[1] = (cb_q * this->tint_i + cb_i * this->tint_q) * this->color_control;
       multiq2[2] = -multiq2[0];
       multiq2[3] = -multiq2[1];
     }
@@ -404,10 +447,10 @@ analogtv_ntsc_to_yiq(const analogtv *it, int lineno, unsigned int signal_offset,
 #if 0
   if (lineno==100) {
     printf("multiq = [%0.3f %0.3f %0.3f %0.3f] ",
-           it->multiq[60],it->multiq[61],it->multiq[62],it->multiq[63]);
+           this->multiq[60], this->multiq[61], this->multiq[62], this->multiq[63]);
     printf("it->line_cb_phase = [%0.3f %0.3f %0.3f %0.3f]\n",
-           it->line_cb_phase[lineno][0],it->line_cb_phase[lineno][1],
-           it->line_cb_phase[lineno][2],it->line_cb_phase[lineno][3]);
+           this->line_cb_phase[lineno][0], this->line_cb_phase[lineno][1],
+           this->line_cb_phase[lineno][2], this->line_cb_phase[lineno][3]);
     printf("multiq2 = [%0.3f %0.3f %0.3f %0.3f]\n",
            multiq2[0],multiq2[1],multiq2[2],multiq2[3]);
   }
@@ -425,8 +468,8 @@ analogtv_ntsc_to_yiq(const analogtv *it, int lineno, unsigned int signal_offset,
   dp = delay + ANALOGTV_PIC_LEN - MAXDELAY;
   for (int i = 0; i < 24; i++) dp[i]=0.0;
 
-  float agclevel  = it->agclevel;
-  float brightadd = it->brightness_control*100.0 - ANALOGTV_BLACK_LEVEL;
+  float agclevel  = this->agclevel;
+  float brightadd = this->brightness_control * 100.0 - ANALOGTV_BLACK_LEVEL;
 
   for (int i = start; i < end; i++, dp--)
   {
@@ -497,15 +540,14 @@ analogtv_ntsc_to_yiq(const analogtv *it, int lineno, unsigned int signal_offset,
 }
 
 
-void
-analogtv_setup_frame(analogtv *it)
+void AnalogTV::setup_frame()
 {
   /*  int i,x,y;*/
 
-  if (it->flutter_horiz_desync)
+  if (this->flutter_horiz_desync)
   {
     /* Horizontal sync during vertical sync instability. */
-    it->horiz_desync += -0.10*(it->horiz_desync-3.0) +
+    this->horiz_desync += -0.10*(this->horiz_desync-3.0) +
                         ((int)(ya_random()&0xff)-0x80) *
                         ((int)(ya_random()&0xff)-0x80) *
                         ((int)(ya_random()&0xff)-0x80) * 0.000001;
@@ -513,22 +555,22 @@ analogtv_setup_frame(analogtv *it)
 
   /* it wasn't used
   for (i=0; i<ANALOGTV_V; i++) {
-    it->hashnoise_times[i]=0;
+    this->hashnoise_times[i]=0;
   }
   */
 
   /* let's leave it to process shrinkpulse */
-  if (it->hashnoise_enable && !it->hashnoise_on)
+  if (this->hashnoise_enable && !this->hashnoise_on)
   {
-    if (ya_random()%10000==0)
+    if (ya_random()%10000 == 0)
     {
-      it->hashnoise_on=1;
-      it->shrinkpulse=ya_random()%ANALOGTV_V;
+      this->hashnoise_on = 1;
+      this->shrinkpulse = ya_random()%ANALOGTV_V;
     }
   }
   if (ya_random()%1000==0)
   {
-    it->hashnoise_on=0;
+    this->hashnoise_on=0;
   }
 
 #if 0  /* never used */
@@ -569,18 +611,19 @@ analogtv_setup_frame(analogtv *it)
 /*    hnc -= (ANALOGTV_V * ANALOGTV_H)<<8;*/
 
 
-  if (it->rx_signal_level != 0.0)
-    it->agclevel = 1.0/it->rx_signal_level;
+  if (this->rx_signal_level != 0.0)
+    this->agclevel = 1.0/this->rx_signal_level;
 
 //TODO: make logs
 #ifdef DEBUG2
   printf("filter: ");
   for (i=0; i<ANALOGTV_GHOSTFIR_LEN; i++) {
-    printf(" %0.3f",it->ghostfir[i]);
+    printf(" %0.3f",this->ghostfir[i]);
   }
-  printf(" siglevel=%g agc=%g\n", siglevel, it->agclevel);
+  printf(" siglevel=%g agc=%g\n", siglevel, this->agclevel);
 #endif
 }
+
 
 void AnalogInput::setup_sync(int do_cb, int do_ssavi)
 {
@@ -618,15 +661,14 @@ void AnalogInput::setup_sync(int do_cb, int do_ssavi)
   }
 }
 
-static void
-analogtv_sync(analogtv *it)
+void AnalogTV::sync()
 {
-  int cur_hsync = it->cur_hsync;
-  int cur_vsync = it->cur_vsync;
+  int cur_hsync = this->cur_hsync;
+  int cur_vsync = this->cur_vsync;
 
   float osc, filt;
 
-/*  sp = it->rx_signal + lineno*ANALOGTV_H + cur_hsync;*/
+/*  sp = this->rx_signal + lineno*ANALOGTV_H + cur_hsync;*/
   int vi;
   for (int i = -32*ANALOGTV_SCALE; i < 32*ANALOGTV_SCALE; i++)
   {
@@ -636,9 +678,9 @@ analogtv_sync(analogtv *it)
     filt=0.0f;
     for (int j = 0; j < ANALOGTV_H; j += ANALOGTV_H/(16*ANALOGTV_SCALE))
     {
-      filt += it->rx_signal[lineno * ANALOGTV_H + j];
+      filt += this->rx_signal[lineno * ANALOGTV_H + j];
     }
-    filt *= it->agclevel;
+    filt *= this->agclevel;
 
     osc = (float)(ANALOGTV_V + i)/(float)ANALOGTV_V;
 
@@ -662,10 +704,10 @@ analogtv_sync(analogtv *it)
       {
         hi = i;
         osc = (float)(ANALOGTV_H + i) / (float)ANALOGTV_H;
-        filt = ( it->rx_signal[sidx + i - 3] +
-                 it->rx_signal[sidx + i - 2] +
-                 it->rx_signal[sidx + i - 1] +
-                 it->rx_signal[sidx + i - 0] ) * it->agclevel;
+        filt = ( this->rx_signal[sidx + i - 3] +
+                 this->rx_signal[sidx + i - 2] +
+                 this->rx_signal[sidx + i - 1] +
+                 this->rx_signal[sidx + i - 0] ) * this->agclevel;
 
         if (osc >= 1.005f + 0.0001f*filt)
           break;
@@ -673,7 +715,7 @@ analogtv_sync(analogtv *it)
       cur_hsync = (cur_hsync + hi + ANALOGTV_H) % ANALOGTV_H;
     }
 
-    it->line_hsync[lineno]=(cur_hsync + ANALOGTV_PIC_START +
+    this->line_hsync[lineno]=(cur_hsync + ANALOGTV_PIC_START +
                             ANALOGTV_H) % ANALOGTV_H;
 
     /* Now look for the colorburst, which is a few cycles after the H
@@ -686,8 +728,8 @@ analogtv_sync(analogtv *it)
     {
       for (int i = ANALOGTV_CB_START + 8*ANALOGTV_SCALE; i < ANALOGTV_CB_START + (36-8)*ANALOGTV_SCALE; i++)
       {
-        it->cb_phase[i&3] = it->cb_phase[i&3] * (1.0f - 1.0f/128.0f) +
-                            it->rx_signal[lineno*ANALOGTV_H + (cur_hsync&~3) + i] * it->agclevel * (1.0f/128.0f);
+        this->cb_phase[i&3] = this->cb_phase[i&3] * (1.0f - 1.0f/128.0f) +
+                              this->rx_signal[lineno*ANALOGTV_H + (cur_hsync&~3) + i] * this->agclevel * (1.0f/128.0f);
       }
     }
 
@@ -697,28 +739,28 @@ analogtv_sync(analogtv *it)
 
       for (int i = 0; i < 4; i++)
       {
-        tot += it->cb_phase[i]*it->cb_phase[i];
+        tot += this->cb_phase[i] * this->cb_phase[i];
       }
       cbgain = 32.0f/sqrtf(tot);
 
       for (int i = 0; i < 4; i++)
       {
-        it->line_cb_phase[lineno][i] = it->cb_phase[i]*cbgain;
+        this->line_cb_phase[lineno][i] = this->cb_phase[i]*cbgain;
       }
     }
 
 #ifdef DEBUG
     if (0) printf("hs=%d cb=[%0.3f %0.3f %0.3f %0.3f]\n",
                   cur_hsync,
-                  it->cb_phase[0], it->cb_phase[1],
-                  it->cb_phase[2], it->cb_phase[3]);
+                  this->cb_phase[0], this->cb_phase[1],
+                  this->cb_phase[2], this->cb_phase[3]);
 #endif
 
     /* if (ya_random()%2000==0) cur_hsync=ya_random()%ANALOGTV_H; */
   }
 
-  it->cur_hsync = cur_hsync;
-  it->cur_vsync = cur_vsync;
+  this->cur_hsync = cur_hsync;
+  this->cur_vsync = cur_vsync;
 }
 
 // static double
@@ -760,8 +802,7 @@ analogtv_sync(analogtv *it)
   it interpolates extra black lines.
  */
 
-static void
-analogtv_setup_levels(analogtv *it, double avgheight)
+void AnalogTV::setup_levels(double avgheight)
 {
   static const double levelfac[3] = {-7.5, 5.5, 24.5};
 
@@ -769,30 +810,29 @@ analogtv_setup_levels(analogtv *it, double avgheight)
   {
     for (int i = 0; i < height; i++)
     {
-      it->leveltable[height][i].index = 2;
+      this->leveltable[height][i].index = 2;
     }
     
     if (avgheight >= 3)
     {
-      it->leveltable[height][0].index=0;
+      this->leveltable[height][0].index=0;
     }
 
     if (avgheight >= 5)
     {
       if (height >= 1)
-        it->leveltable[height][height-1].index=0;
+        this->leveltable[height][height-1].index=0;
     }
     if (avgheight >= 7)
     {
-      it->leveltable[height][1].index=1;
+      this->leveltable[height][1].index=1;
       if (height >= 2)
-        it->leveltable[height][height-2].index=1;
+        this->leveltable[height][height-2].index=1;
     }
 
     for (int i = 0; i<height; i++)
     {
-      it->leveltable[height][i].value = 
-        (40.0 + levelfac[it->leveltable[height][i].index]*puramp(it, 3.0, 6.0, 1.0)) / 256.0;
+      this->leveltable[height][i].value = (40.0 + levelfac[this->leveltable[height][i].index] * this->puramp(3.0, 6.0, 1.0)) / 256.0;
     }
 
   }
@@ -824,9 +864,9 @@ static unsigned int rnd_seek(unsigned a, unsigned c, unsigned rnd, unsigned dist
   return a * rnd + c;
 }
 
-static void analogtv_init_signal(analogtv *it, double noiselevel, unsigned start, unsigned end)
+void AnalogTV::init_signal(double noiselevel, unsigned start, unsigned end)
 {
-  unsigned int fastrnd = rnd_seek(FASTRND_A, FASTRND_C, it->random0, start);
+  unsigned int fastrnd = rnd_seek(FASTRND_A, FASTRND_C, this->random0, start);
   unsigned int fastrnd_offset;
   float nm1, nm2;
   float noisemul = sqrt(noiselevel*150)/(float)0x7fffffff;
@@ -840,12 +880,12 @@ static void analogtv_init_signal(analogtv *it, double noiselevel, unsigned start
     fastrnd = (fastrnd*FASTRND_A+FASTRND_C) & 0xffffffffu;
     fastrnd_offset = fastrnd - 0x7fffffff;
     nm1 = (fastrnd_offset <= INT_MAX ? (int)fastrnd_offset : -1 - (int)(UINT_MAX - fastrnd_offset)) * noisemul;
-    it->rx_signal[i] = nm1 * nm2;
+    this->rx_signal[i] = nm1 * nm2;
   }
 }
 
 
-static void analogtv_transit_channels(analogtv *it, const AnalogReception& rec, unsigned start, int skip)
+void AnalogTV::transit_channels(const AnalogReception& rec, unsigned start, int skip)
 {
   signed char* signal = rec.input->sigMat.ptr<int8_t>(0);
 
@@ -858,7 +898,7 @@ static void analogtv_transit_channels(analogtv *it, const AnalogReception& rec, 
      We don't bother with the FIR filter here
   */
 
-  unsigned int fastrnd = rnd_seek(FASTRND_A, FASTRND_C, it->random1, start);
+  unsigned int fastrnd = rnd_seek(FASTRND_A, FASTRND_C, this->random1, start);
 
   const float noise_decay = 0.99995f;
   float noise_ampl = 1.3f * powf(noise_decay, start);
@@ -871,14 +911,14 @@ static void analogtv_transit_channels(analogtv *it, const AnalogReception& rec, 
     fastrnd = (fastrnd*FASTRND_A+FASTRND_C) & 0xffffffffu;
 
     int idx = (start + (unsigned)rec.ofs + i) % ANALOGTV_SIGNAL_LEN;
-    it->rx_signal[i] += (float)(signal[idx]) * level * (1.0f - noise_ampl) + noise * noise_ampl;
+    this->rx_signal[i] += (float)(signal[idx]) * level * (1.0f - noise_ampl) + noise * noise_ampl;
 
     noise_ampl *= noise_decay;
   }
 }
 
 
-static void analogtv_add_signal(analogtv *it, const AnalogReception& rec, unsigned start, unsigned end, int skip)
+void AnalogTV::add_signal(const AnalogReception& rec, unsigned start, unsigned end, int skip)
 {
   assert(((int)end - (int)start - skip) % 4 == 0);
 
@@ -922,44 +962,41 @@ static void analogtv_add_signal(analogtv *it, const AnalogReception& rec, unsign
             dp[3]*rec.ghostfir[2] + dp[4]*rec.ghostfir[3]);
     dp[4]=dp[3]; dp[3]=dp[2]; dp[2]=dp[1]; dp[1]=dp[0];
 
-    it->rx_signal[i + 0] += (sig0 + sigr + sig2 * hfloss) * level;
-    it->rx_signal[i + 1] += (sig1 + sigr + sig3 * hfloss) * level;
-    it->rx_signal[i + 2] += (sig2 + sigr + sig0 * hfloss) * level;
-    it->rx_signal[i + 3] += (sig3 + sigr + sig1 * hfloss) * level;
+    this->rx_signal[i + 0] += (sig0 + sigr + sig2 * hfloss) * level;
+    this->rx_signal[i + 1] += (sig1 + sigr + sig3 * hfloss) * level;
+    this->rx_signal[i + 2] += (sig2 + sigr + sig0 * hfloss) * level;
+    this->rx_signal[i + 3] += (sig3 + sigr + sig1 * hfloss) * level;
   }
 }
 
 
-static int analogtv_get_line(const analogtv *it, int lineno, int *slineno,
-                             int *ytop, int *ybot, unsigned *signal_offset)
+int AnalogTV::get_line(int lineno, int *slineno, int *ytop, int *ybot, unsigned *signal_offset) const
 {
   *slineno = lineno - ANALOGTV_TOP;
-  *ytop = (int)(((lineno - ANALOGTV_TOP  )*it->useheight/ANALOGTV_VISLINES - it->useheight/2)*it->puheight) + it->useheight/2;
-  *ybot = (int)(((lineno - ANALOGTV_TOP+1)*it->useheight/ANALOGTV_VISLINES - it->useheight/2)*it->puheight) + it->useheight/2;
+  *ytop = (int)(((lineno - ANALOGTV_TOP  ) * this->useheight / ANALOGTV_VISLINES - this->useheight/2) * this->puheight) + this->useheight/2;
+  *ybot = (int)(((lineno - ANALOGTV_TOP+1) * this->useheight / ANALOGTV_VISLINES - this->useheight/2) * this->puheight) + this->useheight/2;
 #if 0
   int linesig=analogtv_line_signature(input,lineno)
     + it->hashnoise_times[lineno];
 #endif
-  *signal_offset = ((lineno+it->cur_vsync+ANALOGTV_V) % ANALOGTV_V) * ANALOGTV_H +
-                    it->line_hsync[lineno];
+  *signal_offset = ((lineno + this->cur_vsync+ANALOGTV_V) % ANALOGTV_V) * ANALOGTV_H +
+                    this->line_hsync[lineno];
 
   if (*ytop == *ybot) return 0;
-  if (*ybot < 0 || *ytop > it->useheight) return 0;
+  if (*ybot < 0 || *ytop > this->useheight) return 0;
 
   *ytop = std::max(0, *ytop);
 
-  *ybot = std::min(*ybot, std::min(it->useheight, *ytop + ANALOGTV_MAX_LINEHEIGHT));
+  *ybot = std::min(*ybot, std::min(this->useheight, *ytop + ANALOGTV_MAX_LINEHEIGHT));
   return 1;
 }
 
-static void
-analogtv_blast_imagerow(analogtv *it,
-                        const std::vector<float>& rgbf,
-                        int ytop, int ybot)
+
+void AnalogTV::blast_imagerow(const std::vector<float>& rgbf, int ytop, int ybot)
 {
   std::vector<cv::Vec4b*> level_copyfrom(3, nullptr);
   // 1 or 2
-  int xrepl = it->xrepl;
+  int xrepl = this->xrepl;
 
   unsigned lineheight = ybot - ytop;
   if (lineheight > ANALOGTV_MAX_LINEHEIGHT)
@@ -967,15 +1004,15 @@ analogtv_blast_imagerow(analogtv *it,
 
   for (int y = ytop; y < ybot; y++)
   {
-    cv::Vec4b *rowdata = it->image[y];
+    cv::Vec4b *rowdata = this->image[y];
     unsigned line = y-ytop;
 
-    int   level     = it->leveltable[lineheight][line].index;
-    float levelmult = it->leveltable[lineheight][line].value;
+    int   level     = this->leveltable[lineheight][line].index;
+    float levelmult = this->leveltable[lineheight][line].value;
 
     if (level_copyfrom[level])
     {
-      memcpy((void*)rowdata, (void*)level_copyfrom[level], it->image.step);
+      memcpy((void*)rowdata, (void*)level_copyfrom[level], this->image.step);
     }
     else
     {
@@ -990,7 +1027,7 @@ analogtv_blast_imagerow(analogtv *it,
 
         for (int j = 0; j < 3; j++)
         {
-          rgb[j] = it->intensity_values[std::min(int(rgb[j] * levelmult), ANALOGTV_CV_MAX-1)];
+          rgb[j] = this->intensity_values[std::min(int(rgb[j] * levelmult), ANALOGTV_CV_MAX-1)];
         }
 
         cv::Vec4b v(rgb[2], rgb[1], rgb[0], 0);
@@ -1008,39 +1045,40 @@ analogtv_blast_imagerow(analogtv *it,
 }
 
 
-static void analogtv_parallel_for_draw_lines(analogtv* it, const cv::Range& r)
+void AnalogTV::parallel_for_draw_lines(const cv::Range& r)
 {
-  std::vector<float> raw_rgb(it->subwidth * 3);
+  //TODO: Vec3f
+  std::vector<float> raw_rgb(this->subwidth * 3);
 
   // from ANALOGTV_TOP to ANALOGTV_BOT
   for (int lineno = r.start; lineno < r.end; lineno++)
   {
     int slineno, ytop, ybot;
     unsigned signal_offset;
-    if (! analogtv_get_line(it, lineno, &slineno, &ytop, &ybot, &signal_offset))
+    if (! this->get_line(lineno, &slineno, &ytop, &ybot, &signal_offset))
       continue;
 
-    float bloomthisrow = std::clamp(-10.0f * it->crtload[lineno], -10.f, 2.0f);
+    float bloomthisrow = std::clamp(-10.0f * this->crtload[lineno], -10.f, 2.0f);
 
-    float shiftthisrow = (slineno < 16) ? it->horiz_desync * (expf(-0.17f * slineno) * (0.7f + cosf(slineno*0.6f))) : 0.f;
+    float shiftthisrow = (slineno < 16) ? this->horiz_desync * (expf(-0.17f * slineno) * (0.7f + cosf(slineno*0.6f))) : 0.f;
 
     float viswidth = ANALOGTV_PIC_LEN * 0.79f - 5.0f * bloomthisrow;
     float middle = ANALOGTV_PIC_LEN/2 - shiftthisrow;
 
-    float scanwidth = it->width_control * puramp(it, 0.5f, 0.3f, 1.0f);
+    float scanwidth = this->width_control * this->puramp(0.5f, 0.3f, 1.0f);
 
-    int scw = it->subwidth*scanwidth;
-    if (scw > it->subwidth)
-        scw = it->usewidth;
+    int scw = this->subwidth * scanwidth;
+    if (scw > this->subwidth)
+        scw = this->usewidth;
 
-    int scl = it->subwidth/2 - scw/2;
-    int scr = it->subwidth/2 + scw/2;
+    int scl = this->subwidth/2 - scw/2;
+    int scr = this->subwidth/2 + scw/2;
 
-    int pixrate = (int)((viswidth*65536.0f*1.0f)/it->subwidth)/scanwidth;
+    int pixrate = (int)((viswidth*65536.0f*1.0f)/this->subwidth)/scanwidth;
     int scanstart_i = (int)((middle-viswidth*0.5f)*65536.0f);
     int scanend_i = (ANALOGTV_PIC_LEN-1)*65536;
-    int squishright_i = (int)((middle+viswidth*(0.25f + 0.25f*puramp(it, 2.0f, 0.0f, 1.1f) - it->squish_control)) *65536.0f);
-    int squishdiv = it->subwidth/15;
+    int squishright_i = (int)((middle+viswidth*(0.25f + 0.25f * this->puramp(2.0f, 0.0f, 1.1f) - this->squish_control)) *65536.0f);
+    int squishdiv = this->subwidth/15;
 
     assert(scanstart_i>=0);
 
@@ -1054,9 +1092,9 @@ static void analogtv_parallel_for_draw_lines(analogtv* it, const cv::Range& r)
 #endif
 
     struct analogtv_yiq_s yiq[ANALOGTV_PIC_LEN+10];
-    analogtv_ntsc_to_yiq(it, lineno, signal_offset, (scanstart_i>>16)-10, (scanend_i>>16)+10, yiq);
+    this->ntsc_to_yiq(lineno, signal_offset, (scanstart_i>>16)-10, (scanend_i>>16)+10, yiq);
 
-    float pixbright = it->contrast_control * puramp(it, 1.0f, 0.0f, 1.0f) / (0.5f+0.5f*it->puheight) * 1024.0f/100.0f;
+    float pixbright = this->contrast_control * this->puramp(1.0f, 0.0f, 1.0f) / (0.5f+0.5f*this->puheight) * 1024.0f/100.0f;
     int pixmultinc = pixrate;
     int i = scanstart_i;
     int rrpIdx = scl*3;
@@ -1098,6 +1136,7 @@ static void analogtv_parallel_for_draw_lines(analogtv* it, const cv::Range& r)
       r = (interpy + 0.948f*interpi + 0.624f*interpq) * pixbright;
       g = (interpy - 0.276f*interpi - 0.639f*interpq) * pixbright;
       b = (interpy - 1.105f*interpi + 1.729f*interpq) * pixbright;
+      //TODO: std::max
       if (r<0.0f) r=0.0f;
       if (g<0.0f) g=0.0f;
       if (b<0.0f) b=0.0f;
@@ -1121,28 +1160,27 @@ static void analogtv_parallel_for_draw_lines(analogtv* it, const cv::Range& r)
       rrpIdx += 3;
     }
 
-    analogtv_blast_imagerow(it, raw_rgb, ytop, ybot);
+    this->blast_imagerow(raw_rgb, ytop, ybot);
   }
 }
 
 
-void
-analogtv_draw(analogtv *it, double noiselevel, const std::vector<AnalogReception>& receptions)
+void AnalogTV::draw(double noiselevel, const std::vector<AnalogReception>& receptions)
 {
   /*  int bigloadchange,drawcount;*/
 
   /* AnalogTV isn't very interesting if there isn't enough RAM. */
-  if (it->image.empty())
+  if (this->image.empty())
     return;
 
-  it->rx_signal_level = noiselevel;
+  this->rx_signal_level = noiselevel;
   for (int i = 0; i < (int)receptions.size(); ++i)
   {
     const AnalogReception& rec = receptions[i];
     double level = rec.level;
 
-    it->rx_signal_level =
-      sqrt(it->rx_signal_level * it->rx_signal_level +
+    this->rx_signal_level =
+      sqrt(this->rx_signal_level * this->rx_signal_level +
            (level * level * (1.0 + 4.0*(rec.ghostfir[0] + rec.ghostfir[1] +
                                         rec.ghostfir[2] + rec.ghostfir[3]))));
 
@@ -1150,13 +1188,13 @@ analogtv_draw(analogtv *it, double noiselevel, const std::vector<AnalogReception
     rec.input->sigMat.row(0).copyTo(rec.input->sigMat.row(ANALOGTV_V));
   }
 
-  analogtv_setup_frame(it);
+  this->setup_frame();
 
-  it->random0 = ya_random();
-  it->random1 = ya_random();
+  this->random0 = ya_random();
+  this->random1 = ya_random();
 
   assert (ANALOGTV_SIGNAL_LEN % 4 == 0);
-  cv::parallel_for_(cv::Range(0, ANALOGTV_SIGNAL_LEN), [it, &receptions, noiselevel](const cv::Range& r)
+  cv::parallel_for_(cv::Range(0, ANALOGTV_SIGNAL_LEN), [this, &receptions, noiselevel](const cv::Range& r)
   {
     unsigned start  = r.start;
     unsigned finish = r.end;
@@ -1171,46 +1209,46 @@ analogtv_draw(analogtv *it, double noiselevel, const std::vector<AnalogReception
       /* (Though it doesn't seem to help much on my system.) */
       unsigned end = std::min(start + 2048, finish);
 
-      analogtv_init_signal (it, noiselevel, start, end);
+      this->init_signal(noiselevel, start, end);
 
       for (uint32_t i = 0; i < receptions.size(); ++i)
       {
         /* Sometimes start > ec. */
-        int ec = !i ? it->channel_change_cycles : 0;
+        int ec = !i ? this->channel_change_cycles : 0;
         int skip = ((int)start >= ec) ? 0 : std::min(ec, (int)end) - start;
 
         if (skip > 0)
         {
-          analogtv_transit_channels(it, receptions[i], start, skip);
+          this->transit_channels(receptions[i], start, skip);
         }
         
-        analogtv_add_signal (it, receptions[i], start, end, skip);
+        this->add_signal(receptions[i], start, end, skip);
       }
 
       start = end;
     }
   });
 
-  it->channel_change_cycles=0;
+  this->channel_change_cycles = 0;
 
   /* rx_signal has an extra 2 lines at the end, where we copy the
      first 2 lines so we can index into it while only worrying about
      wraparound on a per-line level */
-  memcpy(&it->rx_signal[ANALOGTV_SIGNAL_LEN],
-         &it->rx_signal[0],
-         2*ANALOGTV_H*sizeof(it->rx_signal[0]));
+  memcpy(&this->rx_signal[ANALOGTV_SIGNAL_LEN],
+         &this->rx_signal[0],
+         2*ANALOGTV_H*sizeof(this->rx_signal[0]));
 
-  analogtv_sync(it); /* Requires the add_signals be complete. */
+  this->sync(); /* Requires the add_signals be complete. */
 
   double baseload = 0.5;
-  /* if (it->hashnoise_on) baseload=0.5; */
+  /* if (this->hashnoise_on) baseload=0.5; */
 
   /*bigloadchange=1;
     drawcount=0;*/
-  it->crtload[ANALOGTV_TOP-1] = baseload;
-  it->puheight = puramp(it, 2.0, 1.0, 1.3) * it->height_control * (1.125 - 0.125*puramp(it, 2.0, 2.0, 1.1));
+  this->crtload[ANALOGTV_TOP-1] = baseload;
+  this->puheight = this->puramp(2.0, 1.0, 1.3) * this->height_control * (1.125 - 0.125 * this->puramp(2.0, 2.0, 1.1));
 
-  analogtv_setup_levels(it, it->puheight * (double)it->useheight/(double)ANALOGTV_VISLINES);
+  this->setup_levels(this->puheight * (double)this->useheight/(double)ANALOGTV_VISLINES);
 
   /* calculate tint once per frame */
   /* Christopher Mosher argues that this should use 33 degress instead of
@@ -1218,21 +1256,21 @@ analogtv_draw(analogtv *it, double noiselevel, const std::vector<AnalogReception
      all relevant XML files. But that makes all the colors go really green
      and saturated, so apparently that's not right.  -- jwz, Nov 2020.
    */
-  it->tint_i = -cos((103 + it->tint_control)*M_PI/180);
-  it->tint_q =  sin((103 + it->tint_control)*M_PI/180);
+  this->tint_i = -cos((103 + this->tint_control)*M_PI/180);
+  this->tint_q =  sin((103 + this->tint_control)*M_PI/180);
 
   for (int lineno = ANALOGTV_TOP; lineno < ANALOGTV_BOT; lineno++)
   {
     int slineno, ytop, ybot;
     unsigned signal_offset;
-    if (! analogtv_get_line(it, lineno, &slineno, &ytop, &ybot, &signal_offset))
+    if (!this->get_line(lineno, &slineno, &ytop, &ybot, &signal_offset))
       continue;
 
-    if (lineno == it->shrinkpulse)
+    if (lineno == this->shrinkpulse)
     {
       baseload += 0.4;
       /*bigloadchange=1;*/
-      it->shrinkpulse=-1;
+      this->shrinkpulse=-1;
     }
 
 #if 0
@@ -1287,24 +1325,24 @@ analogtv_draw(analogtv *it, double noiselevel, const std::vector<AnalogReception
       float totsignal = 0;
       for (uint32_t i = signal_offset; i < (signal_offset + ANALOGTV_PIC_LEN); i++)
       {
-        totsignal += it->rx_signal[i];
+        totsignal += this->rx_signal[i];
       }
 
-      totsignal *= it->agclevel;
-      float ncl = 0.95f * it->crtload[lineno-1] +
+      totsignal *= this->agclevel;
+      float ncl = 0.95f * this->crtload[lineno-1] +
                   0.05f*(baseload +
                         (totsignal-30000)/100000.0f +
-                        (slineno>184 ? (slineno-184)*(lineno-184)*0.001f * it->squeezebottom
+                        (slineno>184 ? (slineno-184)*(lineno-184)*0.001f * this->squeezebottom
                           : 0.0f));
-      /*diff=ncl - it->crtload[lineno];*/
+      /*diff = ncl - this->crtload[lineno];*/
       /*bigloadchange = (diff>0.01 || diff<-0.01);*/
-      it->crtload[lineno]=ncl;
+      this->crtload[lineno]=ncl;
     }
   }
 
-  cv::parallel_for_(cv::Range(ANALOGTV_TOP, ANALOGTV_BOT), [it](const cv::Range& r)
+  cv::parallel_for_(cv::Range(ANALOGTV_TOP, ANALOGTV_BOT), [this](const cv::Range& r)
   {
-    analogtv_parallel_for_draw_lines(it, r);
+    this->parallel_for_draw_lines(r);
   });
 
 #if 0
@@ -1330,26 +1368,26 @@ analogtv_draw(analogtv *it, double noiselevel, const std::vector<AnalogReception
     the y-dimension is > 2400, note ANALOGTV_MAX_LINEHEIGHT.
   */
 
-  int overall_top = (int)(it->useheight*(1-it->puheight)/2);
-  int overall_bot = (int)(it->useheight*(1+it->puheight)/2);
+  int overall_top = (int)(this->useheight*(1-this->puheight)/2);
+  int overall_bot = (int)(this->useheight*(1+this->puheight)/2);
 
   overall_top = std::max(overall_top, 0);
-  overall_bot = std::min(overall_bot, it->useheight);
+  overall_bot = std::min(overall_bot, this->useheight);
 
   if (overall_bot > overall_top)
   {
-    int screen_xo = ( it->outBuffer.cols - it->usewidth  )/2;
-    int screen_yo = ( it->outBuffer.rows - it->useheight )/2;
+    int screen_xo = ( this->outBuffer.cols - this->usewidth  )/2;
+    int screen_yo = ( this->outBuffer.rows - this->useheight )/2;
 
     int /* dest_x = screen_xo, */ dest_y = screen_yo + overall_top;
-    unsigned w = it->usewidth, h = overall_bot - overall_top;
+    unsigned w = this->usewidth, h = overall_bot - overall_top;
 
     if (screen_xo < 0)
     {
       w += screen_xo;
       screen_xo = 0;
     }
-    w = std::min((int)w, std::min(it->outBuffer.cols - screen_xo, it->image.cols));
+    w = std::min((int)w, std::min(this->outBuffer.cols - screen_xo, this->image.cols));
 
     if (dest_y < 0)
     {
@@ -1357,9 +1395,9 @@ analogtv_draw(analogtv *it, double noiselevel, const std::vector<AnalogReception
       overall_top -= dest_y;
       dest_y = 0;
     }
-    h = std::min((int)h, std::min(it->outBuffer.rows - dest_y, it->image.rows - overall_top));
+    h = std::min((int)h, std::min(this->outBuffer.rows - dest_y, this->image.rows - overall_top));
 
-    it->image(cv::Rect(0, overall_top, w, h)).copyTo(it->outBuffer(cv::Rect(screen_xo, dest_y, w, h)));
+    this->image(cv::Rect(0, overall_top, w, h)).copyTo(this->outBuffer(cv::Rect(screen_xo, dest_y, w, h)));
   }
 }
 
@@ -1399,9 +1437,9 @@ inline Color pixToColor(uint32_t p)
   return c;
 }
 
-void analogtv_load_ximage(analogtv *it, AnalogInput& input,
-                          const cv::Mat4b& pic_im, const cv::Mat4b& mask_im,
-                          int xoff, int yoff, int target_w, int target_h)
+
+void AnalogTV::load_ximage(AnalogInput& input, const cv::Mat4b& pic_im, const cv::Mat4b& mask_im,
+                           int xoff, int yoff, int target_w, int target_h)
 {
   int img_w,img_h;
   int fyx[7],fyy[7];
@@ -1417,20 +1455,20 @@ void analogtv_load_ximage(analogtv *it, AnalogInput& input,
   int y_overscan=5*ANALOGTV_SCALE; /* overscan this much top and bottom */
   int y_scanlength=ANALOGTV_VISLINES+2*y_overscan;
 
-  if (target_w > 0) x_length     = x_length     * target_w / it->outBuffer.cols;
-  if (target_h > 0) y_scanlength = y_scanlength * target_h / it->outBuffer.rows;
+  if (target_w > 0) x_length     = x_length     * target_w / this->outBuffer.cols;
+  if (target_h > 0) y_scanlength = y_scanlength * target_h / this->outBuffer.rows;
 
   img_w = pic_im.cols;
   img_h = pic_im.rows;
 
-  xoff = ANALOGTV_PIC_LEN  * xoff / it->outBuffer.cols;
-  yoff = ANALOGTV_VISLINES * yoff / it->outBuffer.rows;
+  xoff = ANALOGTV_PIC_LEN  * xoff / this->outBuffer.cols;
+  yoff = ANALOGTV_VISLINES * yoff / this->outBuffer.rows;
 
   for (int i=0; i<x_length+4; i++)
   {
-    double phase=90.0-90.0*i;
-    double ampl=1.0;
-    multiq[i]=(int)(-cos(M_PI/180.0*(phase-303)) * 4096.0 * ampl);
+    double phase = 90.0 - 90.0 * i;
+    double ampl = 1.0;
+    multiq[i] = (int)(-cos(M_PI/180.0*(phase-303)) * 4096.0 * ampl);
   }
 
   for (int y = 0; y < y_scanlength; y++)
@@ -1617,6 +1655,7 @@ analogtv_lcp_to_ntsc(double luma, double chroma, double phase, int ntsc[4])
   {
     double w=90.0*i + phase;
     double val=luma + chroma * (cos(M_PI/180.0*w));
+    //TODO: std::clamp
     if (val<0.0) val=0.0;
     if (val>127.0) val=127.0;
     ntsc[i]=(int)val;

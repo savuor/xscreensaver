@@ -80,7 +80,7 @@ struct state
   { }
 
   cv::Mat4b outBuffer, logoImg, logoMask;
-  analogtv *tv;
+  AnalogTV tv;
 
   std::vector<AnalogInput> stations;
 
@@ -155,13 +155,12 @@ static void update_smpte_colorbars(state *st, AnalogInput& input)
   if (!st->logoImg.empty())
   {
     double aspect = (double)st->outBuffer.cols / st->outBuffer.rows;
-    double scale = (aspect > 1 ? 0.35 : 0.6);
-    int w2 = st->tv->outBuffer.cols  * scale;
-    int h2 = st->tv->outBuffer.rows * scale * aspect;
-    analogtv_load_ximage (st->tv, input, st->logoImg, st->logoMask,
-                          (st->tv->outBuffer.cols - w2) / 2,
-                          st->tv->outBuffer.rows * 0.20,
-                          w2, h2);
+    double scale = aspect > 1 ? 0.35 : 0.6;
+    int w2 = st->outBuffer.cols * scale;
+    int h2 = st->outBuffer.rows * scale * aspect;
+    int xoff = (st->outBuffer.cols - w2) / 2;
+    int yoff = st->outBuffer.rows * 0.20;
+    st->tv.load_ximage(input, st->logoImg, st->logoMask, xoff, yoff, w2, h2);
   }
 }
 
@@ -269,33 +268,33 @@ static void run(Params params)
     cv::merge(std::vector<cv::Mat> {z, z, z, logoCh[3]}, st->logoMask);
   }
 
-  st->tv = analogtv_allocate(st->outBuffer);
+  st->tv.set_buffer(st->outBuffer);
 
   for (int i = 0; i < MAX_STATIONS; i++)
   {
     st->stations.push_back(AnalogInput());
   }
 
-  analogtv_set_defaults(st->tv);
+  st->tv.set_defaults();
 
   bool fixSettings = params.fixSettings;
   if (!fixSettings)
   {
     if (ya_random()%4==0)
     {
-      st->tv->tint_control += pow(ya_frand(2.0)-1.0, 7) * 180.0;
+      st->tv.tint_control += pow(ya_frand(2.0)-1.0, 7) * 180.0;
     }
     if (1)
     {
-      st->tv->color_control += ya_frand(0.3) * ((ya_random() & 1) ? 1 : -1);
+      st->tv.color_control += ya_frand(0.3) * ((ya_random() & 1) ? 1 : -1);
     }
     if (0) //if (darkp)
     {
       if (ya_random()%4==0) {
-        st->tv->brightness_control += ya_frand(0.15);
+        st->tv.brightness_control += ya_frand(0.15);
       }
       if (ya_random()%4==0) {
-        st->tv->contrast_control += ya_frand(0.2) * ((ya_random() & 1) ? 1 : -1);
+        st->tv.contrast_control += ya_frand(0.2) * ((ya_random() & 1) ? 1 : -1);
       }
     }
   }
@@ -365,7 +364,7 @@ static void run(Params params)
   curticks_sub = 0;
   channel_changes = 0;
   st->curinputi = 0;
-  st->tv->powerup = 0.0;
+  st->tv.powerup = 0.0;
 
   /* Fill all channels with images */
   Log::write(2, "initializing " + std::to_string(nFiles) + " files in " +
@@ -391,7 +390,7 @@ static void run(Params params)
 
     input.setup_sync(1, (ya_random() % 20) == 0);
 
-    analogtv_load_ximage(st->tv, input, img, cv::Mat4b(), x, y, w, h);
+    st->tv.load_ximage(input, img, cv::Mat4b(), x, y, w, h);
   }
 
   /* This is xanalogtv_draw()
@@ -414,7 +413,7 @@ static void run(Params params)
 
       stats[st->curinputi]++;
       /* Set channel change noise flag */
-      st->tv->channel_change_cycles=200000;
+      st->tv.channel_change_cycles = 200000;
 
       Log::write(2, std::to_string(curticks/1000.0) + " sec: channel " + std::to_string(st->curinputi));
 
@@ -423,27 +422,27 @@ static void run(Params params)
       {
         if (ya_random()%4==0) 
         {
-          st->tv->tint_control += pow(ya_frand(2.0)-1.0, 7) * 180.0 * ((ya_random() & 1) ? 1 : -1);
+          st->tv.tint_control += pow(ya_frand(2.0)-1.0, 7) * 180.0 * ((ya_random() & 1) ? 1 : -1);
         }
         if (1)
         {
-          st->tv->color_control += ya_frand(0.3) * ((ya_random() & 1) ? 1 : -1);
+          st->tv.color_control += ya_frand(0.3) * ((ya_random() & 1) ? 1 : -1);
         }
         if (0) //(darkp)
         {
           if (ya_random()%4==0)
           {
-            st->tv->brightness_control += ya_frand(0.15);
+            st->tv.brightness_control += ya_frand(0.15);
           }
           if (ya_random()%4==0)
           {
-            st->tv->contrast_control += ya_frand(0.2) * ((ya_random() & 1) ? 1 : -1);
+            st->tv.contrast_control += ya_frand(0.2) * ((ya_random() & 1) ? 1 : -1);
           }
         }
       }
     }
 
-    st->tv->powerup = (params.powerup ? curtime : 9999);
+    st->tv.powerup = params.powerup ? curtime : 9999;
 
     ChanSetting& curChannel = st->chanSettings[st->curinputi];
     for (size_t i = 0; i < curChannel.receptions.size(); i++)
@@ -467,7 +466,7 @@ static void run(Params params)
         rec.update();
       }
       // why so?...
-      analogtv_draw (st->tv, curChannel.noise_level, curChannel.receptions);
+      st->tv.draw(curChannel.noise_level, curChannel.receptions);
     }
 
     // Send rendered frame to outputs
@@ -485,8 +484,8 @@ static void run(Params params)
       static double ob = 9999;
       double min = -1.5;  /* Usable range is something like -0.75 to 1.0 */
       if (ob == 9999)
-        ob = st->tv->brightness_control;  /* Terrible */
-      st->tv->brightness_control = min + (ob - min) * r;
+        ob = st->tv.brightness_control;  /* Terrible */
+      st->tv.brightness_control = min + (ob - min) * r;
     }
 
     if (curtime >= duration)

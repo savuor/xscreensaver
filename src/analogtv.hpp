@@ -85,6 +85,7 @@ enum {
 
 struct AnalogInput
 {
+  //TODO: use Mat_<int8_t>
   cv::Mat sigMat;
 
   AnalogInput() : sigMat(ANALOGTV_V + 1, ANALOGTV_H, CV_8S) { }
@@ -121,7 +122,9 @@ struct AnalogReception
   The rest of this should be considered mostly opaque to the analogtv module.
  */
 
-typedef struct analogtv_s {
+struct AnalogTV
+{
+public:
 #if 0
   unsigned int onscreen_signature[ANALOGTV_V];
 #endif
@@ -193,24 +196,31 @@ typedef struct analogtv_s {
   unsigned random0, random1;
 
   float puheight;
-} analogtv;
+
+  AnalogTV();
+  void set_buffer(cv::Mat4b outBuffer);
+  void set_defaults();
+  void setup_frame();
+  void draw(double noiselevel, const std::vector<AnalogReception>& receptions);
+  void load_ximage(AnalogInput& input, const cv::Mat4b& pic_im, const cv::Mat4b& mask_im,
+                   int xoff, int yoff, int target_w, int target_h);
+
+private:
+  void  configure();
+  float puramp(float tc, float start, float over) const;
+  void  ntsc_to_yiq(int lineno, unsigned int signal_offset, int start, int end, struct analogtv_yiq_s *it_yiq) const;
+  void  sync();
+  void  setup_levels(double avgheight);
+  void  init_signal(double noiselevel, unsigned start, unsigned end);
+  void  transit_channels(const AnalogReception& rec, unsigned start, int skip);
+  void  add_signal(const AnalogReception& rec, unsigned start, unsigned end, int skip);
+  int   get_line(int lineno, int *slineno, int *ytop, int *ybot, unsigned *signal_offset) const;
+  void  blast_imagerow(const std::vector<float>& rgbf, int ytop, int ybot);
+  void  parallel_for_draw_lines(const cv::Range& r);
+};
 
 
-analogtv * analogtv_allocate(cv::Mat4b outBuffer);
-
-
-void analogtv_set_defaults(analogtv *it);
-void analogtv_setup_frame(analogtv *it);
-
-void analogtv_draw(analogtv *it, double noiselevel,
-                   const std::vector<AnalogReception>& receptions);
-
-void analogtv_load_ximage(analogtv *it, AnalogInput& input,
-                          const cv::Mat4b& pic_im, const cv::Mat4b& mask_im,
-                          int xoff, int yoff, int width, int height);
-
-void analogtv_lcp_to_ntsc(double luma, double chroma, double phase,
-                          int ntsc[4]);
+void analogtv_lcp_to_ntsc(double luma, double chroma, double phase, int ntsc[4]);
 
 /* Brightness: useful range is around -75 to 100.
    Contrast:   useful range is around 0 - 500.
