@@ -9,7 +9,7 @@ struct Output
  /**
  * @brief Currently supported are: ":highgui" and video files
  * 
- * @param s Filename or source name
+ * @param s Filename or output name
  * @param imgSize Image size to write
  * @return Output object
  */
@@ -20,6 +20,23 @@ struct Output
   virtual ~Output() { }
 };
 
+//TODO: this
+struct Source
+{
+  Source() { }
+
+  /**
+   * @brief Currently supported are: ":bars" and image files
+   * 
+   * @param s Filename or source name
+   * @return Source object
+   */
+  static std::shared_ptr<Source> create(const std::string& s);
+
+  virtual cv::Size getImageSize() = 0;
+
+  virtual ~Source() {}
+};
 
 struct Log
 {
@@ -32,7 +49,6 @@ struct Log
 
 
 cv::Mat loadImage(const std::string& fname);
-
 
 struct CmdArgument
 {
