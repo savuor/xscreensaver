@@ -191,7 +191,7 @@ static void run(Params params)
 
   unsigned long start_time = time((time_t *)0);
 
-  unsigned long curticks = 0, curticks_sub = 0;
+  unsigned long curticks = 0;
   time_t lastlog = time((time_t *)0);
   int frames_left = 0;
   int channel_changes = 0;
@@ -358,7 +358,6 @@ static void run(Params params)
     st->outputs.emplace_back(Output::create(s, outSize));
   }
 
-  curticks_sub = 0;
   channel_changes = 0;
   st->tv.powerup = 0.0;
 
@@ -492,7 +491,6 @@ static void run(Params params)
       break;
 
     curticks     += 1000/fps;
-    curticks_sub += 1000/fps;
 
     //TODO: refactor it
     unsigned long now = time((time_t *)0);
