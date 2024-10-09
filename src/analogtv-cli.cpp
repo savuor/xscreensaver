@@ -390,13 +390,14 @@ static void run(Params params)
   }
 
   std::vector<int> stats(N_CHANNELS);
+
+  int curinputi = 0;
+
   /* This is xanalogtv_draw()
    */
   while (1)
   {
     double curtime = curticks * 0.001;
-
-    int curinputi = 0;
 
     frames_left--;
     if (frames_left <= 0 &&
