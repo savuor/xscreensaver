@@ -115,7 +115,7 @@ struct AnalogReception
   double hfloss;
   double hfloss2;
 
-  void update();
+  void update(cv::RNG& rng);
 };
 
 /*
@@ -196,6 +196,8 @@ public:
   unsigned random0, random1;
 
   float puheight;
+
+  cv::RNG rng;
 
   AnalogTV();
   void set_buffer(cv::Mat4b outBuffer);

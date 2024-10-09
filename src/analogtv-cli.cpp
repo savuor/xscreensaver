@@ -178,14 +178,6 @@ static void run(Params params)
 
   int N_CHANNELS = MAX_STATIONS * 2;
 
-  //TODO: use different random
-  if (params.seed == 0)
-  {
-    auto tp = std::chrono::high_resolution_clock::now().time_since_epoch();
-    params.seed = tp.count();
-  }
-  ya_rand_init (params.seed);
-
   cv::Size outSize = params.size;
   int duration = params.duration;
 
@@ -251,6 +243,14 @@ static void run(Params params)
   state runState;
   state* st = &runState;
 
+  if (params.seed == 0)
+  {
+    auto tp = std::chrono::high_resolution_clock::now().time_since_epoch();
+    params.seed = tp.count();
+  }
+
+  st->tv.rng = cv::RNG(params.seed);
+
   st->outBuffer = cv::Mat4b(outSize);
 
   if (!params.logoFname.empty())
@@ -277,23 +277,23 @@ static void run(Params params)
   bool fixSettings = params.fixSettings;
   if (!fixSettings)
   {
-    if (ya_random()%4==0)
+    if (st->tv.rng() % 4 == 0)
     {
-      st->tv.tint_control += pow(ya_frand(2.0)-1.0, 7) * 180.0;
+      st->tv.tint_control += pow(st->tv.rng.uniform(-1.0, 1.0), 7) * 180.0;
     }
     if (1)
     {
-      st->tv.color_control += ya_frand(0.3) * ((ya_random() & 1) ? 1 : -1);
+      st->tv.color_control += st->tv.rng.uniform(0.0, 0.3) * ((st->tv.rng() & 1) ? 1 : -1);
     }
     if (0) //if (darkp)
     {
-      if (ya_random() % 4 == 0)
+      if (st->tv.rng() % 4 == 0)
       {
-        st->tv.brightness_control += ya_frand(0.15);
+        st->tv.brightness_control += st->tv.rng.uniform(0.0, 0.15);
       }
-      if (ya_random() % 4 == 0)
+      if (st->tv.rng() % 4 == 0)
       {
-        st->tv.contrast_control += ya_frand(0.2) * ((ya_random() & 1) ? 1 : -1);
+        st->tv.contrast_control += st->tv.rng.uniform(0.0, 0.2) * ((st->tv.rng() & 1) ? 1 : -1);
       }
     }
   }
@@ -310,9 +310,9 @@ static void run(Params params)
         int stationId;
         while (1)
         {
-          stationId = ya_random() % (st->stations.size());
+          stationId = st->tv.rng() % (st->stations.size());
           if (stationId != last_station) break;
-          if ((ya_random()%10)==0) break;
+          if (st->tv.rng() % 10 == 0) break;
         }
         last_station = stationId;
 
@@ -327,21 +327,21 @@ static void run(Params params)
         }
         else
         {
-          rec.level = pow(ya_frand(1.0), 3.0) * 2.0 + 0.05;
-          rec.ofs   = ya_random() % ANALOGTV_SIGNAL_LEN;
-          if (ya_random()%3)
+          rec.level = pow(st->tv.rng.uniform(0.0, 1.0), 3.0) * 2.0 + 0.05;
+          rec.ofs   = st->tv.rng() % ANALOGTV_SIGNAL_LEN;
+          if (st->tv.rng() % 3)
           {
-            rec.multipath = ya_frand(1.0);
+            rec.multipath = st->tv.rng.uniform(0.0, 1.0);
           }
           else
           {
-            rec.multipath=0.0;
+            rec.multipath = 0.0;
           }
           if (stati)
           {
             /* We only set a frequency error for ghosting stations,
               because it doesn't matter otherwise */
-            rec.freqerr = (ya_frand(2.0)-1.0) * 3.0;
+            rec.freqerr = st->tv.rng.uniform(-1.0, 1.0) * 3.0;
           }
         }
 
@@ -349,7 +349,7 @@ static void run(Params params)
         channel.stationIds.push_back(stationId);
 
         if (rec.level > 0.3) break;
-        if (ya_random()%4) break;
+        if (st->tv.rng() % 4) break;
     }
   }
 
@@ -377,13 +377,13 @@ static void run(Params params)
     int y = (outSize.height - h) / 2;
 
     int inputType = 0;
-    if (!(ya_random() % 8)) /* Some stations are colorbars */
+    if (st->tv.rng() % 8 == 0) /* Some stations are colorbars */
     {
       inputType = INPUT_BARS;
     }
     inputTypes.push_back(inputType);
 
-    input.setup_sync(1, (ya_random() % 20) == 0);
+    input.setup_sync(1, (st->tv.rng() % 20 == 0));
 
     st->tv.load_ximage(input, img, cv::Mat4b(), x, y, w, h);
   }
@@ -405,10 +405,10 @@ static void run(Params params)
       channel_changes++;
 
       /* 1 - 7 sec */
-      frames_left = fps * (1 + ya_frand(6));
+      frames_left = fps * (1 + st->tv.rng.uniform(0.0, 6.0));
 
       /* Otherwise random */
-      curinputi = 1 + (ya_random() % (N_CHANNELS - 1));
+      curinputi = 1 + (st->tv.rng() % (N_CHANNELS - 1));
 
       stats[curinputi]++;
       /* Set channel change noise flag */
@@ -417,25 +417,25 @@ static void run(Params params)
       Log::write(2, std::to_string(curticks/1000.0) + " sec: channel " + std::to_string(curinputi));
 
       /* Turn the knobs every now and then */
-      if (!fixSettings && !(ya_random() % 5))
+      if (!fixSettings && !(st->tv.rng() % 5))
       {
-        if (ya_random()%4==0) 
+        if (st->tv.rng() % 4 == 0) 
         {
-          st->tv.tint_control += pow(ya_frand(2.0)-1.0, 7) * 180.0 * ((ya_random() & 1) ? 1 : -1);
+          st->tv.tint_control += pow(st->tv.rng.uniform(-1.0, 1.0), 7) * 180.0 * ((st->tv.rng() & 1) ? 1 : -1);
         }
         if (1)
         {
-          st->tv.color_control += ya_frand(0.3) * ((ya_random() & 1) ? 1 : -1);
+          st->tv.color_control += st->tv.rng.uniform(0.0, 0.3) * ((st->tv.rng() & 1) ? 1 : -1);
         }
         if (0) //(darkp)
         {
-          if (ya_random()%4==0)
+          if (st->tv.rng() % 4 == 0)
           {
-            st->tv.brightness_control += ya_frand(0.15);
+            st->tv.brightness_control += st->tv.rng.uniform(0.0, 0.15);
           }
-          if (ya_random()%4==0)
+          if (st->tv.rng() % 4 == 0)
           {
-            st->tv.contrast_control += ya_frand(0.2) * ((ya_random() & 1) ? 1 : -1);
+            st->tv.contrast_control += st->tv.rng.uniform(0.0, 0.2) * ((st->tv.rng() & 1) ? 1 : -1);
           }
         }
       }
@@ -462,7 +462,7 @@ static void run(Params params)
       /* Noisy image */
       if (rec.input)
       {
-        rec.update();
+        rec.update(st->tv.rng);
       }
       // why so?...
       st->tv.draw(curChannel.noise_level, curChannel.receptions);

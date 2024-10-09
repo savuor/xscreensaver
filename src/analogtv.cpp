@@ -136,8 +136,8 @@ void AnalogTV::set_defaults()
   this->hashnoise_on=0;
   this->hashnoise_enable=1;
 
-  this->horiz_desync=ya_frand(10.0)-5.0;
-  this->squeezebottom=ya_frand(5.0)-1.0;
+  this->horiz_desync  = this->rng.uniform(-5.0, 5.0);
+  this->squeezebottom = this->rng.uniform(-1.0, 4.0);
 
   //TODO: make logs
 #ifdef DEBUG
@@ -308,7 +308,8 @@ AnalogTV::AnalogTV() :
   random0(),
   random1(),
 
-  puheight()
+  puheight(),
+  rng()
 {
   // float crtload[ANALOGTV_V];
 
@@ -547,10 +548,11 @@ void AnalogTV::setup_frame()
   if (this->flutter_horiz_desync)
   {
     /* Horizontal sync during vertical sync instability. */
+
     this->horiz_desync += -0.10*(this->horiz_desync-3.0) +
-                        ((int)(ya_random()&0xff)-0x80) *
-                        ((int)(ya_random()&0xff)-0x80) *
-                        ((int)(ya_random()&0xff)-0x80) * 0.000001;
+                          this->rng.uniform(-0x80, 0x80) *
+                          this->rng.uniform(-0x80, 0x80) *
+                          this->rng.uniform(-0x80, 0x80) * 0.000001;
   }
 
   /* it wasn't used
@@ -562,15 +564,15 @@ void AnalogTV::setup_frame()
   /* let's leave it to process shrinkpulse */
   if (this->hashnoise_enable && !this->hashnoise_on)
   {
-    if (ya_random()%10000 == 0)
+    if (this->rng() % 10000 == 0)
     {
       this->hashnoise_on = 1;
-      this->shrinkpulse = ya_random()%ANALOGTV_V;
+      this->shrinkpulse = this->rng() % ANALOGTV_V;
     }
   }
-  if (ya_random()%1000==0)
+  if (this->rng() % 1000 == 0)
   {
-    this->hashnoise_on=0;
+    this->hashnoise_on = 0;
   }
 
 #if 0  /* never used */
@@ -1190,8 +1192,8 @@ void AnalogTV::draw(double noiselevel, const std::vector<AnalogReception>& recep
 
   this->setup_frame();
 
-  this->random0 = ya_random();
-  this->random1 = ya_random();
+  this->random0 = this->rng();
+  this->random1 = this->rng();
 
   assert (ANALOGTV_SIGNAL_LEN % 4 == 0);
   cv::parallel_for_(cv::Range(0, ANALOGTV_SIGNAL_LEN), [this, &receptions, noiselevel](const cv::Range& r)
@@ -1615,17 +1617,17 @@ void analogtv_channel_noise(analogtv_input *it, analogtv_input *s2)
 #endif
 
 
-void AnalogReception::update()
+void AnalogReception::update(cv::RNG& rng)
 {
   if (this->multipath > 0.0)
   {
     for (int i=0; i<ANALOGTV_GHOSTFIR_LEN; i++)
     {
-      this->ghostfir2[i] += -(this->ghostfir2[i]/16.0) + this->multipath * (ya_frand(0.02)-0.01);
+      this->ghostfir2[i] += -(this->ghostfir2[i]/16.0) + this->multipath * rng.uniform(-0.01, 0.01);
     }
-    if (ya_random()%20==0)
+    if (rng() % 20 == 0)
     {
-      this->ghostfir2[ya_random()%(ANALOGTV_GHOSTFIR_LEN)] = this->multipath * (ya_frand(0.08)-0.04);
+      this->ghostfir2[rng() % ANALOGTV_GHOSTFIR_LEN] = this->multipath * rng.uniform(-0.04, 0.04);
     }
     for (int i=0; i<ANALOGTV_GHOSTFIR_LEN; i++)
     {
@@ -1634,7 +1636,7 @@ void AnalogReception::update()
 
     if (0)
     {
-      this->hfloss2 += -(this->hfloss2/16.0) + this->multipath * (ya_frand(0.08)-0.04);
+      this->hfloss2 += -(this->hfloss2/16.0) + this->multipath * rng.uniform(-0.04, 0.04);
       this->hfloss = 0.5*this->hfloss + 0.5*this->hfloss2;
     }
   }
