@@ -74,7 +74,6 @@ struct state
   logoMask(),
   tv(),
   stations(),
-  curinputi(),
   chanSettings(),
   outputs()
   { }
@@ -84,7 +83,6 @@ struct state
 
   std::vector<AnalogInput> stations;
 
-  int curinputi;
   std::vector<ChanSetting> chanSettings;
 
   std::vector<std::shared_ptr<Output>> outputs;
@@ -198,9 +196,8 @@ static void run(Params params)
   int frames_left = 0;
   int channel_changes = 0;
   int fps = 30;
+
   std::vector<cv::Mat> images;
-  cv::Mat baseImage;
-  std::vector<int> stats(N_CHANNELS);
 
   /* Load all of the input images.
    */
@@ -290,10 +287,12 @@ static void run(Params params)
     }
     if (0) //if (darkp)
     {
-      if (ya_random()%4==0) {
+      if (ya_random() % 4 == 0)
+      {
         st->tv.brightness_control += ya_frand(0.15);
       }
-      if (ya_random()%4==0) {
+      if (ya_random() % 4 == 0)
+      {
         st->tv.contrast_control += ya_frand(0.2) * ((ya_random() & 1) ? 1 : -1);
       }
     }
@@ -354,8 +353,6 @@ static void run(Params params)
     }
   }
 
-  st->curinputi = 0;
-
   for (const auto& s : params.outputs)
   {
     st->outputs.emplace_back(Output::create(s, outSize));
@@ -363,7 +360,6 @@ static void run(Params params)
 
   curticks_sub = 0;
   channel_changes = 0;
-  st->curinputi = 0;
   st->tv.powerup = 0.0;
 
   /* Fill all channels with images */
@@ -393,11 +389,14 @@ static void run(Params params)
     st->tv.load_ximage(input, img, cv::Mat4b(), x, y, w, h);
   }
 
+  std::vector<int> stats(N_CHANNELS);
   /* This is xanalogtv_draw()
    */
   while (1)
   {
     double curtime = curticks * 0.001;
+
+    int curinputi = 0;
 
     frames_left--;
     if (frames_left <= 0 &&
@@ -409,13 +408,13 @@ static void run(Params params)
       frames_left = fps * (1 + ya_frand(6));
 
       /* Otherwise random */
-      st->curinputi = 1 + (ya_random() % (N_CHANNELS - 1));
+      curinputi = 1 + (ya_random() % (N_CHANNELS - 1));
 
-      stats[st->curinputi]++;
+      stats[curinputi]++;
       /* Set channel change noise flag */
       st->tv.channel_change_cycles = 200000;
 
-      Log::write(2, std::to_string(curticks/1000.0) + " sec: channel " + std::to_string(st->curinputi));
+      Log::write(2, std::to_string(curticks/1000.0) + " sec: channel " + std::to_string(curinputi));
 
       /* Turn the knobs every now and then */
       if (!fixSettings && !(ya_random() % 5))
@@ -444,7 +443,7 @@ static void run(Params params)
 
     st->tv.powerup = params.powerup ? curtime : 9999;
 
-    ChanSetting& curChannel = st->chanSettings[st->curinputi];
+    ChanSetting& curChannel = st->chanSettings[curinputi];
     for (size_t i = 0; i < curChannel.receptions.size(); i++)
     {
       AnalogReception& rec = curChannel.receptions[i];
@@ -516,7 +515,6 @@ static void run(Params params)
   }
 
   if (Log::getVerbosity() == 1) fprintf(stderr, "\n");
-
 
   if (channel_changes == 0) channel_changes++;
 
