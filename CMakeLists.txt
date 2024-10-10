@@ -17,7 +17,6 @@ include_directories(
 add_executable(analogtv-cli
     "./src/analogtv-cli.cpp"
     "./src/analogtv.cpp"
-    "./src/yarandom.cpp"
     "./src/utils.cpp"
 )
 

@@ -72,7 +72,6 @@
 #include "precomp.hpp"
 
 #include "analogtv.hpp"
-#include "yarandom.hpp"
 #include "utils.hpp"
 
 /* #define DEBUG 1 */
