@@ -835,29 +835,26 @@ void AnalogTV::setup_levels(double avgheight)
   }
 }
 
-static void rnd_combine(unsigned *a0, unsigned *c0, unsigned a1, unsigned c1)
-{
-  *a0 = (*a0 * a1) & 0xffffffffu;
-  *c0 = (c1 + a1 * *c0) & 0xffffffffu;
-}
 
-static void rnd_seek_ac(unsigned *a, unsigned *c, unsigned dist)
+static unsigned int rnd_seek(unsigned a, unsigned c, unsigned rnd, unsigned dist)
 {
-  unsigned int a1 = *a, c1 = *c;
-  *a = 1, *c = 0;
+  unsigned int a1 = a, c1 = c;
+  a = 1, c = 0;
 
   while(dist)
   {
     if(dist & 1)
-      rnd_combine(a, c, a1, c1);
-    dist >>= 1;
-    rnd_combine(&a1, &c1, a1, c1);
-  }
-}
+    {
+        a = (a * a1) & 0xffffffffu;
+        c = (c1 + a1 * c) & 0xffffffffu;
+    }
 
-static unsigned int rnd_seek(unsigned a, unsigned c, unsigned rnd, unsigned dist)
-{
-  rnd_seek_ac(&a, &c, dist);
+    a1 = (a1 * a1) & 0xffffffffu;
+    c1 = (c1 + a1 * c1) & 0xffffffffu;
+
+    dist >>= 1;
+  }
+
   return a * rnd + c;
 }
 
