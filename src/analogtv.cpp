@@ -304,9 +304,6 @@ AnalogTV::AnalogTV() :
   rx_signal_level(),
   rx_signal(),
 
-  random0(),
-  random1(),
-
   puheight(),
   rng()
 {
@@ -864,9 +861,9 @@ static unsigned int rnd_seek(unsigned a, unsigned c, unsigned rnd, unsigned dist
   return a * rnd + c;
 }
 
-void AnalogTV::init_signal(double noiselevel, unsigned start, unsigned end)
+void AnalogTV::init_signal(double noiselevel, unsigned start, unsigned end, unsigned randVal)
 {
-  unsigned int fastrnd = rnd_seek(FASTRND_A, FASTRND_C, this->random0, start);
+  unsigned int fastrnd = rnd_seek(FASTRND_A, FASTRND_C, randVal, start);
   unsigned int fastrnd_offset;
   float nm1, nm2;
   float noisemul = sqrt(noiselevel*150)/(float)0x7fffffff;
@@ -885,7 +882,7 @@ void AnalogTV::init_signal(double noiselevel, unsigned start, unsigned end)
 }
 
 
-void AnalogTV::transit_channels(const AnalogReception& rec, unsigned start, int skip)
+void AnalogTV::transit_channels(const AnalogReception& rec, unsigned start, int skip, unsigned randVal)
 {
   signed char* signal = rec.input->sigMat.ptr<int8_t>(0);
 
@@ -898,7 +895,7 @@ void AnalogTV::transit_channels(const AnalogReception& rec, unsigned start, int 
      We don't bother with the FIR filter here
   */
 
-  unsigned int fastrnd = rnd_seek(FASTRND_A, FASTRND_C, this->random1, start);
+  unsigned int fastrnd = rnd_seek(FASTRND_A, FASTRND_C, randVal, start);
 
   const float noise_decay = 0.99995f;
   float noise_ampl = 1.3f * powf(noise_decay, start);
@@ -1188,11 +1185,11 @@ void AnalogTV::draw(double noiselevel, const std::vector<AnalogReception>& recep
 
   this->setup_frame();
 
-  this->random0 = this->rng();
-  this->random1 = this->rng();
+  unsigned randVal0 = this->rng();
+  unsigned randVal1 = this->rng();
 
   assert (ANALOGTV_SIGNAL_LEN % 4 == 0);
-  cv::parallel_for_(cv::Range(0, ANALOGTV_SIGNAL_LEN), [this, &receptions, noiselevel](const cv::Range& r)
+  cv::parallel_for_(cv::Range(0, ANALOGTV_SIGNAL_LEN), [this, &receptions, noiselevel, randVal0, randVal1](const cv::Range& r)
   {
     unsigned start  = r.start;
     unsigned finish = r.end;
@@ -1207,7 +1204,7 @@ void AnalogTV::draw(double noiselevel, const std::vector<AnalogReception>& recep
       /* (Though it doesn't seem to help much on my system.) */
       unsigned end = std::min(start + 2048, finish);
 
-      this->init_signal(noiselevel, start, end);
+      this->init_signal(noiselevel, start, end, randVal0);
 
       for (uint32_t i = 0; i < receptions.size(); ++i)
       {
@@ -1217,7 +1214,7 @@ void AnalogTV::draw(double noiselevel, const std::vector<AnalogReception>& recep
 
         if (skip > 0)
         {
-          this->transit_channels(receptions[i], start, skip);
+          this->transit_channels(receptions[i], start, skip, randVal1);
         }
         
         this->add_signal(receptions[i], start, end, skip);

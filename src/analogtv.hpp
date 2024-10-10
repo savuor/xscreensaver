@@ -192,9 +192,6 @@ public:
     double value;
   } leveltable[ANALOGTV_MAX_LINEHEIGHT+1][ANALOGTV_MAX_LINEHEIGHT+1];
 
-  /* Only valid during draw. */
-  unsigned random0, random1;
-
   float puheight;
 
   cv::RNG rng;
@@ -213,8 +210,8 @@ private:
   void  ntsc_to_yiq(int lineno, unsigned int signal_offset, int start, int end, struct analogtv_yiq_s *it_yiq) const;
   void  sync();
   void  setup_levels(double avgheight);
-  void  init_signal(double noiselevel, unsigned start, unsigned end);
-  void  transit_channels(const AnalogReception& rec, unsigned start, int skip);
+  void  init_signal(double noiselevel, unsigned start, unsigned end, unsigned randVal);
+  void  transit_channels(const AnalogReception& rec, unsigned start, int skip, unsigned randVal);
   void  add_signal(const AnalogReception& rec, unsigned start, unsigned end, int skip);
   int   get_line(int lineno, int *slineno, int *ytop, int *ybot, unsigned *signal_offset) const;
   void  blast_imagerow(const std::vector<float>& rgbf, int ytop, int ybot);
