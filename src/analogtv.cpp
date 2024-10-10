@@ -260,8 +260,8 @@ void AnalogTV::configure()
     this->useheight=hlim;
 
     //TODO: fix this behavior
-    this->xrepl = 1 + this->usewidth/640;
-    if (this->xrepl>2) this->xrepl=2;
+    this->xrepl = 1 + this->usewidth / 640;
+    this->xrepl = std::min(this->xrepl, 2);
     this->subwidth = this->usewidth / this->xrepl;
 
     this->image = cv::Mat4b(this->useheight, this->usewidth);
@@ -329,8 +329,7 @@ AnalogTV::AnalogTV() :
   for (int i = 0; i < ANALOGTV_CV_MAX; i++)
   {
     int intensity = pow(i / 256.0, 0.8) * 65535.0; /* gamma correction */
-    if (intensity > 65535)
-      intensity = 65535;
+    intensity = std::min(intensity, 65535);
     this->intensity_values[i] = intensity >> 8;
   }
 }
@@ -1001,8 +1000,7 @@ void AnalogTV::blast_imagerow(const std::vector<float>& rgbf, int ytop, int ybot
   int xrepl = this->xrepl;
 
   unsigned lineheight = ybot - ytop;
-  if (lineheight > ANALOGTV_MAX_LINEHEIGHT)
-    lineheight = ANALOGTV_MAX_LINEHEIGHT;
+  lineheight = std::min(lineheight, (unsigned)ANALOGTV_MAX_LINEHEIGHT);
 
   for (int y = ytop; y < ybot; y++)
   {
@@ -1138,10 +1136,9 @@ void AnalogTV::parallel_for_draw_lines(const cv::Range& r)
       r = (interpy + 0.948f*interpi + 0.624f*interpq) * pixbright;
       g = (interpy - 0.276f*interpi - 0.639f*interpq) * pixbright;
       b = (interpy - 1.105f*interpi + 1.729f*interpq) * pixbright;
-      //TODO: std::max
-      if (r<0.0f) r=0.0f;
-      if (g<0.0f) g=0.0f;
-      if (b<0.0f) b=0.0f;
+      r = std::max(r, 0.0f);
+      g = std::max(g, 0.0f);
+      b = std::max(b, 0.0f);
       raw_rgb[rrpIdx + 0] = r;
       raw_rgb[rrpIdx + 1] = g;
       raw_rgb[rrpIdx + 2] = b;
@@ -1552,8 +1549,7 @@ void AnalogTV::load_ximage(AnalogInput& input, const cv::Mat4b& pic_im, const cv
 
       composite = filty + ((multiq[x] * filti + multiq[x+3] * filtq)>>12);
       composite = ((composite*100)>>14) + ANALOGTV_BLACK_LEVEL;
-      if (composite>125) composite=125;
-      if (composite<0) composite=0;
+      composite = std::clamp(composite, 0, 125);
 
       sigRow[x+ANALOGTV_PIC_START+xoff] = composite;
     }
@@ -1657,9 +1653,7 @@ analogtv_lcp_to_ntsc(double luma, double chroma, double phase, int ntsc[4])
   {
     double w=90.0*i + phase;
     double val=luma + chroma * (cos(M_PI/180.0*w));
-    //TODO: std::clamp
-    if (val<0.0) val=0.0;
-    if (val>127.0) val=127.0;
+    val = std::clamp(val, 0.0, 127.0);
     ntsc[i]=(int)val;
   }
 }
