@@ -167,17 +167,6 @@ static void run(Params params)
 {
   int nFiles = params.sources.size();
 
-  /* stations should be a multiple of files, but >= 6.
-     channels should be double that. */
-  int MAX_STATIONS = 0;
-  while (MAX_STATIONS < 6)
-  {
-    MAX_STATIONS += nFiles;
-  }
-  MAX_STATIONS *= 2;
-
-  int N_CHANNELS = MAX_STATIONS * 2;
-
   cv::Size outSize = params.size;
   int duration = params.duration;
 
@@ -243,16 +232,6 @@ static void run(Params params)
   state runState;
   state* st = &runState;
 
-  if (params.seed == 0)
-  {
-    auto tp = std::chrono::high_resolution_clock::now().time_since_epoch();
-    params.seed = tp.count();
-  }
-
-  st->tv.rng = cv::RNG(params.seed);
-
-  st->outBuffer = cv::Mat4b(outSize);
-
   if (!params.logoFname.empty())
   {
     st->logoImg = loadImage(params.logoFname);
@@ -265,12 +244,17 @@ static void run(Params params)
     cv::merge(std::vector<cv::Mat> {z, z, z, logoCh[3]}, st->logoMask);
   }
 
-  st->tv.set_buffer(st->outBuffer);
-
-  for (int i = 0; i < MAX_STATIONS; i++)
+  if (params.seed == 0)
   {
-    st->stations.push_back(AnalogInput());
+    auto tp = std::chrono::high_resolution_clock::now().time_since_epoch();
+    params.seed = tp.count();
   }
+
+  st->tv.rng = cv::RNG(params.seed);
+
+  st->outBuffer = cv::Mat4b(outSize);
+
+  st->tv.set_buffer(st->outBuffer);
 
   st->tv.set_defaults();
 
@@ -296,6 +280,22 @@ static void run(Params params)
         st->tv.contrast_control += st->tv.rng.uniform(0.0, 0.2) * ((st->tv.rng() & 1) ? 1 : -1);
       }
     }
+  }
+
+  /* stations should be a multiple of files, but >= 6.
+     channels should be double that. */
+  int MAX_STATIONS = 0;
+  while (MAX_STATIONS < 6)
+  {
+    MAX_STATIONS += nFiles;
+  }
+  MAX_STATIONS *= 2;
+
+  int N_CHANNELS = MAX_STATIONS * 2;
+
+  for (int i = 0; i < MAX_STATIONS; i++)
+  {
+    st->stations.push_back(AnalogInput());
   }
 
   st->chanSettings.resize(N_CHANNELS);
