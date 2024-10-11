@@ -1438,16 +1438,6 @@ inline Color pixToColor(uint32_t p)
 void AnalogTV::load_ximage(AnalogInput& input, const cv::Mat4b& pic_im, const cv::Mat4b& mask_im,
                            int xoff, int yoff, int target_w, int target_h)
 {
-  int img_w,img_h;
-  int fyx[7],fyy[7];
-  int fix[4],fiy[4];
-  int fqx[4],fqy[4];
-  Color col1[ANALOGTV_PIC_LEN];
-  Color col2[ANALOGTV_PIC_LEN];
-  char mask[ANALOGTV_PIC_LEN];
-
-  unsigned long black = 0; /* not BlackPixelOfScreen (it->xgwa.screen); */
-
   int x_length=ANALOGTV_PIC_LEN;
   int y_overscan=5*ANALOGTV_SCALE; /* overscan this much top and bottom */
   int y_scanlength=ANALOGTV_VISLINES+2*y_overscan;
@@ -1455,8 +1445,8 @@ void AnalogTV::load_ximage(AnalogInput& input, const cv::Mat4b& pic_im, const cv
   if (target_w > 0) x_length     = x_length     * target_w / this->outBuffer.cols;
   if (target_h > 0) y_scanlength = y_scanlength * target_h / this->outBuffer.rows;
 
-  img_w = pic_im.cols;
-  img_h = pic_im.rows;
+  int img_w = pic_im.cols;
+  int img_h = pic_im.rows;
 
   xoff = ANALOGTV_PIC_LEN  * xoff / this->outBuffer.cols;
   yoff = ANALOGTV_VISLINES * yoff / this->outBuffer.rows;
@@ -1474,6 +1464,10 @@ void AnalogTV::load_ximage(AnalogInput& input, const cv::Mat4b& pic_im, const cv
     int picy1=(y*img_h                 )/y_scanlength;
     int picy2=(y*img_h + y_scanlength/2)/y_scanlength;
 
+    Color col1[ANALOGTV_PIC_LEN];
+    Color col2[ANALOGTV_PIC_LEN];
+    char mask[ANALOGTV_PIC_LEN];
+
     uint32_t* rowIm1 = (uint32_t*)(pic_im.data + picy1 * pic_im.step);
     uint32_t* rowIm2 = (uint32_t*)(pic_im.data + picy2 * pic_im.step);
     uint32_t* rowMask1 = mask_im.data ? (uint32_t*)(mask_im.data + picy1 * mask_im.step) : nullptr;
@@ -1483,11 +1477,14 @@ void AnalogTV::load_ximage(AnalogInput& input, const cv::Mat4b& pic_im, const cv
       col1[x] = pixToColor(rowIm1[picx]);
       col2[x] = pixToColor(rowIm2[picx]);
       if (rowMask1)
-        mask[x] = (rowMask1[picx] != black);
+        mask[x] = (rowMask1[picx] != 0);
       else
         mask[x] = 1;
     }
 
+    int fyx[7], fyy[7];
+    int fix[4], fiy[4];
+    int fqx[4], fqy[4];
     for (int i=0; i<7; i++) fyx[i]=fyy[i]=0;
     for (int i=0; i<4; i++) fix[i]=fiy[i]=fqx[i]=fqy[i]=0.0;
 
