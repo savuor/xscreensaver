@@ -858,22 +858,29 @@ static unsigned int rnd_seek(unsigned a, unsigned c, unsigned rnd, unsigned dist
   return a * rnd + c;
 }
 
+
+// generating uniform value from -range to range
+float getUniformSymmetrical(unsigned int& fastrnd, float range)
+{
+  unsigned int fastrnd_offset = fastrnd - 0x7fffffff;
+  float v = (fastrnd_offset <= INT_MAX ? (int)fastrnd_offset : -1 - (int)(UINT_MAX - fastrnd_offset)) * (range/(float)0x7fffffff);
+  fastrnd = (fastrnd*FASTRND_A+FASTRND_C) & 0xffffffffu;
+
+  return v;
+}
+
 void AnalogTV::init_signal(double noiselevel, unsigned start, unsigned end, unsigned randVal)
 {
   unsigned int fastrnd = rnd_seek(FASTRND_A, FASTRND_C, randVal, start);
-  unsigned int fastrnd_offset;
-  float nm1, nm2;
-  float noisemul = sqrt(noiselevel*150)/(float)0x7fffffff;
 
-  fastrnd_offset = fastrnd - 0x7fffffff;
-  nm1 = (fastrnd_offset <= INT_MAX ? (int)fastrnd_offset : -1 - (int)(UINT_MAX - fastrnd_offset)) * noisemul;
+  float noiseSize = sqrt(noiselevel*150);
 
+  float nm1 = getUniformSymmetrical(fastrnd, noiseSize);
+  float nm2;
   for (uint32_t i = start; i < end; i++)
   {
     nm2 = nm1;
-    fastrnd = (fastrnd*FASTRND_A+FASTRND_C) & 0xffffffffu;
-    fastrnd_offset = fastrnd - 0x7fffffff;
-    nm1 = (fastrnd_offset <= INT_MAX ? (int)fastrnd_offset : -1 - (int)(UINT_MAX - fastrnd_offset)) * noisemul;
+    nm1 = getUniformSymmetrical(fastrnd, noiseSize);
     this->rx_signal[i] = nm1 * nm2;
   }
 }
@@ -900,9 +907,7 @@ void AnalogTV::transit_channels(const AnalogReception& rec, unsigned start, int 
   float level = rec.level;
   for (int i = start; i < skip + (int)start; i++)
   {
-    unsigned int fastrnd_offset = fastrnd - 0x7fffffff;
-    float noise = (fastrnd_offset <= INT_MAX ? (int)fastrnd_offset : -1 - (int)(UINT_MAX - fastrnd_offset)) * (50.0f/(float)0x7fffffff);
-    fastrnd = (fastrnd*FASTRND_A+FASTRND_C) & 0xffffffffu;
+    float noise = getUniformSymmetrical(fastrnd, 50.f);
 
     int idx = (start + (unsigned)rec.ofs + i) % ANALOGTV_SIGNAL_LEN;
     this->rx_signal[i] += (float)(signal[idx]) * level * (1.0f - noise_ampl) + noise * noise_ampl;
