@@ -1445,7 +1445,7 @@ void AnalogTV::load_ximage(AnalogInput& input, const cv::Mat4b& pic_im, const cv
   Color col1[ANALOGTV_PIC_LEN];
   Color col2[ANALOGTV_PIC_LEN];
   char mask[ANALOGTV_PIC_LEN];
-  int multiq[ANALOGTV_PIC_LEN+4];
+
   unsigned long black = 0; /* not BlackPixelOfScreen (it->xgwa.screen); */
 
   int x_length=ANALOGTV_PIC_LEN;
@@ -1461,6 +1461,7 @@ void AnalogTV::load_ximage(AnalogInput& input, const cv::Mat4b& pic_im, const cv
   xoff = ANALOGTV_PIC_LEN  * xoff / this->outBuffer.cols;
   yoff = ANALOGTV_VISLINES * yoff / this->outBuffer.rows;
 
+  int multiq[ANALOGTV_PIC_LEN+4];
   for (int i=0; i<x_length+4; i++)
   {
     double phase = 90.0 - 90.0 * i;
