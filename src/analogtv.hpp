@@ -85,10 +85,9 @@ enum {
 
 struct AnalogInput
 {
-  //TODO: use Mat_<int8_t>
-  cv::Mat sigMat;
+  cv::Mat_<int8_t> sigMat;
 
-  AnalogInput() : sigMat(ANALOGTV_V + 1, ANALOGTV_H, CV_8S) { }
+  AnalogInput() : sigMat(ANALOGTV_V + 1, ANALOGTV_H) { }
 
   void setup_sync(int do_cb, int do_ssavi);
 

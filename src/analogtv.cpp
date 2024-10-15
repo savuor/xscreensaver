@@ -630,7 +630,7 @@ void AnalogInput::setup_sync(int do_cb, int do_ssavi)
   {
     int vsync = lineno >= 3 && lineno < 7;
 
-    signed char *sig = this->sigMat.ptr<int8_t>(lineno);
+    signed char *sig = this->sigMat[lineno];
 
     int i = ANALOGTV_SYNC_START;
     if (vsync)
@@ -888,7 +888,7 @@ void AnalogTV::init_signal(double noiselevel, unsigned start, unsigned end, unsi
 
 void AnalogTV::transit_channels(const AnalogReception& rec, unsigned start, int skip, unsigned randVal)
 {
-  signed char* signal = rec.input->sigMat.ptr<int8_t>(0);
+  signed char* signal = rec.input->sigMat[0];
 
   /* Do a big noisy transition. We can make the transition noise of
      high constant strength regardless of signal strength.
@@ -921,7 +921,7 @@ void AnalogTV::add_signal(const AnalogReception& rec, unsigned start, unsigned e
 {
   assert(((int)end - (int)start - skip) % 4 == 0);
 
-  signed char* signal = rec.input->sigMat.ptr<int8_t>(0);
+  signed char* signal = rec.input->sigMat[0];
   float level = rec.level;
 
   float dp[5];
@@ -1488,7 +1488,7 @@ void AnalogTV::load_ximage(AnalogInput& input, const cv::Mat4b& pic_im, const cv
     for (int i=0; i<7; i++) fyx[i]=fyy[i]=0;
     for (int i=0; i<4; i++) fix[i]=fiy[i]=fqx[i]=fqy[i]=0.0;
 
-    signed char* sigRow = input.sigMat.ptr<int8_t>(y-y_overscan+ANALOGTV_TOP+yoff);
+    signed char* sigRow = input.sigMat[y - y_overscan + ANALOGTV_TOP + yoff];
     for (int x = 0; x < x_length; x++)
     {
       int rawy,rawi,rawq;
