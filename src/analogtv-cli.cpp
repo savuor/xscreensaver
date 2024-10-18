@@ -157,7 +157,7 @@ static void update_smpte_colorbars(state *st, AnalogInput& input)
     int h2 = st->outBuffer.rows * scale * aspect;
     int xoff = (st->outBuffer.cols - w2) / 2;
     int yoff = st->outBuffer.rows * 0.20;
-    st->tv.load_ximage(input, st->logoImg, st->logoMask, xoff, yoff, w2, h2);
+    input.load_ximage(st->logoImg, st->logoMask, xoff, yoff, w2, h2, st->outBuffer.cols, st->outBuffer.rows);
   }
 }
 
@@ -384,7 +384,7 @@ static void run(Params params)
 
     input.setup_sync(1, (st->tv.rng() % 20 == 0));
 
-    st->tv.load_ximage(input, img, cv::Mat4b(), x, y, w, h);
+    input.load_ximage(img, cv::Mat4b(), x, y, w, h, outSize.width, outSize.height);
   }
 
   std::vector<int> stats(N_CHANNELS);

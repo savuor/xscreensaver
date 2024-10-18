@@ -96,6 +96,9 @@ struct AnalogInput
   void draw_solid_rel_lcp(double left, double right,
                           double top, double bot,
                           double luma, double chroma, double phase);
+
+  void load_ximage(const cv::Mat4b& pic_im, const cv::Mat4b& mask_im,
+                   int xoff, int yoff, int target_w, int target_h, int out_w, int out_h);
 };
 
 struct AnalogReception
@@ -200,8 +203,6 @@ public:
   void set_defaults();
   void setup_frame();
   void draw(double noiselevel, const std::vector<AnalogReception>& receptions);
-  void load_ximage(AnalogInput& input, const cv::Mat4b& pic_im, const cv::Mat4b& mask_im,
-                   int xoff, int yoff, int target_w, int target_h);
 
 private:
   void  configure();

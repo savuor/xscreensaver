@@ -1435,21 +1435,21 @@ inline Color pixToColor(uint32_t p)
 }
 
 
-void AnalogTV::load_ximage(AnalogInput& input, const cv::Mat4b& pic_im, const cv::Mat4b& mask_im,
-                           int xoff, int yoff, int target_w, int target_h)
+void AnalogInput::load_ximage(const cv::Mat4b& pic_im, const cv::Mat4b& mask_im,
+                              int xoff, int yoff, int target_w, int target_h, int out_w, int out_h)
 {
   int x_length=ANALOGTV_PIC_LEN;
   int y_overscan=5*ANALOGTV_SCALE; /* overscan this much top and bottom */
   int y_scanlength=ANALOGTV_VISLINES+2*y_overscan;
 
-  if (target_w > 0) x_length     = x_length     * target_w / this->outBuffer.cols;
-  if (target_h > 0) y_scanlength = y_scanlength * target_h / this->outBuffer.rows;
+  if (target_w > 0) x_length     = x_length     * target_w / out_w;
+  if (target_h > 0) y_scanlength = y_scanlength * target_h / out_h;
 
   int img_w = pic_im.cols;
   int img_h = pic_im.rows;
 
-  xoff = ANALOGTV_PIC_LEN  * xoff / this->outBuffer.cols;
-  yoff = ANALOGTV_VISLINES * yoff / this->outBuffer.rows;
+  xoff = ANALOGTV_PIC_LEN  * xoff / out_w;
+  yoff = ANALOGTV_VISLINES * yoff / out_w;
 
   int multiq[ANALOGTV_PIC_LEN+4];
   for (int i=0; i<x_length+4; i++)
@@ -1488,7 +1488,7 @@ void AnalogTV::load_ximage(AnalogInput& input, const cv::Mat4b& pic_im, const cv
     for (int i=0; i<7; i++) fyx[i]=fyy[i]=0;
     for (int i=0; i<4; i++) fix[i]=fiy[i]=fqx[i]=fqy[i]=0.0;
 
-    signed char* sigRow = input.sigMat[y - y_overscan + ANALOGTV_TOP + yoff];
+    signed char* sigRow = this->sigMat[y - y_overscan + ANALOGTV_TOP + yoff];
     for (int x = 0; x < x_length; x++)
     {
       int rawy,rawi,rawq;
