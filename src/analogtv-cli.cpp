@@ -535,7 +535,7 @@ static const std::map<std::string, CmdArgument> knownArgs =
         "length of video in secs, e.g. 60" }},
     {"powerup",
       { "",      CmdArgument::Type::BOOL, true,
-        "to run power up sequence or not" }},
+        "to run or not the power-on animation at the beginning, and fade to black at the end" }},
     {"fixsettings",
       { "",      CmdArgument::Type::BOOL, true,
         "apply less randomness to settings" }},
@@ -550,14 +550,14 @@ static const std::map<std::string, CmdArgument> knownArgs =
         "random seed to start random generator or 0 to randomize by current date and time" }},
     {"in",
       { "src1 [src2 ... srcN]", CmdArgument::Type::LIST_STRING, false,
-          "signal sources: still images, video files (not implemented yet) or special sources:\n"
-          "  * :cam0 to :cam9 are camera sources (not implemented yet)\n"
-          "  * :bars are SMPTE color bars (if it's the only image and no size is given then the output size will be 320x240)\n"
-          "    (not implemented yet)" }},
+        "signal sources: still images, video files (not implemented yet) or special sources:\n"
+        "  * :cam0 to :cam9 are camera sources (not implemented yet)\n"
+        "  * :bars are SMPTE color bars (if it's the only image and no size is given then the output size will be 320x240)\n"
+        "    (not implemented yet)" }},
     {"out",
       { "out1 [out2 ... outN]", CmdArgument::Type::LIST_STRING, false,
-          "where to output video: video files or window, output to all sources happens simultaneously\n"
-          "  * :highgui means output to window using OpenCV HighGUI module, stable FPS is not guaranteed" }}
+        "where to output video: video files or window, output to all sources happens simultaneously\n"
+        "  * :highgui means output to window using OpenCV HighGUI module, stable FPS is not guaranteed" }}
 };
 
 static const std::string message =
