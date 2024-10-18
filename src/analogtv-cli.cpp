@@ -86,12 +86,45 @@ struct state
 
   std::vector<std::shared_ptr<Output>> outputs;
 };
+struct BarsSource
+{
+  BarsSource() { }
+
+  BarsSource(cv::Size _outSize) :
+    BarsSource()
+  {
+    outSize = _outSize;
+  }
+
+  BarsSource(const cv::Mat& _logoImg, cv::Size _outSize);
+
+  void update(AnalogInput& input);
+
+  cv::Mat logoImg, logoMask;
+  cv::Size outSize;
+};
+
 
 //TODO: refactor it to something else
 const int INPUT_BARS = 1;
 
-static void update_smpte_colorbars(state *st, AnalogInput& input)
+BarsSource::BarsSource(const cv::Mat& _logoImg, cv::Size _outSize)
 {
+  outSize = _outSize;
+  logoImg = _logoImg;
+  /* Pull the alpha out of the logo and make a separate mask ximage. */
+  logoMask = cv::Mat(logoImg.size(), CV_8UC4, cv::Scalar(0));
+  std::vector<cv::Mat> logoCh;
+  cv::split(logoImg, logoCh);
+  cv::Mat z = cv::Mat(logoImg.size(), CV_8UC1, cv::Scalar(0));
+  cv::merge(std::vector<cv::Mat> {logoCh[0], logoCh[1], logoCh[2], z}, logoImg);
+  cv::merge(std::vector<cv::Mat> {z, z, z, logoCh[3]}, logoMask);
+}
+
+void BarsSource::update(AnalogInput& input)
+{
+  // original name: update_smpte_colorbars()
+
   int black_ntsc[4];
 
   /* 
@@ -149,15 +182,17 @@ static void update_smpte_colorbars(state *st, AnalogInput& input)
   input.draw_solid_rel_lcp(14.0/18.0, 15.0/18.0, 0.75, 1.00,  11,  0,   0);   /* black +4 */
   input.draw_solid_rel_lcp(  5.0/6.0,   6.0/6.0, 0.75, 1.00,   7,  0,   0);   /* black    */
 
-  if (!st->logoImg.empty())
+  if (!this->logoImg.empty())
   {
-    double aspect = (double)st->outBuffer.cols / st->outBuffer.rows;
+    int outw = this->outSize.width;
+    int outh = this->outSize.height;
+    double aspect = (double)outw / outh;
     double scale = aspect > 1 ? 0.35 : 0.6;
-    int w2 = st->outBuffer.cols * scale;
-    int h2 = st->outBuffer.rows * scale * aspect;
-    int xoff = (st->outBuffer.cols - w2) / 2;
-    int yoff = st->outBuffer.rows * 0.20;
-    input.load_ximage(st->logoImg, st->logoMask, xoff, yoff, w2, h2, st->outBuffer.cols, st->outBuffer.rows);
+    int w2 = outw * scale;
+    int h2 = outh * scale * aspect;
+    int xoff = (outw - w2) / 2;
+    int yoff = outh * 0.20;
+    input.load_ximage(this->logoImg, this->logoMask, xoff, yoff, w2, h2, outw, outh);
   }
 }
 
@@ -231,17 +266,12 @@ static void run(Params params)
   state runState;
   state* st = &runState;
 
+  cv::Mat logo;
   if (!params.logoFname.empty())
   {
-    st->logoImg = loadImage(params.logoFname);
-    /* Pull the alpha out of the logo and make a separate mask ximage. */
-    st->logoMask = cv::Mat(st->logoImg.size(), CV_8UC4, cv::Scalar(0));
-    std::vector<cv::Mat> logoCh;
-    cv::split(st->logoImg, logoCh);
-    cv::Mat z = cv::Mat(st->logoImg.size(), CV_8UC1, cv::Scalar(0));
-    cv::merge(std::vector<cv::Mat> {logoCh[0], logoCh[1], logoCh[2], z}, st->logoImg);
-    cv::merge(std::vector<cv::Mat> {z, z, z, logoCh[3]}, st->logoMask);
+    logo = loadImage(params.logoFname);
   }
+  BarsSource barsSource(logo, outSize);
 
   if (params.seed == 0)
   {
@@ -450,7 +480,7 @@ static void run(Params params)
       //TODO: refactor it
       if (inputTypes[curChannel.stationIds[i]] == INPUT_BARS)
       {
-        update_smpte_colorbars(st, *rec.input);
+        barsSource.update(*rec.input);
       }
 
       rec.ofs += rec.freqerr;
