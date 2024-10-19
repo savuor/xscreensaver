@@ -27,6 +27,7 @@
 #include "analogtv.hpp"
 #include "utils.hpp"
 #include "source.hpp"
+#include "output.hpp"
 
 #include <chrono>
 
