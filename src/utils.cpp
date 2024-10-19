@@ -48,7 +48,7 @@ cv::Mat loadImage(const std::string& fname)
     abort();
   }
 
-    Log::write(2, "loaded " + fname + " " + std::to_string(img.cols) + "x" + std::to_string(img.rows));
+  Log::write(2, "loaded " + fname + " " + std::to_string(img.cols) + "x" + std::to_string(img.rows));
 
   return cvt4;
 }
