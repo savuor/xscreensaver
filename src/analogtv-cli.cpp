@@ -67,49 +67,6 @@ struct ChanSetting
 };
 
 
-// the sources can be tuned later for different size or other params
-std::shared_ptr<Source> Source::create(const std::string& name)
-{
-  std::shared_ptr<Source> src;
-  if (name.at(0) == ':')
-  {
-      size_t at = name.find_first_of(":", 1);
-      std::string stype, arg;
-      if (at != std::string::npos)
-      {
-        stype = name.substr(1, at - 1);
-        arg = name.substr(at + 1, name.length() - at);
-      }
-      else
-      {
-        stype = name.substr(1, name.length() - 1);
-      }
-      // should be like ":bars" or ":bars:/path/to/image"
-      if (stype == "bars")
-      {
-        cv::Mat logo;
-        if (!arg.empty())
-        {
-          logo = loadImage(arg);
-        }
-        src = std::make_shared<BarsSource>(logo);
-      }
-      else
-      {
-          throw std::runtime_error("Unknown source type: " + stype);
-      }
-  }
-  else
-  {
-    //TODO: support videos
-    cv::Mat img = loadImage(name);
-    src = std::make_shared<ImageSource>(img);
-  }
-
-  return src;
-}
-
-
 cv::Size getBestSize(const std::vector<std::shared_ptr<Source>>& sources, cv::Size size)
 {
   // get best size
