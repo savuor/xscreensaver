@@ -42,7 +42,6 @@ struct Params
   bool        powerup;
   bool        fixSettings;
   cv::Size    size;
-  std::string logoFname;
 
   std::vector<std::string> sources;
   std::vector<std::string> outputs;
@@ -53,42 +52,39 @@ struct Params
 #define POWERUP_DURATION   6  /* Hardcoded in analogtv.c */
 #define POWERDOWN_DURATION 1  /* Only used here */
 
-struct ChanSetting
+//TODO: move this to separate header
+struct Source
 {
-  ChanSetting() :
-    receptions(),
-    noise_level(0)
-  { }
+  Source() { }
 
-  std::vector<AnalogReception> receptions;
-  std::vector<int> stationIds;
-  double noise_level;
+  //TODO: this
+  /**
+   * @brief Currently supported are: ":bars" and image files
+   * 
+   * @param s Filename or source name
+   * @return Source object
+   */
+  static std::shared_ptr<Source> create(const std::string& s);
+
+  virtual void update(AnalogInput& input) = 0;
+
+  virtual cv::Size getImageSize() = 0;
+
+  virtual void setOutSize(cv::Size size) = 0;
+
+  // used for images only
+  virtual void setSsavi(bool _do_ssavi) = 0;
+
+  virtual ~Source() {}
 };
 
-struct state
+struct BarsSource : Source
 {
-  state() : 
-  outBuffer(),
-  logoImg(),
-  logoMask(),
-  tv(),
-  stations(),
-  chanSettings(),
-  outputs()
+  static const cv::Size defaultSize; // 320x240
+
+  BarsSource() :
+    outSize(defaultSize) // default size
   { }
-
-  cv::Mat4b outBuffer, logoImg, logoMask;
-  AnalogTV tv;
-
-  std::vector<AnalogInput> stations;
-
-  std::vector<ChanSetting> chanSettings;
-
-  std::vector<std::shared_ptr<Output>> outputs;
-};
-struct BarsSource
-{
-  BarsSource() { }
 
   BarsSource(cv::Size _outSize) :
     BarsSource()
@@ -96,22 +92,42 @@ struct BarsSource
     outSize = _outSize;
   }
 
+  BarsSource(const cv::Mat& _logoImg) :
+    BarsSource(_logoImg, defaultSize)
+  { }
+
   BarsSource(const cv::Mat& _logoImg, cv::Size _outSize);
 
-  void update(AnalogInput& input);
+  void update(AnalogInput& input) override;
+
+  cv::Size getImageSize() override
+  {
+    return defaultSize;
+  }
+
+  void setOutSize(cv::Size _outSize) override
+  {
+    outSize = _outSize;
+  }
+
+  // used for images only
+  void setSsavi(bool _do_ssavi) override
+  { }
 
   cv::Mat logoImg, logoMask;
   cv::Size outSize;
 };
 
-
-//TODO: refactor it to something else
-const int INPUT_BARS = 1;
+const cv::Size BarsSource::defaultSize = cv::Size {320, 240};
 
 BarsSource::BarsSource(const cv::Mat& _logoImg, cv::Size _outSize)
 {
   outSize = _outSize;
   logoImg = _logoImg;
+
+  if (_logoImg.empty())
+    return;
+
   /* Pull the alpha out of the logo and make a separate mask ximage. */
   logoMask = cv::Mat(logoImg.size(), CV_8UC4, cv::Scalar(0));
   std::vector<cv::Mat> logoCh;
@@ -125,6 +141,7 @@ void BarsSource::update(AnalogInput& input)
 {
   // original name: update_smpte_colorbars()
 
+  //TODO: remove this
   int black_ntsc[4];
 
   /* 
@@ -196,13 +213,188 @@ void BarsSource::update(AnalogInput& input)
   }
 }
 
+struct ImageSource : Source
+{
+  ImageSource() :
+    outSize(),
+    img(),
+    resizedImg(),
+    do_ssavi()
+  { }
+
+  ImageSource(const cv::Mat& _img) :
+    ImageSource(_img, _img.size(), false)
+  { }
+
+  ImageSource(const cv::Mat& _img, cv::Size _outSize, bool _do_ssavi) :
+    outSize(_outSize),
+    img(_img),
+    resizedImg(_img),
+    do_ssavi(_do_ssavi)
+  { }
+
+  cv::Size getImageSize() override
+  {
+    return img.size();
+  }
+
+  void setOutSize(cv::Size _outSize) override;
+
+  void setSsavi(bool _do_ssavi) override
+  {
+    do_ssavi = _do_ssavi;
+  }
+
+  void update(AnalogInput& input) override;
+
+  cv::Size outSize;
+  cv::Mat img;
+  cv::Mat resizedImg;
+  bool do_ssavi;
+};
+
+void ImageSource::update(AnalogInput& input)
+{
+  //TODO: do not update since last time
+  int w = this->resizedImg.cols * 0.815; /* underscan */
+  int h = this->resizedImg.rows * 0.970;
+  int x = (this->outSize.width  - w) / 2;
+  int y = (this->outSize.height - h) / 2;
+
+  input.setup_sync(1, this->do_ssavi);
+
+  input.load_ximage(this->resizedImg, cv::Mat4b(), x, y, w, h, this->outSize.width, this->outSize.height);
+}
+
+void ImageSource::setOutSize(cv::Size _outSize)
+{
+  outSize = _outSize;
+
+  if (resizedImg.size() != outSize)
+  {
+    double r1 = (double) outSize.width / outSize.height;
+    double r2 = (double) resizedImg.cols / resizedImg.rows;
+    int w2, h2;
+    if (r1 > r2)
+    {
+      w2 = outSize.height * r2;
+      h2 = outSize.height;
+    }
+    else
+    {
+      w2 = outSize.width;
+      h2 = outSize.width / r2;
+    }
+    cv::resize(img, resizedImg, cv::Size(w2, h2));
+  }
+}
+
+
+struct ChanSetting
+{
+  ChanSetting() :
+    receptions(),
+    sources(),
+    noise_level(0)
+  { }
+
+  //TODO: join them into one vector
+  std::vector<AnalogReception> receptions;
+  std::vector<std::shared_ptr<Source>> sources;
+  double noise_level;
+};
+
+//TODO: remove this struct
+struct state
+{
+  state() : 
+  outBuffer(),
+  tv(),
+  chanSettings(),
+  outputs()
+  { }
+
+  cv::Mat4b outBuffer;
+  AnalogTV tv;
+
+  std::vector<ChanSetting> chanSettings;
+
+  std::vector<std::shared_ptr<Output>> outputs;
+};
+
+
+// the sources can be tuned later for different size or other params
+std::shared_ptr<Source> loadSource(const std::string& name)
+{
+  std::shared_ptr<Source> src;
+  if (name.at(0) == ':')
+  {
+      size_t at = name.find_first_of(":", 1);
+      std::string stype, arg;
+      if (at != std::string::npos)
+      {
+        stype = name.substr(1, at - 1);
+        arg = name.substr(at + 1, name.length() - at);
+      }
+      else
+      {
+        stype = name.substr(1, name.length() - 1);
+      }
+      // should be like ":bars" or ":bars:/path/to/image"
+      if (stype == "bars")
+      {
+        cv::Mat logo;
+        if (!arg.empty())
+        {
+          logo = loadImage(arg);
+        }
+        src = std::make_shared<BarsSource>(logo);
+      }
+      else
+      {
+          throw std::runtime_error("Unknown source type: " + stype);
+      }
+  }
+  else
+  {
+    //TODO: support videos
+    cv::Mat img = loadImage(name);
+    src = std::make_shared<ImageSource>(img);
+  }
+
+  return src;
+}
+
+
+cv::Size getBestSize(const std::vector<std::shared_ptr<Source>>& sources, cv::Size size)
+{
+  // get best size
+  cv::Size outSize;
+  int maxw = 0, maxh = 0;
+  for (const auto& s : sources)
+  {
+    cv::Size sz = s->getImageSize();
+    maxw = std::max(maxw, sz.width);
+    maxh = std::max(maxh, sz.height);
+  }
+  outSize = (size.empty()) ? cv::Size(maxw, maxh) : size;
+  /* can't be odd */
+  outSize.width  &= ~1;
+  outSize.height &= ~1;
+
+  return outSize;
+}
+
 
 static void run(Params params)
 {
-  int nFiles = params.sources.size();
-
-  cv::Size outSize = params.size;
   int duration = params.duration;
+
+  if (params.seed == 0)
+  {
+    auto tp = std::chrono::high_resolution_clock::now().time_since_epoch();
+    params.seed = tp.count();
+  }
 
   unsigned long start_time = time((time_t *)0);
 
@@ -212,72 +404,21 @@ static void run(Params params)
   int channel_changes = 0;
   int fps = 30;
 
-  std::vector<cv::Mat> images;
-
-  /* Load all of the input images.
-   */
-
-  int maxw = 0, maxh = 0;
-  for (int i = 0; i < nFiles; i++)
+  std::vector<std::shared_ptr<Source>> sources;
+  for (const auto& s : params.sources)
   {
-    //TODO: sources
-    std::string fname = params.sources[i];
-    cv::Mat img = loadImage(fname);
-    images.push_back(img);
-    maxw = std::max(maxw, img.cols);
-    maxh = std::max(maxh, img.rows);
+    sources.push_back(loadSource(s));
   }
 
-  if (outSize.empty())
-  {
-    outSize = cv::Size(maxw, maxh);
-  }
+  cv::Size outSize = getBestSize(sources, params.size);
 
-  /* can't be odd */
-  outSize.width  &= ~1;
-  outSize.height &= ~1;
-
-  /* Scale all of the input images to the size of the largest one, or frame.
-   */
-  for (int i = 0; i < nFiles; i++)
+  for (const auto& s : sources)
   {
-    cv::Mat img = images[i];
-    if (img.size() != outSize)
-    {
-      double r1 = (double) outSize.width / outSize.height;
-      double r2 = (double) img.cols / img.rows;
-      int w2, h2;
-      if (r1 > r2)
-        {
-          w2 = outSize.height * r2;
-          h2 = outSize.height;
-        }
-      else
-        {
-          w2 = outSize.width;
-          h2 = outSize.width / r2;
-        }
-      cv::Mat out;
-      cv::resize(img, out, cv::Size(w2, h2));
-      images[i] = out;
-    }
+    s->setOutSize(outSize);
   }
 
   state runState;
   state* st = &runState;
-
-  cv::Mat logo;
-  if (!params.logoFname.empty())
-  {
-    logo = loadImage(params.logoFname);
-  }
-  BarsSource barsSource(logo, outSize);
-
-  if (params.seed == 0)
-  {
-    auto tp = std::chrono::high_resolution_clock::now().time_since_epoch();
-    params.seed = tp.count();
-  }
 
   st->tv.rng = cv::RNG(params.seed);
 
@@ -286,6 +427,12 @@ static void run(Params params)
   st->tv.set_buffer(st->outBuffer);
 
   st->tv.set_defaults();
+
+  // randomly set ssavi (what's this? BW?) for image sources
+  for (const auto& s : sources)
+  {
+    s->setSsavi(st->tv.rng() % 20 == 0);
+  }
 
   bool fixSettings = params.fixSettings;
   if (!fixSettings)
@@ -311,21 +458,10 @@ static void run(Params params)
     }
   }
 
-  /* stations should be a multiple of files, but >= 6.
-     channels should be double that. */
-  int MAX_STATIONS = 0;
-  while (MAX_STATIONS < 6)
-  {
-    MAX_STATIONS += nFiles;
-  }
-  MAX_STATIONS *= 2;
+  int N_CHANNELS = std::max(sources.size() * 2, 6UL);
 
-  int N_CHANNELS = MAX_STATIONS * 2;
-
-  for (int i = 0; i < MAX_STATIONS; i++)
-  {
-    st->stations.push_back(AnalogInput());
-  }
+  Log::write(2, "initializing " + std::to_string(sources.size()) + " sources in " +
+                std::to_string(N_CHANNELS) + " channels");
 
   st->chanSettings.resize(N_CHANNELS);
   for (int i = 0; i < N_CHANNELS; i++)
@@ -339,14 +475,16 @@ static void run(Params params)
         int stationId;
         while (1)
         {
-          stationId = st->tv.rng() % (st->stations.size());
+          stationId = st->tv.rng() % (sources.size());
+          // don't do ghost reception with the same station...
           if (stationId != last_station) break;
+          // ...at least too often
           if (st->tv.rng() % 10 == 0) break;
         }
         last_station = stationId;
+        std::shared_ptr<Source> source = sources[stationId];
 
         AnalogReception rec;
-        rec.input = &st->stations[stationId];
         if (fixSettings)
         {
           rec.level = 0.3;
@@ -375,7 +513,7 @@ static void run(Params params)
         }
 
         channel.receptions.push_back(rec);
-        channel.stationIds.push_back(stationId);
+        channel.sources.push_back(source);
 
         if (rec.level > 0.3) break;
         if (st->tv.rng() % 4) break;
@@ -389,33 +527,6 @@ static void run(Params params)
 
   channel_changes = 0;
   st->tv.powerup = 0.0;
-
-  /* Fill all channels with images */
-  Log::write(2, "initializing " + std::to_string(nFiles) + " files in " +
-                std::to_string(MAX_STATIONS) + " channels");
-
-  std::vector<int> inputTypes;
-  for (int i = 0; i < MAX_STATIONS; i++)
-  {
-    const cv::Mat& img = images[i % nFiles];
-    AnalogInput& input = st->stations[i];
-
-    int w = img.cols * 0.815; /* underscan */
-    int h = img.rows * 0.970;
-    int x = (outSize.width  - w) / 2;
-    int y = (outSize.height - h) / 2;
-
-    int inputType = 0;
-    if (st->tv.rng() % 8 == 0) /* Some stations are colorbars */
-    {
-      inputType = INPUT_BARS;
-    }
-    inputTypes.push_back(inputType);
-
-    input.setup_sync(1, (st->tv.rng() % 20 == 0));
-
-    input.load_ximage(img, cv::Mat4b(), x, y, w, h, outSize.width, outSize.height);
-  }
 
   std::vector<int> stats(N_CHANNELS);
 
@@ -476,23 +587,19 @@ static void run(Params params)
     for (size_t i = 0; i < curChannel.receptions.size(); i++)
     {
       AnalogReception& rec = curChannel.receptions[i];
-      if (!rec.input) continue;
-      //TODO: refactor it
-      if (inputTypes[curChannel.stationIds[i]] == INPUT_BARS)
-      {
-        barsSource.update(*rec.input);
-      }
+      std::shared_ptr<Source> src = curChannel.sources[i];
+
+      src->update(rec.input);
 
       rec.ofs += rec.freqerr;
     }
 
-    for (AnalogReception& rec : curChannel.receptions)
+    for (size_t i = 0; i < curChannel.receptions.size(); i++)
     {
+      AnalogReception& rec = curChannel.receptions[i];
+      std::shared_ptr<Source> src = curChannel.sources[i];
       /* Noisy image */
-      if (rec.input)
-      {
-        rec.update(st->tv.rng);
-      }
+      rec.update(st->tv.rng);
       // why so?...
       st->tv.draw(curChannel.noise_level, curChannel.receptions);
     }
@@ -572,9 +679,6 @@ static const std::map<std::string, CmdArgument> knownArgs =
     {"size",
       { "width height", CmdArgument::Type::LIST_INT, true,
         "use different size than maximum of given images" }},
-    {"logo",
-      { "file",  CmdArgument::Type::STRING, true,
-        "logo image to display over color bars" }},
     {"seed",
       { "value", CmdArgument::Type::INT, true,
         "random seed to start random generator or 0 to randomize by current date and time" }},
@@ -583,7 +687,7 @@ static const std::map<std::string, CmdArgument> knownArgs =
         "signal sources: still images, video files (not implemented yet) or special sources:\n"
         "  * :cam0 to :cam9 are camera sources (not implemented yet)\n"
         "  * :bars are SMPTE color bars (if it's the only image and no size is given then the output size will be 320x240)\n"
-        "    (not implemented yet)" }},
+        "  * :bars:/path/to/image is the as above with an overlaid station logo" }},
     {"out",
       { "out1 [out2 ... outN]", CmdArgument::Type::LIST_STRING, false,
         "where to output video: video files or window, output to all sources happens simultaneously\n"
@@ -642,12 +746,6 @@ std::optional<Params> parseParams(int args, char** argv)
       std::cout << "Image size should be bigger than 64x64" << std::endl;
       return { };
     }
-  }
-
-  p.logoFname = "";
-  if (usedArgs.count("logo"))
-  {
-    p.logoFname = std::get<std::string>(usedArgs.at("logo"));
   }
 
   p.seed = 0;
