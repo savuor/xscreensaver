@@ -57,7 +57,6 @@ struct Source
 {
   Source() { }
 
-  //TODO: this
   /**
    * @brief Currently supported are: ":bars" and image files
    * 
@@ -324,7 +323,7 @@ struct state
 
 
 // the sources can be tuned later for different size or other params
-std::shared_ptr<Source> loadSource(const std::string& name)
+std::shared_ptr<Source> Source::create(const std::string& name)
 {
   std::shared_ptr<Source> src;
   if (name.at(0) == ':')
@@ -407,7 +406,7 @@ static void run(Params params)
   std::vector<std::shared_ptr<Source>> sources;
   for (const auto& s : params.sources)
   {
-    sources.push_back(loadSource(s));
+    sources.push_back(Source::create(s));
   }
 
   cv::Size outSize = getBestSize(sources, params.size);
