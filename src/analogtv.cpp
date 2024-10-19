@@ -888,7 +888,7 @@ void AnalogTV::init_signal(double noiselevel, unsigned start, unsigned end, unsi
 
 void AnalogTV::transit_channels(const AnalogReception& rec, unsigned start, int skip, unsigned randVal)
 {
-  signed char* signal = rec.input->sigMat[0];
+  const signed char* signal = rec.input.sigMat[0];
 
   /* Do a big noisy transition. We can make the transition noise of
      high constant strength regardless of signal strength.
@@ -921,7 +921,7 @@ void AnalogTV::add_signal(const AnalogReception& rec, unsigned start, unsigned e
 {
   assert(((int)end - (int)start - skip) % 4 == 0);
 
-  signed char* signal = rec.input->sigMat[0];
+  const signed char* signal = rec.input.sigMat[0];
   float level = rec.level;
 
   float dp[5];
@@ -1182,7 +1182,7 @@ void AnalogTV::draw(double noiselevel, const std::vector<AnalogReception>& recep
                                         rec.ghostfir[2] + rec.ghostfir[3]))));
 
     /* duplicate the first line into the Nth line to ease wraparound computation */
-    rec.input->sigMat.row(0).copyTo(rec.input->sigMat.row(ANALOGTV_V));
+    rec.input.sigMat.row(0).copyTo(rec.input.sigMat.row(ANALOGTV_V));
   }
 
   this->setup_frame();

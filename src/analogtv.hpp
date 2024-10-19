@@ -103,8 +103,7 @@ struct AnalogInput
 
 struct AnalogReception
 {
-  //TODO: refactor it
-  AnalogInput* input;
+  AnalogInput input;
 
   double ofs;
   double level;
