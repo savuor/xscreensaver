@@ -3,52 +3,50 @@
 #include "source.hpp"
 
 #include <opencv2/imgproc.hpp>
+#include <opencv2/videoio.hpp>
 
 namespace atv
 {
 
-// the sources can be tuned later for different size or other params
-std::shared_ptr<Source> Source::create(const std::string& name)
+struct BarsSource : Source
 {
-  std::shared_ptr<Source> src;
-  if (name.at(0) == ':')
+  static const cv::Size defaultSize; // 320x240
+
+  BarsSource()
   {
-    //TODO: split string by ":"
-    size_t at = name.find_first_of(":", 1);
-    std::string stype, arg;
-    if (at != std::string::npos)
-    {
-      stype = name.substr(1, at - 1);
-      arg = name.substr(at + 1, name.length() - at);
-    }
-    else
-    {
-      stype = name.substr(1, name.length() - 1);
-    }
-    // should be like ":bars" or ":bars:/path/to/image"
-    if (stype == "bars")
-    {
-      cv::Mat logo;
-      if (!arg.empty())
-      {
-        logo = loadImage(arg);
-      }
-      src = std::make_shared<BarsSource>(logo);
-    }
-    else
-    {
-        throw std::runtime_error("Unknown source type: " + stype);
-    }
-  }
-  else
-  {
-    //TODO: support videos
-    cv::Mat img = loadImage(name);
-    src = std::make_shared<ImageSource>(img);
+    Source::outSize = defaultSize;
   }
 
-  return src;
-}
+  BarsSource(cv::Size _outSize) :
+    BarsSource()
+  {
+    outSize = _outSize;
+  }
+
+  BarsSource(const cv::Mat& _logoImg) :
+    BarsSource(_logoImg, defaultSize)
+  { }
+
+  BarsSource(const cv::Mat& _logoImg, cv::Size _outSize);
+
+  void update(AnalogInput& input) override;
+
+  cv::Size getImageSize() override
+  {
+    return defaultSize;
+  }
+
+  void setOutSize(cv::Size _outSize) override
+  {
+    outSize = _outSize;
+  }
+
+  // used for images only
+  void setSsavi(bool _do_ssavi) override
+  { }
+
+  cv::Mat logoImg, logoMask;
+};
 
 const cv::Size BarsSource::defaultSize = cv::Size {320, 240};
 
@@ -142,6 +140,45 @@ void BarsSource::update(AnalogInput& input)
 }
 
 
+struct ImageSource : Source
+{
+  ImageSource() :
+    img(),
+    resizedImg(),
+    do_ssavi()
+  { }
+
+  ImageSource(const cv::Mat& _img) :
+    ImageSource(_img, _img.size(), false)
+  { }
+
+  ImageSource(const cv::Mat& _img, cv::Size _outSize, bool _do_ssavi) :
+    img(_img),
+    resizedImg(_img),
+    do_ssavi(_do_ssavi)
+  {
+    Source::outSize = _outSize;
+  }
+
+  cv::Size getImageSize() override
+  {
+    return img.size();
+  }
+
+  void setOutSize(cv::Size _outSize) override;
+
+  void setSsavi(bool _do_ssavi) override
+  {
+    do_ssavi = _do_ssavi;
+  }
+
+  void update(AnalogInput& input) override;
+
+  cv::Mat img;
+  cv::Mat resizedImg;
+  bool do_ssavi;
+};
+
 void ImageSource::update(AnalogInput& input)
 {
   //TODO: do not update since last time
@@ -156,27 +193,163 @@ void ImageSource::update(AnalogInput& input)
 }
 
 
+cv::Size fitSize(cv::Size imgSize, cv::Size outSize)
+{
+  double r1 = (double) outSize.width / outSize.height;
+  double r2 = (double) imgSize.width / imgSize.height;
+  cv::Size sz;
+  if (r1 > r2)
+  {
+    sz = { (int)(outSize.height * r2), outSize.height };
+  }
+  else
+  {
+    sz = { outSize.width, (int)(outSize.width / r2) };
+  }
+  return sz;
+}
+
+
 void ImageSource::setOutSize(cv::Size _outSize)
 {
   outSize = _outSize;
 
   if (resizedImg.size() != outSize)
   {
-    double r1 = (double) outSize.width / outSize.height;
-    double r2 = (double) resizedImg.cols / resizedImg.rows;
-    int w2, h2;
-    if (r1 > r2)
+    cv::Size fs = fitSize(resizedImg.size(), outSize);
+    cv::resize(img, resizedImg, fs);
+  }
+}
+
+struct CamSource : Source
+{
+  CamSource() :
+    frameSize()
+  { }
+
+  CamSource(int nCam);
+
+  void update(AnalogInput& input) override;
+
+  cv::Size getImageSize() override
+  {
+    return frameSize;
+  }
+
+  void setOutSize(cv::Size size) override;
+
+  // used for images only
+  void setSsavi(bool _do_ssavi) override { }
+
+  cv::Size frameSize, fittedSize;
+  cv::VideoCapture cap;
+};
+
+
+CamSource::CamSource(int nCam)
+{
+  if (!cap.open(nCam))
+  {
+    throw std::runtime_error("Failed to open VideoWriter");
+  }
+
+  frameSize = { (int)cap.get(cv::CAP_PROP_FRAME_WIDTH), (int)cap.get(cv::CAP_PROP_FRAME_HEIGHT)};
+  fittedSize = frameSize;
+
+  Log::write(2, "opened cam #" + std::to_string(nCam) + " " + std::to_string(frameSize.width) + "x" + std::to_string(frameSize.height));
+}
+
+
+void CamSource::setOutSize(cv::Size _outSize)
+{
+  outSize = _outSize;
+
+  if (fittedSize != outSize)
+  {
+    fittedSize = fitSize(frameSize, outSize);
+  }
+}
+
+
+void CamSource::update(AnalogInput& input)
+{
+  cv::Mat frame, prepared;
+
+  cap >> frame;
+
+  if (frame.empty())
+  {
+    prepared = cv::Mat(fittedSize, CV_8UC4, cv::Scalar(128, 64, 0));
+
+    cv::putText(prepared, "no frame :(", {120, fittedSize.height / 2}, cv::FONT_HERSHEY_SIMPLEX, 5.0, cv::Scalar::all(255), 6);
+  }
+  else
+  {
+    cv::Mat resized;
+    cv::resize(frame, resized, fittedSize);
+    std::vector<cv::Mat> ch;
+    cv::split(resized, ch);
+    cv::Mat z = cv::Mat(fittedSize, CV_8UC1, cv::Scalar(0));
+    cv::merge(std::vector<cv::Mat> {ch[0], ch[1], ch[2], z}, prepared);
+  }
+
+  int w = fittedSize.width  * 0.815; /* underscan */
+  int h = fittedSize.height * 0.970;
+  int x = (this->outSize.width  - w) / 2;
+  int y = (this->outSize.height - h) / 2;
+
+  input.setup_sync(1, 0);
+
+  input.load_ximage(prepared, cv::Mat4b(), x, y, w, h, this->outSize.width, this->outSize.height);
+}
+
+
+// the sources can be tuned later for different size or other params
+std::shared_ptr<Source> Source::create(const std::string& name)
+{
+  std::shared_ptr<Source> src;
+  if (name.at(0) == ':')
+  {
+    //TODO: split string by ":"
+    size_t at = name.find_first_of(":", 1);
+    std::string stype, arg;
+    if (at != std::string::npos)
     {
-      w2 = outSize.height * r2;
-      h2 = outSize.height;
+      stype = name.substr(1, at - 1);
+      arg = name.substr(at + 1, name.length() - at);
     }
     else
     {
-      w2 = outSize.width;
-      h2 = outSize.width / r2;
+      stype = name.substr(1, name.length() - 1);
     }
-    cv::resize(img, resizedImg, cv::Size(w2, h2));
+    // should be like ":bars" or ":bars:/path/to/image"
+    if (stype == "bars")
+    {
+      cv::Mat logo;
+      if (!arg.empty())
+      {
+        logo = loadImage(arg);
+      }
+      src = std::make_shared<BarsSource>(logo);
+    }
+    else if (stype == "cam")
+    {
+      int nCam = arg.empty() ? 0 : parseInt(arg).value_or(0);
+      src = std::make_shared<CamSource>(nCam);
+    }
+    else
+    {
+        throw std::runtime_error("Unknown source type: " + stype);
+    }
   }
+  else
+  {
+    //TODO: support videos
+    cv::Mat img = loadImage(name);
+    src = std::make_shared<ImageSource>(img);
+  }
+
+  return src;
 }
 
 } // ::atv

@@ -382,7 +382,7 @@ static const std::map<std::string, atv::CmdArgument> knownArgs =
     {"in",
       { "src1 [src2 ... srcN]", atv::CmdArgument::Type::LIST_STRING, false,
         "signal sources: still images, video files (not implemented yet) or special sources:\n"
-        "  * :cam0 to :cam9 are camera sources (not implemented yet)\n"
+        "  * :cam:0 to :cam:9 are camera sources\n"
         "  * :bars are SMPTE color bars (if it's the only image and no size is given then the output size will be 320x240)\n"
         "  * :bars:/path/to/image is the as above with an overlaid station logo" }},
     {"out",

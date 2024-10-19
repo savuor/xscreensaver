@@ -35,7 +35,7 @@
 					"--in", "~/Pictures/90s/*",
 							":bars:/home/savuor/code/xscreensaver/hacks/images/amiga.png",
 							":bars:/home/savuor/Pictures/ort.png",
-							":bars:/home/savuor/Pictures/random_logo_small.png",
+							":cam:0",
 					"--out", "~/Videos/90s.mp4", ":highgui",
 						],
 				"stopAtEntry": false,
