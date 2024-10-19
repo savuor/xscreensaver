@@ -17,6 +17,8 @@ struct Log
 
 cv::Mat loadImage(const std::string& fname);
 
+std::optional<int> parseInt(const std::string &s);
+
 struct CmdArgument
 {
   enum class Type
