@@ -1,5 +1,6 @@
+# Analog TV emulator
 
-This repo contains a tool that shows images or videos like they are on an old TV screen.
+This repo contains a tool that shows images or videos like they are on an old TV screen. NTSC standard is emulated, interlacing is not used.
 
 It's based on a tool called `analogtv-cli` from [XScreensaver](https://www.jwz.org/xscreensaver/) stripped to the minimum.
 The original code is written by [Trevor Blackwell](https://tlb.org/), [Jamie Zawinski](https://jwz.org/) and the team.
@@ -9,20 +10,26 @@ It imitates old TV so well that I always wanted to have this as a filter.
 OpenCV is used just for video I/O, image loading and memory management.
 wxWidgets will be used for GUI.
 
-Build:
+### How to build
 * Get OpenCV, wxWidgets and CMake
 * Run CMake with the flags:
   - `-DOpenCV_DIR=<path_to_OpenCV_installation>`
   - `-DwxWidgets_DIR=<path_to_wxWidgets_installation>`
 * Build it
 
-TODO:
+### How to run
+* Provide several signal sources, several outputs (they will get the same frames) and some other parameters
+* Example:
+  ```
+  analogtv-cli --duration 60 --powerup --size 1280 1024 --in image.png :bars:logo.png :cam:0 --out video.mp4 :highgui
+  ```
+* For more details, see command line help
+
+### TODO
 * make some kind of GUI to switch channels and rotate knobs
-* rewrite non-calculating code to proper c++
-* fix channel issue
 * transform this code to a platform-independent shader-like filter
 
-Copyright notice:
+### Copyright notice
 
 xscreensaver, Copyright (c) 1992-2014 Jamie Zawinski <jwz@jwz.org>
 
