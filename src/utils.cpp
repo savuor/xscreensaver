@@ -4,6 +4,8 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
 
+namespace atv
+{
 
 // I/O
 
@@ -292,3 +294,4 @@ void Log::write(int level, const std::string& s)
     }
 }
 
+} // ::atv

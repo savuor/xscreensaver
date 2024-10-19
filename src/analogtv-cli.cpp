@@ -62,13 +62,13 @@ struct ChanSetting
   { }
 
   //TODO: join them into one vector
-  std::vector<AnalogReception> receptions;
-  std::vector<std::shared_ptr<Source>> sources;
+  std::vector<atv::AnalogReception> receptions;
+  std::vector<std::shared_ptr<atv::Source>> sources;
   double noise_level;
 };
 
 
-cv::Size getBestSize(const std::vector<std::shared_ptr<Source>>& sources, cv::Size size)
+cv::Size getBestSize(const std::vector<std::shared_ptr<atv::Source>>& sources, cv::Size size)
 {
   // get best size
   cv::Size outSize;
@@ -108,10 +108,10 @@ static void run(Params params)
   int channel_changes = 0;
   int fps = 30;
 
-  std::vector<std::shared_ptr<Source>> sources;
+  std::vector<std::shared_ptr<atv::Source>> sources;
   for (const auto& s : params.sources)
   {
-    sources.push_back(Source::create(s));
+    sources.push_back(atv::Source::create(s));
   }
 
   cv::Size outSize = getBestSize(sources, params.size);
@@ -125,13 +125,13 @@ static void run(Params params)
 
   cv::Mat4b outBuffer = cv::Mat4b(outSize);
 
-  std::vector<std::shared_ptr<Output>> outputs;
+  std::vector<std::shared_ptr<atv::Output>> outputs;
   for (const auto& s : params.outputs)
   {
-    outputs.emplace_back(Output::create(s, outSize));
+    outputs.emplace_back(atv::Output::create(s, outSize));
   }
 
-  AnalogTV tv(seed);
+  atv::AnalogTV tv(seed);
   tv.set_buffer(outBuffer);
   tv.set_defaults();
 
@@ -161,8 +161,8 @@ static void run(Params params)
 
   int N_CHANNELS = std::max(sources.size() * 2, 6UL);
 
-  Log::write(2, "initializing " + std::to_string(sources.size()) + " sources in " +
-                std::to_string(N_CHANNELS) + " channels");
+  atv::Log::write(2, "initializing " + std::to_string(sources.size()) + " sources in " +
+                  std::to_string(N_CHANNELS) + " channels");
 
   std::vector<ChanSetting> chanSettings;
   chanSettings.resize(N_CHANNELS);
@@ -184,9 +184,9 @@ static void run(Params params)
           if (rng() % 10 == 0) break;
         }
         last_station = stationId;
-        std::shared_ptr<Source> source = sources[stationId];
+        std::shared_ptr<atv::Source> source = sources[stationId];
 
-        AnalogReception rec;
+        atv::AnalogReception rec;
         if (fixSettings)
         {
           rec.level = 0.3;
@@ -197,7 +197,7 @@ static void run(Params params)
         else
         {
           rec.level = pow(rng.uniform(0.0, 1.0), 3.0) * 2.0 + 0.05;
-          rec.ofs   = rng() % ANALOGTV_SIGNAL_LEN;
+          rec.ofs   = rng() % atv::ANALOGTV_SIGNAL_LEN;
           if (rng() % 3)
           {
             rec.multipath = rng.uniform(0.0, 1.0);
@@ -251,7 +251,7 @@ static void run(Params params)
       /* Set channel change noise flag */
       tv.channel_change_cycles = 200000;
 
-      Log::write(2, std::to_string(curticks/1000.0) + " sec: channel " + std::to_string(curinputi));
+      atv::Log::write(2, std::to_string(curticks/1000.0) + " sec: channel " + std::to_string(curinputi));
 
       /* Turn the knobs every now and then */
       if (!fixSettings && !(rng() % 5))
@@ -283,8 +283,8 @@ static void run(Params params)
     ChanSetting& curChannel = chanSettings[curinputi];
     for (size_t i = 0; i < curChannel.receptions.size(); i++)
     {
-      AnalogReception& rec = curChannel.receptions[i];
-      std::shared_ptr<Source> src = curChannel.sources[i];
+      atv::AnalogReception& rec = curChannel.receptions[i];
+      std::shared_ptr<atv::Source> src = curChannel.sources[i];
 
       src->update(rec.input);
 
@@ -293,8 +293,8 @@ static void run(Params params)
 
     for (size_t i = 0; i < curChannel.receptions.size(); i++)
     {
-      AnalogReception& rec = curChannel.receptions[i];
-      std::shared_ptr<Source> src = curChannel.sources[i];
+      atv::AnalogReception& rec = curChannel.receptions[i];
+      std::shared_ptr<atv::Source> src = curChannel.sources[i];
       /* Noisy image */
       rec.update(rng);
       // why so?...
@@ -327,7 +327,7 @@ static void run(Params params)
 
     //TODO: refactor it
     unsigned long now = time((time_t *)0);
-    if (now > (unsigned int)(Log::getVerbosity() == 1 ? lastlog : lastlog + 10))
+    if (now > (unsigned int)(atv::Log::getVerbosity() == 1 ? lastlog : lastlog + 10))
     {
       unsigned long elapsed = now - start_time;
         double ratio = curtime / (double) duration;
@@ -336,57 +336,57 @@ static void run(Params params)
         int cols = 47;
         std::string dots(cols * ratio, '.');
         fprintf (stderr, "%sprocessing%s %2d%%, %d:%02d:%02d ETA%s",
-                 (Log::getVerbosity() == 1 ? "\r" : ""),
+                 (atv::Log::getVerbosity() == 1 ? "\r" : ""),
                  dots.c_str(), percent, 
                  (remaining/60/60),
                  (remaining/60)%60,
                  remaining%60,
-                 (Log::getVerbosity() == 1 ? "" : "\n"));
+                 (atv::Log::getVerbosity() == 1 ? "" : "\n"));
         lastlog = now;
     }
   }
 
-  if (Log::getVerbosity() == 1) fprintf(stderr, "\n");
+  if (atv::Log::getVerbosity() == 1) fprintf(stderr, "\n");
 
   if (channel_changes == 0) channel_changes++;
 
-  Log::write(2, "channels shown: " + std::to_string(channel_changes));
+  atv::Log::write(2, "channels shown: " + std::to_string(channel_changes));
   for (int i = 0; i < N_CHANNELS; i++)
   {
-    Log::write(2, "  " + std::to_string(i+1) + ":  " + std::to_string(stats[i] * 100 / channel_changes));
+    atv::Log::write(2, "  " + std::to_string(i+1) + ":  " + std::to_string(stats[i] * 100 / channel_changes));
   }
 }
 
 
-static const std::map<std::string, CmdArgument> knownArgs =
+static const std::map<std::string, atv::CmdArgument> knownArgs =
 {
     // name, exampleArgs, type, optional, help
     {"verbose",
-      { "n",     CmdArgument::Type::INT,  true,
+      { "n",     atv::CmdArgument::Type::INT,  true,
         "level of verbosity from 0 to 5" }},
     {"duration",
-      { "secs",  CmdArgument::Type::INT,  false,
+      { "secs",  atv::CmdArgument::Type::INT,  false,
         "length of video in secs, e.g. 60" }},
     {"powerup",
-      { "",      CmdArgument::Type::BOOL, true,
+      { "",      atv::CmdArgument::Type::BOOL, true,
         "to run or not the power-on animation at the beginning, and fade to black at the end" }},
     {"fixsettings",
-      { "",      CmdArgument::Type::BOOL, true,
+      { "",      atv::CmdArgument::Type::BOOL, true,
         "apply less randomness to settings" }},
     {"size",
-      { "width height", CmdArgument::Type::LIST_INT, true,
+      { "width height", atv::CmdArgument::Type::LIST_INT, true,
         "use different size than maximum of given images" }},
     {"seed",
-      { "value", CmdArgument::Type::INT, true,
+      { "value", atv::CmdArgument::Type::INT, true,
         "random seed to start random generator or 0 to randomize by current date and time" }},
     {"in",
-      { "src1 [src2 ... srcN]", CmdArgument::Type::LIST_STRING, false,
+      { "src1 [src2 ... srcN]", atv::CmdArgument::Type::LIST_STRING, false,
         "signal sources: still images, video files (not implemented yet) or special sources:\n"
         "  * :cam0 to :cam9 are camera sources (not implemented yet)\n"
         "  * :bars are SMPTE color bars (if it's the only image and no size is given then the output size will be 320x240)\n"
         "  * :bars:/path/to/image is the as above with an overlaid station logo" }},
     {"out",
-      { "out1 [out2 ... outN]", CmdArgument::Type::LIST_STRING, false,
+      { "out1 [out2 ... outN]", atv::CmdArgument::Type::LIST_STRING, false,
         "where to output video: video files or window, output to all sources happens simultaneously\n"
         "  * :highgui means output to window using OpenCV HighGUI module, stable FPS is not guaranteed" }}
 };
@@ -399,7 +399,7 @@ static const std::string message =
 
 std::optional<Params> parseParams(int args, char** argv)
 {
-  std::map<std::string, ArgType> usedArgs = parseCmdArgs(knownArgs, args, argv);
+  std::map<std::string, atv::ArgType> usedArgs = atv::parseCmdArgs(knownArgs, args, argv);
   if (usedArgs.empty())
   {
     return { };
@@ -467,8 +467,8 @@ int main (int argc, char **argv)
     return -1;
   }
 
-  Log::setProgName(progName);
-  Log::setVerbosity(oparams.value().verbosity);
+  atv::Log::setProgName(progName);
+  atv::Log::setVerbosity(oparams.value().verbosity);
 
   // Check that wxWidgets builds and works
   wxPuts(wxT("TODO: implement a real GUI instead"));

@@ -2,6 +2,9 @@
 
 #include "precomp.hpp"
 
+namespace atv
+{
+
 struct Log
 {
     // TODO: variadic
@@ -53,3 +56,5 @@ typedef std::variant<bool, int, std::string, std::vector<int>, std::vector<std::
 std::map<std::string, ArgType> parseCmdArgs(const std::map<std::string, CmdArgument>& knownArgs, int nArgs, char** argv);
 
 void showUsage(const std::string& message, const std::string& appName, const std::map<std::string, CmdArgument>& knownArgs);
+
+} // ::atv

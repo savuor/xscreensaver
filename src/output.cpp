@@ -7,6 +7,9 @@
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
 
+namespace atv
+{
+
 // Output classes
 
 struct HighguiOutput : Output
@@ -89,3 +92,5 @@ std::shared_ptr<Output> Output::create(const std::string &s, cv::Size imgSize)
         return std::make_shared<VideoOutput>(s, imgSize);
     }
 }
+
+} // ::atv

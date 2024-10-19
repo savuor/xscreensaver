@@ -74,6 +74,9 @@
 #include "analogtv.hpp"
 #include "utils.hpp"
 
+namespace atv
+{
+
 /* #define DEBUG 1 */
 
 #define FASTRND_A 1103515245
@@ -1693,3 +1696,5 @@ void AnalogInput::draw_solid_rel_lcp(double left, double right, double top, doub
   analogtv_lcp_to_ntsc(luma, chroma, phase, ntsc);
   this->draw_solid(lefti, righti, topi, boti, ntsc);
 }
+
+} // ::atv

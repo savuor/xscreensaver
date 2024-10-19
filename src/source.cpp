@@ -4,6 +4,8 @@
 
 #include <opencv2/imgproc.hpp>
 
+namespace atv
+{
 
 // the sources can be tuned later for different size or other params
 std::shared_ptr<Source> Source::create(const std::string& name)
@@ -176,3 +178,5 @@ void ImageSource::setOutSize(cv::Size _outSize)
     cv::resize(img, resizedImg, cv::Size(w2, h2));
   }
 }
+
+} // ::atv

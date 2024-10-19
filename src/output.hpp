@@ -2,6 +2,9 @@
 
 #include "precomp.hpp"
 
+namespace atv
+{
+
 struct Output
 {
   Output() { }
@@ -19,3 +22,5 @@ struct Output
 
   virtual ~Output() { }
 };
+
+} // ::atv

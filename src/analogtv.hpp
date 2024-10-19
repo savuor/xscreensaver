@@ -15,6 +15,9 @@
 
 #include "utils.hpp"
 
+namespace atv
+{
+
 /* To simulate an NTSC CRT monitor with way more scanlines, and thus
    apply an ahistorical tv-like effect to a larger image, increase
    this resolution multiplier.
@@ -239,4 +242,4 @@ void analogtv_lcp_to_ntsc(double luma, double chroma, double phase, int ntsc[4])
   "*fpsSolid:	     True", \
   "*lowrez:	     True", \
 
-
+} // ::atv

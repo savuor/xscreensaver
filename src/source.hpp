@@ -4,6 +4,8 @@
 
 #include "analogtv.hpp"
 
+namespace atv
+{
 
 struct Source
 {
@@ -110,3 +112,6 @@ struct ImageSource : Source
   cv::Mat resizedImg;
   bool do_ssavi;
 };
+
+
+} // ::atv
