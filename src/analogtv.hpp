@@ -197,7 +197,7 @@ public:
 
   cv::RNG rng;
 
-  AnalogTV();
+  AnalogTV(int seed = 0);
   void set_buffer(cv::Mat4b outBuffer);
   void set_defaults();
   void setup_frame();

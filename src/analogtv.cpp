@@ -267,7 +267,7 @@ void AnalogTV::configure()
   }
 }
 
-AnalogTV::AnalogTV() :
+AnalogTV::AnalogTV(int seed) :
   agclevel(),
   tint_control(),
   color_control(),
@@ -305,7 +305,7 @@ AnalogTV::AnalogTV() :
   rx_signal(),
 
   puheight(),
-  rng()
+  rng(seed)
 {
   // float crtload[ANALOGTV_V];
 

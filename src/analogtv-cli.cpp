@@ -91,11 +91,13 @@ static void run(Params params)
 {
   int duration = params.duration;
 
+  int seed = params.seed;
   if (params.seed == 0)
   {
     auto tp = std::chrono::high_resolution_clock::now().time_since_epoch();
-    params.seed = tp.count();
+    seed = tp.count();
   }
+  cv::RNG rng(seed);
 
   unsigned long start_time = time((time_t *)0);
 
@@ -116,44 +118,42 @@ static void run(Params params)
   for (const auto& s : sources)
   {
     s->setOutSize(outSize);
+    // randomly set ssavi (what's this? BW?) for image sources
+    s->setSsavi(rng() % 20 == 0);
   }
-
-  AnalogTV tv;
-
-  tv.rng = cv::RNG(params.seed);
 
   cv::Mat4b outBuffer = cv::Mat4b(outSize);
 
-  tv.set_buffer(outBuffer);
-
-  tv.set_defaults();
-
-  // randomly set ssavi (what's this? BW?) for image sources
-  for (const auto& s : sources)
+  std::vector<std::shared_ptr<Output>> outputs;
+  for (const auto& s : params.outputs)
   {
-    s->setSsavi(tv.rng() % 20 == 0);
+    outputs.emplace_back(Output::create(s, outSize));
   }
+
+  AnalogTV tv(seed);
+  tv.set_buffer(outBuffer);
+  tv.set_defaults();
 
   bool fixSettings = params.fixSettings;
   if (!fixSettings)
   {
-    if (tv.rng() % 4 == 0)
+    if (rng() % 4 == 0)
     {
-      tv.tint_control += pow(tv.rng.uniform(-1.0, 1.0), 7) * 180.0;
+      tv.tint_control += pow(rng.uniform(-1.0, 1.0), 7) * 180.0;
     }
     if (1)
     {
-      tv.color_control += tv.rng.uniform(0.0, 0.3) * ((tv.rng() & 1) ? 1 : -1);
+      tv.color_control += rng.uniform(0.0, 0.3) * ((rng() & 1) ? 1 : -1);
     }
     if (0) //if (darkp)
     {
-      if (tv.rng() % 4 == 0)
+      if (rng() % 4 == 0)
       {
-        tv.brightness_control += tv.rng.uniform(0.0, 0.15);
+        tv.brightness_control += rng.uniform(0.0, 0.15);
       }
-      if (tv.rng() % 4 == 0)
+      if (rng() % 4 == 0)
       {
-        tv.contrast_control += tv.rng.uniform(0.0, 0.2) * ((tv.rng() & 1) ? 1 : -1);
+        tv.contrast_control += rng.uniform(0.0, 0.2) * ((rng() & 1) ? 1 : -1);
       }
     }
   }
@@ -176,11 +176,11 @@ static void run(Params params)
         int stationId;
         while (1)
         {
-          stationId = tv.rng() % (sources.size());
+          stationId = rng() % (sources.size());
           // don't do ghost reception with the same station...
           if (stationId != last_station) break;
           // ...at least too often
-          if (tv.rng() % 10 == 0) break;
+          if (rng() % 10 == 0) break;
         }
         last_station = stationId;
         std::shared_ptr<Source> source = sources[stationId];
@@ -195,11 +195,11 @@ static void run(Params params)
         }
         else
         {
-          rec.level = pow(tv.rng.uniform(0.0, 1.0), 3.0) * 2.0 + 0.05;
-          rec.ofs   = tv.rng() % ANALOGTV_SIGNAL_LEN;
-          if (tv.rng() % 3)
+          rec.level = pow(rng.uniform(0.0, 1.0), 3.0) * 2.0 + 0.05;
+          rec.ofs   = rng() % ANALOGTV_SIGNAL_LEN;
+          if (rng() % 3)
           {
-            rec.multipath = tv.rng.uniform(0.0, 1.0);
+            rec.multipath = rng.uniform(0.0, 1.0);
           }
           else
           {
@@ -209,7 +209,7 @@ static void run(Params params)
           {
             /* We only set a frequency error for ghosting stations,
               because it doesn't matter otherwise */
-            rec.freqerr = tv.rng.uniform(-1.0, 1.0) * 3.0;
+            rec.freqerr = rng.uniform(-1.0, 1.0) * 3.0;
           }
         }
 
@@ -217,14 +217,8 @@ static void run(Params params)
         channel.sources.push_back(source);
 
         if (rec.level > 0.3) break;
-        if (tv.rng() % 4) break;
+        if (rng() % 4) break;
     }
-  }
-
-  std::vector<std::shared_ptr<Output>> outputs;
-  for (const auto& s : params.outputs)
-  {
-    outputs.emplace_back(Output::create(s, outSize));
   }
 
   channel_changes = 0;
@@ -247,10 +241,10 @@ static void run(Params params)
       channel_changes++;
 
       /* 1 - 7 sec */
-      frames_left = fps * (1 + tv.rng.uniform(0.0, 6.0));
+      frames_left = fps * (1 + rng.uniform(0.0, 6.0));
 
       /* Otherwise random */
-      curinputi = 1 + (tv.rng() % (N_CHANNELS - 1));
+      curinputi = 1 + (rng() % (N_CHANNELS - 1));
 
       stats[curinputi]++;
       /* Set channel change noise flag */
@@ -259,25 +253,25 @@ static void run(Params params)
       Log::write(2, std::to_string(curticks/1000.0) + " sec: channel " + std::to_string(curinputi));
 
       /* Turn the knobs every now and then */
-      if (!fixSettings && !(tv.rng() % 5))
+      if (!fixSettings && !(rng() % 5))
       {
-        if (tv.rng() % 4 == 0) 
+        if (rng() % 4 == 0) 
         {
-          tv.tint_control += pow(tv.rng.uniform(-1.0, 1.0), 7) * 180.0 * ((tv.rng() & 1) ? 1 : -1);
+          tv.tint_control += pow(rng.uniform(-1.0, 1.0), 7) * 180.0 * ((rng() & 1) ? 1 : -1);
         }
         if (1)
         {
-          tv.color_control += tv.rng.uniform(0.0, 0.3) * ((tv.rng() & 1) ? 1 : -1);
+          tv.color_control += rng.uniform(0.0, 0.3) * ((rng() & 1) ? 1 : -1);
         }
         if (0) //(darkp)
         {
-          if (tv.rng() % 4 == 0)
+          if (rng() % 4 == 0)
           {
-            tv.brightness_control += tv.rng.uniform(0.0, 0.15);
+            tv.brightness_control += rng.uniform(0.0, 0.15);
           }
-          if (tv.rng() % 4 == 0)
+          if (rng() % 4 == 0)
           {
-            tv.contrast_control += tv.rng.uniform(0.0, 0.2) * ((tv.rng() & 1) ? 1 : -1);
+            tv.contrast_control += rng.uniform(0.0, 0.2) * ((rng() & 1) ? 1 : -1);
           }
         }
       }
@@ -301,7 +295,7 @@ static void run(Params params)
       AnalogReception& rec = curChannel.receptions[i];
       std::shared_ptr<Source> src = curChannel.sources[i];
       /* Noisy image */
-      rec.update(tv.rng);
+      rec.update(rng);
       // why so?...
       tv.draw(curChannel.noise_level, curChannel.receptions);
     }
