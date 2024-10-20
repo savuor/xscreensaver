@@ -21,7 +21,7 @@ wxWidgets will be used for GUI.
 * Provide several signal sources, several outputs (they will get the same frames) and some other parameters
 * Example:
   ```
-  analogtv-cli --duration 60 --powerup --size 1280 1024 --in image.png :bars:logo.png :cam:0 --out video.mp4 :highgui
+  analogtv-cli --duration 60 --powerup --size 1280 1024 --in image.png :bars:logo.png :cam:0 sintel.avi --out video.mp4 :highgui
   ```
 * For more details, see command line help
 

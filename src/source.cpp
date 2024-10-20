@@ -221,13 +221,16 @@ void ImageSource::setOutSize(cv::Size _outSize)
   }
 }
 
-struct CamSource : Source
+
+// Video file or camera
+struct VideoSource : Source
 {
-  CamSource() :
+  VideoSource() :
     frameSize()
   { }
 
-  CamSource(int nCam);
+  VideoSource(int nCam);
+  VideoSource(const std::string& fileName);
 
   void update(AnalogInput& input) override;
 
@@ -246,11 +249,11 @@ struct CamSource : Source
 };
 
 
-CamSource::CamSource(int nCam)
+VideoSource::VideoSource(int nCam)
 {
   if (!cap.open(nCam))
   {
-    throw std::runtime_error("Failed to open VideoWriter");
+    throw std::runtime_error("Failed to open VideoCapture for camera #" + std::to_string(nCam));
   }
 
   frameSize = { (int)cap.get(cv::CAP_PROP_FRAME_WIDTH), (int)cap.get(cv::CAP_PROP_FRAME_HEIGHT)};
@@ -259,8 +262,21 @@ CamSource::CamSource(int nCam)
   Log::write(2, "opened cam #" + std::to_string(nCam) + " " + std::to_string(frameSize.width) + "x" + std::to_string(frameSize.height));
 }
 
+VideoSource::VideoSource(const std::string& fileName)
+{
+  if (!cap.open(fileName))
+  {
+    throw std::runtime_error("Failed to open VideoCapture for file " + fileName);
+  }
 
-void CamSource::setOutSize(cv::Size _outSize)
+  frameSize = { (int)cap.get(cv::CAP_PROP_FRAME_WIDTH), (int)cap.get(cv::CAP_PROP_FRAME_HEIGHT)};
+  fittedSize = frameSize;
+
+  Log::write(2, "opened video file " + fileName + " " + std::to_string(frameSize.width) + "x" + std::to_string(frameSize.height));
+}
+
+
+void VideoSource::setOutSize(cv::Size _outSize)
 {
   outSize = _outSize;
 
@@ -271,10 +287,11 @@ void CamSource::setOutSize(cv::Size _outSize)
 }
 
 
-void CamSource::update(AnalogInput& input)
+void VideoSource::update(AnalogInput& input)
 {
   cv::Mat frame, prepared;
 
+  //TODO: for a video file: keep time
   cap >> frame;
 
   if (frame.empty())
@@ -335,7 +352,7 @@ std::shared_ptr<Source> Source::create(const std::string& name)
     else if (stype == "cam")
     {
       int nCam = arg.empty() ? 0 : parseInt(arg).value_or(0);
-      src = std::make_shared<CamSource>(nCam);
+      src = std::make_shared<VideoSource>(nCam);
     }
     else
     {
@@ -344,9 +361,26 @@ std::shared_ptr<Source> Source::create(const std::string& name)
   }
   else
   {
-    //TODO: support videos
-    cv::Mat img = loadImage(name);
-    src = std::make_shared<ImageSource>(img);
+    const std::set<std::string> knownVideoExtensions = {
+      "h264", "h265",
+      "mpeg2", "mpeg4", "mp4", "mjpeg", "mpg",
+      "vp8", "mov", "wmv", "flv",
+      "avi", "mkv"
+    };
+    int extIdx = name.find_last_of(".");
+    std::string ext = name.substr(extIdx + 1, name.length() - extIdx - 1);
+    std::transform(ext.begin(), ext.end(), ext.begin(),
+                   [](unsigned char c){ return std::tolower(c); });
+
+    if (knownVideoExtensions.count(ext))
+    {
+      src = std::make_shared<VideoSource>(name);
+    }
+    else
+    {
+      cv::Mat img = loadImage(name);
+      src = std::make_shared<ImageSource>(img);
+    }
   }
 
   return src;
