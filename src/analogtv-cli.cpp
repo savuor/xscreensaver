@@ -88,6 +88,60 @@ cv::Size getBestSize(const std::vector<std::shared_ptr<atv::Source>>& sources, c
 }
 
 
+void rotateKnobsStart(bool fixSettings, atv::AnalogTV& tv, cv::RNG& rng)
+{
+  if (!fixSettings)
+  {
+    if (rng() % 4 == 0)
+    {
+      tv.tint_control += pow(rng.uniform(-1.0, 1.0), 7) * 180.0;
+    }
+    if (1)
+    {
+      tv.color_control += rng.uniform(0.0, 0.3) * ((rng() & 1) ? 1 : -1);
+    }
+    if (0) //if (darkp)
+    {
+      if (rng() % 4 == 0)
+      {
+        tv.brightness_control += rng.uniform(0.0, 0.15);
+      }
+      if (rng() % 4 == 0)
+      {
+        tv.contrast_control += rng.uniform(0.0, 0.2) * ((rng() & 1) ? 1 : -1);
+      }
+    }
+  }
+}
+
+
+void rotateKnobsFrame(bool fixSettings, atv::AnalogTV& tv, cv::RNG& rng)
+{
+  if (!fixSettings && !(rng() % 5))
+  {
+    if (rng() % 4 == 0) 
+    {
+      tv.tint_control += pow(rng.uniform(-1.0, 1.0), 7) * 180.0 * ((rng() & 1) ? 1 : -1);
+    }
+    if (1)
+    {
+      tv.color_control += rng.uniform(0.0, 0.3) * ((rng() & 1) ? 1 : -1);
+    }
+    if (0) //(darkp)
+    {
+      if (rng() % 4 == 0)
+      {
+        tv.brightness_control += rng.uniform(0.0, 0.15);
+      }
+      if (rng() % 4 == 0)
+      {
+        tv.contrast_control += rng.uniform(0.0, 0.2) * ((rng() & 1) ? 1 : -1);
+      }
+    }
+  }
+}
+
+
 static void run(Params params)
 {
   int duration = params.duration;
@@ -135,29 +189,7 @@ static void run(Params params)
   tv.set_buffer(outBuffer);
   tv.set_defaults();
 
-  bool fixSettings = params.fixSettings;
-  if (!fixSettings)
-  {
-    if (rng() % 4 == 0)
-    {
-      tv.tint_control += pow(rng.uniform(-1.0, 1.0), 7) * 180.0;
-    }
-    if (1)
-    {
-      tv.color_control += rng.uniform(0.0, 0.3) * ((rng() & 1) ? 1 : -1);
-    }
-    if (0) //if (darkp)
-    {
-      if (rng() % 4 == 0)
-      {
-        tv.brightness_control += rng.uniform(0.0, 0.15);
-      }
-      if (rng() % 4 == 0)
-      {
-        tv.contrast_control += rng.uniform(0.0, 0.2) * ((rng() & 1) ? 1 : -1);
-      }
-    }
-  }
+  rotateKnobsStart(params.fixSettings, tv, rng);
 
   int N_CHANNELS = std::max(sources.size() * 2, 6UL);
 
@@ -187,7 +219,7 @@ static void run(Params params)
         std::shared_ptr<atv::Source> source = sources[stationId];
 
         atv::AnalogReception rec;
-        if (fixSettings)
+        if (params.fixSettings)
         {
           rec.level = 0.3;
           rec.ofs=0;
@@ -254,28 +286,7 @@ static void run(Params params)
       atv::Log::write(2, std::to_string(curticks/1000.0) + " sec: channel " + std::to_string(curinputi));
 
       /* Turn the knobs every now and then */
-      if (!fixSettings && !(rng() % 5))
-      {
-        if (rng() % 4 == 0) 
-        {
-          tv.tint_control += pow(rng.uniform(-1.0, 1.0), 7) * 180.0 * ((rng() & 1) ? 1 : -1);
-        }
-        if (1)
-        {
-          tv.color_control += rng.uniform(0.0, 0.3) * ((rng() & 1) ? 1 : -1);
-        }
-        if (0) //(darkp)
-        {
-          if (rng() % 4 == 0)
-          {
-            tv.brightness_control += rng.uniform(0.0, 0.15);
-          }
-          if (rng() % 4 == 0)
-          {
-            tv.contrast_control += rng.uniform(0.0, 0.2) * ((rng() & 1) ? 1 : -1);
-          }
-        }
-      }
+      rotateKnobsFrame(params.fixSettings, tv, rng);
     }
 
     tv.powerup = params.powerup ? curtime : 9999;
