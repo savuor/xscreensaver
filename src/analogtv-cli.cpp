@@ -154,12 +154,6 @@ static void run(Params params)
   }
   cv::RNG rng(seed);
 
-  unsigned long start_time = time((time_t *)0);
-
-  unsigned long curticks = 0;
-  time_t lastlog = time((time_t *)0);
-  int frames_left = 0;
-  int channel_changes = 0;
   int fps = 30;
 
   std::vector<std::shared_ptr<atv::Source>> sources;
@@ -254,12 +248,17 @@ static void run(Params params)
     }
   }
 
-  channel_changes = 0;
+  unsigned long start_time = time((time_t *)0);
+
+  unsigned long curticks = 0;
+  time_t lastlog = time((time_t *)0);
+  int frames_left = 0;
+  int channel_changes = 0;
+  int curinputi = 0;
+
   tv.powerup = 0.0;
 
   std::vector<int> stats(N_CHANNELS);
-
-  int curinputi = 0;
 
   /* This is xanalogtv_draw()
    */
