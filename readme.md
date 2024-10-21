@@ -26,6 +26,7 @@ wxWidgets will be used for GUI.
 * For more details, see command line help
 
 ### TODO
+* keep desired FPS
 * make some kind of GUI to switch channels and rotate knobs
 * transform this code to a platform-independent shader-like filter
 
