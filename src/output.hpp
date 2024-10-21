@@ -9,6 +9,7 @@ struct Output
 {
   Output() { }
 
+  //TODO: send desired FPS
  /**
  * @brief Currently supported are: ":highgui" and video files
  * 

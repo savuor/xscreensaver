@@ -21,6 +21,7 @@ struct Source
    */
   static std::shared_ptr<Source> create(const std::string& s);
 
+  //TODO: send actual time to this function
   virtual void update(AnalogInput& input) = 0;
 
   virtual cv::Size getImageSize() = 0;
