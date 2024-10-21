@@ -273,6 +273,8 @@ VideoSource::VideoSource(const std::string& fileName)
   fittedSize = frameSize;
 
   Log::write(2, "opened video file " + fileName + " " + std::to_string(frameSize.width) + "x" + std::to_string(frameSize.height));
+
+  //TODO: time since last grab == infinity
 }
 
 
@@ -292,13 +294,21 @@ void VideoSource::update(AnalogInput& input)
   cv::Mat frame, prepared;
 
   //TODO: for a video file: keep time
-  cap >> frame;
 
-  if (frame.empty())
+  //TODO: check time since last grab
+  // if (timeSinceLastGrab > 2.0 / fps)
+  // {
+  //   // for a video file: keep time, seek to needed frame
+  //   cap.grab();
+  // }
+
+  bool ok = cap.retrieve(frame);
+
+  if (!ok || frame.empty())
   {
     prepared = cv::Mat(fittedSize, CV_8UC4, cv::Scalar(128, 64, 0));
-
-    cv::putText(prepared, "no frame :(", {120, fittedSize.height / 2}, cv::FONT_HERSHEY_SIMPLEX, 5.0, cv::Scalar::all(255), 6);
+    cv::putText(prepared, "no frame :(", {120, fittedSize.height / 2},
+                cv::FONT_HERSHEY_SIMPLEX, 5.0, cv::Scalar::all(255), 6);
   }
   else
   {
@@ -318,6 +328,10 @@ void VideoSource::update(AnalogInput& input)
   input.setup_sync(1, 0);
 
   input.load_ximage(prepared, cv::Mat4b(), x, y, w, h, this->outSize.width, this->outSize.height);
+
+  // for next frame
+  //TODO: check time since last grab
+  cap.grab();
 }
 
 
