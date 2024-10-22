@@ -60,7 +60,7 @@ VideoOutput::VideoOutput(const std::string &s, cv::Size imgSize)
     {
         throw std::runtime_error("Failed to open VideoWriter");
     }
-    Log::write(2, "opened " + s + " " + std::to_string(imgSize.width) + "x" + std::to_string(imgSize.height));
+    Log::write(2, "writing to " + s + " " + std::to_string(imgSize.width) + "x" + std::to_string(imgSize.height));
 }
 
 void VideoOutput::send(const cv::Mat &m)

@@ -12,7 +12,8 @@ struct BarsSource : Source
 {
   static const cv::Size defaultSize; // 320x240
 
-  BarsSource()
+  BarsSource() :
+    Source()
   {
     Source::outSize = defaultSize;
   }
@@ -143,6 +144,7 @@ void BarsSource::update(AnalogInput& input)
 struct ImageSource : Source
 {
   ImageSource() :
+    Source(),
     img(),
     resizedImg(),
     do_ssavi()
@@ -226,11 +228,13 @@ void ImageSource::setOutSize(cv::Size _outSize)
 struct VideoSource : Source
 {
   VideoSource() :
-    frameSize()
+    Source(), frameSize(), isCamera(false)
   { }
 
   VideoSource(int nCam);
   VideoSource(const std::string& fileName);
+
+  void init();
 
   void update(AnalogInput& input) override;
 
@@ -246,33 +250,46 @@ struct VideoSource : Source
 
   cv::Size frameSize, fittedSize;
   cv::VideoCapture cap;
+  // TODO: variant or so
+  bool isCamera;
+  std::string videoFileName;
+  int nCamera;
 };
 
 
 VideoSource::VideoSource(int nCam)
 {
-  if (!cap.open(nCam))
-  {
-    throw std::runtime_error("Failed to open VideoCapture for camera #" + std::to_string(nCam));
-  }
+  nCamera = nCam;
+  isCamera = true;
 
-  frameSize = { (int)cap.get(cv::CAP_PROP_FRAME_WIDTH), (int)cap.get(cv::CAP_PROP_FRAME_HEIGHT)};
-  fittedSize = frameSize;
-
-  Log::write(2, "opened cam #" + std::to_string(nCam) + " " + std::to_string(frameSize.width) + "x" + std::to_string(frameSize.height));
+  init();
 }
 
 VideoSource::VideoSource(const std::string& fileName)
 {
-  if (!cap.open(fileName))
+  isCamera = false;
+  videoFileName = fileName;
+
+  init();
+}
+
+void VideoSource::init()
+{
+  bool ok = isCamera ? cap.open(nCamera) : cap.open(videoFileName);
+
+  if (!ok)
   {
-    throw std::runtime_error("Failed to open VideoCapture for file " + fileName);
+    std::string err = "Failed to open VideoCapture for " +
+                      isCamera ? ("camera #" + std::to_string(nCamera)) :
+                                 ("file " + videoFileName);
+    throw std::runtime_error(err);
   }
 
   frameSize = { (int)cap.get(cv::CAP_PROP_FRAME_WIDTH), (int)cap.get(cv::CAP_PROP_FRAME_HEIGHT)};
   fittedSize = frameSize;
 
-  Log::write(2, "opened video file " + fileName + " " + std::to_string(frameSize.width) + "x" + std::to_string(frameSize.height));
+  Log::write(2, "reading from " + (isCamera ? ("cam #" + std::to_string(nCamera)) : videoFileName) + " " +
+                std::to_string(frameSize.width) + "x" + std::to_string(frameSize.height));
 
   //TODO: time since last grab == infinity
 }
