@@ -142,57 +142,15 @@ void rotateKnobsFrame(bool fixSettings, atv::AnalogTV& tv, cv::RNG& rng)
 }
 
 
-static void run(Params params)
+std::vector<ChanSetting> createChannels(bool fixSettings, const std::vector<std::shared_ptr<atv::Source>>& sources,
+                                        cv::RNG& rng)
 {
-  int duration = params.duration;
-
-  int seed = params.seed;
-  if (params.seed == 0)
-  {
-    auto tp = std::chrono::high_resolution_clock::now().time_since_epoch();
-    seed = tp.count();
-  }
-  cv::RNG rng(seed);
-
-  int fps = 30;
-
-  std::vector<std::shared_ptr<atv::Source>> sources;
-  for (const auto& s : params.sources)
-  {
-    sources.push_back(atv::Source::create(s));
-  }
-
-  cv::Size outSize = getBestSize(sources, params.size);
-
-  for (const auto& s : sources)
-  {
-    s->setOutSize(outSize);
-    // randomly set ssavi (what's this? BW?) for image sources
-    s->setSsavi(rng() % 20 == 0);
-  }
-
-  cv::Mat4b outBuffer = cv::Mat4b(outSize);
-
-  std::vector<std::shared_ptr<atv::Output>> outputs;
-  for (const auto& s : params.outputs)
-  {
-    outputs.emplace_back(atv::Output::create(s, outSize));
-  }
-
-  atv::AnalogTV tv(seed);
-  tv.set_buffer(outBuffer);
-  tv.set_defaults();
-
-  rotateKnobsStart(params.fixSettings, tv, rng);
-
-  int N_CHANNELS = std::max(sources.size() * 2, 6UL);
-
-  atv::Log::write(2, "initializing " + std::to_string(sources.size()) + " sources in " +
-                  std::to_string(N_CHANNELS) + " channels");
+  int nChannels = std::max(sources.size() * 2, 6UL);
 
   std::vector<ChanSetting> chanSettings;
-  chanSettings.resize(N_CHANNELS);
-  for (int i = 0; i < N_CHANNELS; i++)
+  chanSettings.resize(nChannels);
+
+  for (int i = 0; i < nChannels; i++)
   {
     ChanSetting& channel = chanSettings[i];
     channel.noise_level = 0.06;
@@ -213,7 +171,7 @@ static void run(Params params)
         std::shared_ptr<atv::Source> source = sources[stationId];
 
         atv::AnalogReception rec;
-        if (params.fixSettings)
+        if (fixSettings)
         {
           rec.level = 0.3;
           rec.ofs=0;
@@ -248,6 +206,61 @@ static void run(Params params)
     }
   }
 
+  return chanSettings;
+}
+
+
+static void run(Params params)
+{
+  int duration = params.duration;
+
+  int seed = params.seed;
+  if (params.seed == 0)
+  {
+    auto tp = std::chrono::high_resolution_clock::now().time_since_epoch();
+    seed = tp.count();
+  }
+  cv::RNG rng(seed);
+
+  int fps = 30;
+
+  std::vector<std::shared_ptr<atv::Source>> sources;
+  for (const auto& s : params.sources)
+  {
+    sources.push_back(atv::Source::create(s));
+  }
+
+  atv::Log::write(2, "initialized " + std::to_string(sources.size()) + " sources");
+
+  cv::Size outSize = getBestSize(sources, params.size);
+
+  for (const auto& s : sources)
+  {
+    s->setOutSize(outSize);
+    // randomly set ssavi (what's this? BW?) for image sources
+    s->setSsavi(rng() % 20 == 0);
+  }
+
+
+  std::vector<std::shared_ptr<atv::Output>> outputs;
+  for (const auto& s : params.outputs)
+  {
+    outputs.emplace_back(atv::Output::create(s, outSize));
+  }
+
+  atv::Log::write(2, "initialized " + std::to_string(outputs.size()) + " outputs");
+
+  cv::Mat4b outBuffer = cv::Mat4b(outSize);
+  atv::AnalogTV tv(seed);
+  tv.set_buffer(outBuffer);
+  tv.set_defaults();
+
+  rotateKnobsStart(params.fixSettings, tv, rng);
+
+  std::vector<ChanSetting> chanSettings = createChannels(params.fixSettings, sources, rng);
+
+  size_t nChannels = chanSettings.size();
+
   unsigned long start_time = time((time_t *)0);
 
   unsigned long curticks = 0;
@@ -258,7 +271,7 @@ static void run(Params params)
 
   tv.powerup = 0.0;
 
-  std::vector<int> stats(N_CHANNELS);
+  std::vector<int> stats(nChannels);
 
   /* This is xanalogtv_draw()
    */
@@ -276,7 +289,7 @@ static void run(Params params)
       frames_left = fps * (1 + rng.uniform(0.0, 6.0));
 
       /* Otherwise random */
-      curinputi = 1 + (rng() % (N_CHANNELS - 1));
+      curinputi = 1 + (rng() % (nChannels - 1));
 
       stats[curinputi]++;
       /* Set channel change noise flag */
@@ -352,7 +365,7 @@ static void run(Params params)
   if (channel_changes == 0) channel_changes++;
 
   atv::Log::write(2, "channels shown: " + std::to_string(channel_changes));
-  for (int i = 0; i < N_CHANNELS; i++)
+  for (size_t i = 0; i < nChannels; i++)
   {
     atv::Log::write(2, "  " + std::to_string(i+1) + ":  " + std::to_string(stats[i] * 100 / channel_changes));
   }
