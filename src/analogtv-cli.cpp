@@ -142,7 +142,7 @@ void rotateKnobsStart(bool fixSettings, atv::AnalogTV& tv, cv::RNG& rng)
 }
 
 
-void rotateKnobsFrame(bool fixSettings, atv::AnalogTV& tv, cv::RNG& rng)
+void rotateKnobsSwitch(bool fixSettings, atv::AnalogTV& tv, cv::RNG& rng)
 {
   if (!fixSettings && !(rng() % 5))
   {
@@ -324,7 +324,7 @@ static void run(Params params)
       atv::Log::write(2, std::to_string(curticks/1000.0) + " sec: channel " + std::to_string(curinputi));
 
       /* Turn the knobs every now and then */
-      rotateKnobsFrame(params.fixSettings, tv, rng);
+      rotateKnobsSwitch(params.fixSettings, tv, rng);
     }
 
     tv.powerup = params.powerup ? curtime : 9999;
