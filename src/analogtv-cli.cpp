@@ -169,17 +169,15 @@ void rotateKnobsFrame(bool fixSettings, atv::AnalogTV& tv, cv::RNG& rng)
 }
 
 
-std::vector<ChanSetting> createChannels(bool fixSettings, const std::vector<std::shared_ptr<atv::Source>>& sources,
+std::vector<ChanSetting> createChannels(bool fixSettings, const std::vector<std::shared_ptr<atv::Source>> sources,
                                         cv::RNG& rng)
 {
-  int nChannels = std::max(sources.size() * 2, 6UL);
+  size_t nChannels = std::max(sources.size() * 2, 6UL);
 
   std::vector<ChanSetting> chanSettings;
-  chanSettings.resize(nChannels);
-
-  for (int i = 0; i < nChannels; i++)
+  for (size_t i = 0; i < nChannels; i++)
   {
-    ChanSetting& channel = chanSettings[i];
+    ChanSetting channel;
     // noise: 0 to 0.2 or 0 to 5.0, default 0.04
     channel.noise_level = 0.06;
 
@@ -232,6 +230,8 @@ std::vector<ChanSetting> createChannels(bool fixSettings, const std::vector<std:
         if (rec.level > 0.3) break;
         if (rng() % 4) break;
     }
+
+    chanSettings.push_back(channel);
   }
 
   return chanSettings;
@@ -268,7 +268,6 @@ static void run(Params params)
     // randomly set ssavi (what's this? BW?) for image sources
     s->setSsavi(rng() % 20 == 0);
   }
-
 
   std::vector<std::shared_ptr<atv::Output>> outputs;
   for (const auto& s : params.outputs)
