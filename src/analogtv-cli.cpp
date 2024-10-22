@@ -294,22 +294,13 @@ static void run(Params params)
     for (size_t i = 0; i < curChannel.receptions.size(); i++)
     {
       atv::AnalogReception& rec = curChannel.receptions[i];
-      std::shared_ptr<atv::Source> src = curChannel.sources[i];
-
-      src->update(rec.input);
-
+      curChannel.sources[i]->update(rec.input);
       rec.ofs += rec.freqerr;
-    }
-
-    for (size_t i = 0; i < curChannel.receptions.size(); i++)
-    {
-      atv::AnalogReception& rec = curChannel.receptions[i];
-      std::shared_ptr<atv::Source> src = curChannel.sources[i];
       /* Noisy image */
       rec.update(rng);
-      // why so?...
-      tv.draw(curChannel.noise_level, curChannel.receptions);
     }
+
+    tv.draw(curChannel.noise_level, curChannel.receptions);
 
     // Send rendered frame to outputs
     for (const auto& o : outputs)
