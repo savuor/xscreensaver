@@ -90,6 +90,33 @@ cv::Size getBestSize(const std::vector<std::shared_ptr<atv::Source>>& sources, c
 
 void rotateKnobsStart(bool fixSettings, atv::AnalogTV& tv, cv::RNG& rng)
 {
+  // from analogtv_set_defaults()
+
+  // values taken from analogtv-cli
+
+  // tint: 0 to 360, default 5
+  tv.tint_control  = 5;
+  // color: 0 to 400, default 70
+  // or 0 to +/- 500, need to check it
+  tv.color_control = 70 / 100.0;
+
+  // brightness: -75 to 100, default 1.5 or 3.0
+  tv.brightness_control = 2 / 100.0;
+  // contrast: 0 to 500, default 150
+  tv.contrast_control   = 150 / 100.0;
+  tv.height_control = 1.0;
+  tv.width_control  = 1.0;
+  tv.squish_control = 0.0;
+
+  tv.powerup =1000.0;
+
+  //tv.hashnoise_rpm = 0;
+  tv.hashnoise_on = 0;
+  tv.hashnoise_enable = 1;
+
+  tv.horiz_desync  = rng.uniform(-5.0, 5.0);
+  tv.squeezebottom = rng.uniform(-1.0, 4.0);
+
   if (!fixSettings)
   {
     if (rng() % 4 == 0)
@@ -153,6 +180,7 @@ std::vector<ChanSetting> createChannels(bool fixSettings, const std::vector<std:
   for (int i = 0; i < nChannels; i++)
   {
     ChanSetting& channel = chanSettings[i];
+    // noise: 0 to 0.2 or 0 to 5.0, default 0.04
     channel.noise_level = 0.06;
 
     int last_station = 42;
@@ -253,7 +281,6 @@ static void run(Params params)
   cv::Mat4b outBuffer = cv::Mat4b(outSize);
   atv::AnalogTV tv(seed);
   tv.set_buffer(outBuffer);
-  tv.set_defaults();
 
   rotateKnobsStart(params.fixSettings, tv, rng);
 

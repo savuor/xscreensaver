@@ -122,60 +122,6 @@ float AnalogTV::puramp(float tc, float start, float over) const
 
 static const double float_low8_ofs=8388608.0;
 
-void AnalogTV::set_defaults()
-{
-  // values taken from analogtv-cli
-  this->tint_control = 5; // 270 (almost) fixes the color issue!
-  this->color_control = 70/100.0;
-  this->brightness_control = 2 / 100.0;
-  this->contrast_control = 150 / 100.0;
-  this->height_control = 1.0;
-  this->width_control = 1.0;
-  this->squish_control = 0.0;
-  this->powerup=1000.0;
-
-  //it->hashnoise_rpm=0;
-  this->hashnoise_on=0;
-  this->hashnoise_enable=1;
-
-  this->horiz_desync  = this->rng.uniform(-5.0, 5.0);
-  this->squeezebottom = this->rng.uniform(-1.0, 4.0);
-
-  //TODO: make logs
-#ifdef DEBUG
-  printf("analogtv: prefix=%s\n",prefix);
-  printf("  use: color=1\n");
-  printf("  controls: tint=%g color=%g brightness=%g contrast=%g\n",
-         this->tint_control, this->color_control, this->brightness_control,
-         this->contrast_control);
-/*  printf("  freq_error %g: %g %d\n",
-         this->freq_error, this->freq_error_inc, this->flutter_tint); */
-  printf("  desync: %g %d\n",
-         this->horiz_desync, this->flutter_horiz_desync);
-  printf("  hashnoise rpm: %g\n",
-         this->hashnoise_rpm);
-  printf("  size: %d %d xrepl=%d\n",
-         this->usewidth, this->useheight,
-         this->xrepl);
-
-  printf("    ANALOGTV_V=%d\n",ANALOGTV_V);
-  printf("    ANALOGTV_TOP=%d\n",ANALOGTV_TOP);
-  printf("    ANALOGTV_VISLINES=%d\n",ANALOGTV_VISLINES);
-  printf("    ANALOGTV_BOT=%d\n",ANALOGTV_BOT);
-  printf("    ANALOGTV_H=%d\n",ANALOGTV_H);
-  printf("    ANALOGTV_SYNC_START=%d\n",ANALOGTV_SYNC_START);
-  printf("    ANALOGTV_BP_START=%d\n",ANALOGTV_BP_START);
-  printf("    ANALOGTV_CB_START=%d\n",ANALOGTV_CB_START);
-  printf("    ANALOGTV_PIC_START=%d\n",ANALOGTV_PIC_START);
-  printf("    ANALOGTV_PIC_LEN=%d\n",ANALOGTV_PIC_LEN);
-  printf("    ANALOGTV_FP_START=%d\n",ANALOGTV_FP_START);
-  printf("    ANALOGTV_PIC_END=%d\n",ANALOGTV_PIC_END);
-  printf("    ANALOGTV_HASHNOISE_LEN=%d\n",ANALOGTV_HASHNOISE_LEN);
-
-#endif
-
-}
-
 
 void AnalogTV::configure()
 {

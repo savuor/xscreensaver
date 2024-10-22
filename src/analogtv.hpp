@@ -202,7 +202,6 @@ public:
 
   AnalogTV(int seed = 0);
   void set_buffer(cv::Mat4b outBuffer);
-  void set_defaults();
   void setup_frame();
   void draw(double noiselevel, const std::vector<AnalogReception>& receptions);
 
@@ -222,24 +221,5 @@ private:
 
 
 void analogtv_lcp_to_ntsc(double luma, double chroma, double phase, int ntsc[4]);
-
-/* Brightness: useful range is around -75 to 100.
-   Contrast:   useful range is around 0 - 500.
-   Color:      useful range is around +/- 500.
-   Tint:       range is mod 360.
-
-   The values in the 'analogtv' struct are the resource divided by 100.0,
-   except for tint, which is exact.
- */
-
-#define ANALOGTV_DEFAULTS \
-  "*TVColor:         70", \
-  "*TVTint:           5",  \
-  "*TVBrightness:     2",  \
-  "*TVContrast:     150", \
-  "*Background:      Black", \
-  "*geometry:	     800x600", \
-  "*fpsSolid:	     True", \
-  "*lowrez:	     True", \
 
 } // ::atv
