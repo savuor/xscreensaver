@@ -168,7 +168,7 @@ void rotateKnobsFrame(bool fixSettings, atv::AnalogTV& tv, cv::RNG& rng)
   }
 }
 
-
+// why const ref to sources does not work?
 std::vector<ChanSetting> createChannels(bool fixSettings, const std::vector<std::shared_ptr<atv::Source>> sources,
                                         cv::RNG& rng)
 {
