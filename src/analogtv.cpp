@@ -1565,6 +1565,8 @@ void analogtv_channel_noise(analogtv_input *it, analogtv_input *s2)
 
 void AnalogReception::update(cv::RNG& rng)
 {
+  this->ofs += this->freqerr;
+
   if (this->multipath > 0.0)
   {
     for (int i=0; i<ANALOGTV_GHOSTFIR_LEN; i++)

@@ -114,9 +114,11 @@ struct AnalogReception
   double freqerr;
 
   double ghostfir[ANALOGTV_GHOSTFIR_LEN];
+  // used to update ghostfir
   double ghostfir2[ANALOGTV_GHOSTFIR_LEN];
 
   double hfloss;
+  // used to update hfloss
   double hfloss2;
 
   void update(cv::RNG& rng);

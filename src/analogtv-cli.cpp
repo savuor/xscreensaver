@@ -202,8 +202,8 @@ std::vector<ChanSetting> createChannels(bool fixSettings, const std::vector<std:
         if (fixSettings)
         {
           rec.level = 0.3;
-          rec.ofs=0;
-          rec.multipath=0.0;
+          rec.ofs = 0;
+          rec.multipath = 0.0;
           rec.freqerr = 0;
         }
         else
@@ -218,7 +218,7 @@ std::vector<ChanSetting> createChannels(bool fixSettings, const std::vector<std:
           {
             rec.multipath = 0.0;
           }
-          if (stati)
+          if (stati > 0)
           {
             /* We only set a frequency error for ghosting stations,
               because it doesn't matter otherwise */
@@ -335,7 +335,6 @@ static void run(Params params)
     {
       atv::AnalogReception& rec = curChannel.receptions[i];
       curChannel.sources[i]->update(rec.input);
-      rec.ofs += rec.freqerr;
       /* Noisy image */
       rec.update(rng);
     }
