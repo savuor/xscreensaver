@@ -209,7 +209,6 @@ public:
 
 private:
   void  configure();
-  float puramp(float tc, float start, float over) const;
   void  ntsc_to_yiq(int lineno, unsigned int signal_offset, int start, int end, struct analogtv_yiq_s *it_yiq) const;
   void  sync();
   void  setup_levels(double avgheight);
