@@ -84,6 +84,7 @@ namespace atv
 #define FASTRND (fastrnd = fastrnd*FASTRND_A+FASTRND_C)
 
 
+//TODO: make it constexpr, not a class member
 float AnalogTV::puramp(float tc, float start, float over) const
 {
   float pt = this->powerup - start;
