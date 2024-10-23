@@ -130,15 +130,49 @@ struct AnalogReception
 
 struct AnalogTV
 {
-public:
+private:
 #if 0
   unsigned int onscreen_signature[ANALOGTV_V];
 #endif
 
+  // these params are set and used internally
+
   float agclevel;
 
-  /* If you change these, call analogtv_set_demod */
-  float tint_control,color_control,brightness_control,contrast_control;
+  int usewidth, useheight, xrepl, subwidth;
+  cv::Mat4b image; /* usewidth * useheight */
+  cv::Mat4b outBuffer;
+
+  int shrinkpulse;
+
+  float crtload[ANALOGTV_V];
+
+  unsigned int intensity_values[ANALOGTV_CV_MAX];
+
+  float tint_i, tint_q;
+
+  int cur_hsync;
+  int line_hsync[ANALOGTV_V];
+  int cur_vsync;
+  double cb_phase[4];
+  double line_cb_phase[ANALOGTV_V][4];
+
+  double rx_signal_level;
+  std::vector<float> rx_signal;
+
+  struct {
+    int index;
+    double value;
+  } leveltable[ANALOGTV_MAX_LINEHEIGHT+1][ANALOGTV_MAX_LINEHEIGHT+1];
+
+  float puheight;
+
+  cv::RNG rng;
+
+public:
+
+  // can be set individually for every frame from outside
+  float tint_control, color_control, brightness_control, contrast_control;
   float height_control, width_control, squish_control;
   float horiz_desync;
   float squeezebottom;
@@ -155,13 +189,8 @@ public:
   // int fakeit_scroll;
   // int redraw_all;
 
-  int usewidth, useheight, xrepl, subwidth;
-  cv::Mat4b image; /* usewidth * useheight */
-  cv::Mat4b outBuffer;
-
   int flutter_horiz_desync;
   //int flutter_tint;
-
 
   /* Add hash (in the radio sense, not the programming sense.) These
      are the small white streaks that appear in quasi-regular patterns
@@ -175,39 +204,16 @@ public:
  // int hashnoise_signal[ANALOGTV_V];
   int hashnoise_on;
   int hashnoise_enable;
-  int shrinkpulse;
 
-  float crtload[ANALOGTV_V];
-
-  unsigned int intensity_values[ANALOGTV_CV_MAX];
-
-  float tint_i, tint_q;
-
-  int cur_hsync;
-  int line_hsync[ANALOGTV_V];
-  int cur_vsync;
-  double cb_phase[4];
-  double line_cb_phase[ANALOGTV_V][4];
-
+  // if set, some portion of noise is added before channel switch
   int channel_change_cycles;
-  double rx_signal_level;
-  std::vector<float> rx_signal;
-
-  struct {
-    int index;
-    double value;
-  } leveltable[ANALOGTV_MAX_LINEHEIGHT+1][ANALOGTV_MAX_LINEHEIGHT+1];
-
-  float puheight;
-
-  cv::RNG rng;
 
   AnalogTV(int seed = 0);
   void set_buffer(cv::Mat4b outBuffer);
-  void setup_frame();
   void draw(double noiselevel, const std::vector<AnalogReception>& receptions);
 
 private:
+  void  setup_frame();
   void  configure();
   void  ntsc_to_yiq(int lineno, unsigned int signal_offset, int start, int end, struct analogtv_yiq_s *it_yiq) const;
   void  sync();

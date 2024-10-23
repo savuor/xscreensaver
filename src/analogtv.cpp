@@ -218,6 +218,29 @@ void AnalogTV::configure()
 
 AnalogTV::AnalogTV(int seed) :
   agclevel(),
+
+  usewidth(),
+  useheight(),
+  xrepl(),
+  subwidth(),
+  image(),
+  outBuffer(),
+
+  tint_i(),
+  tint_q(),
+
+  cur_hsync(),
+  line_hsync(),
+  cur_vsync(),
+  cb_phase(),
+  line_cb_phase(),
+
+  rx_signal_level(),
+  rx_signal(),
+
+  puheight(),
+  rng(seed),
+
   tint_control(),
   color_control(),
   brightness_control(),
@@ -229,32 +252,11 @@ AnalogTV::AnalogTV(int seed) :
   squeezebottom(),
   powerup(),
 
-  usewidth(),
-  useheight(),
-  xrepl(),
-  subwidth(),
-  image(),
-  outBuffer(),
-
   flutter_horiz_desync(),
   hashnoise_on(),
   hashnoise_enable(),
 
-  tint_i(),
-  tint_q(),
-
-  cur_hsync(),
-  line_hsync(),
-  cur_vsync(),
-  cb_phase(),
-  line_cb_phase(),
-
-  channel_change_cycles(),
-  rx_signal_level(),
-  rx_signal(),
-
-  puheight(),
-  rng(seed)
+  channel_change_cycles()
 {
   // float crtload[ANALOGTV_V];
 
