@@ -48,10 +48,10 @@ struct Params
   std::vector<std::string> outputs;
 };
 
-#define MAX_MULTICHAN 2
+const int MAX_MULTICHAN = 2;
 
-#define POWERUP_DURATION   6  /* Hardcoded in analogtv.c */
-#define POWERDOWN_DURATION 1  /* Only used here */
+const double POWERUP_DURATION = 6.0;  /* Hardcoded in analogtv.c */
+const double POWERDOWN_DURATION = 1.0;  /* Only used here */
 
 struct ChanSetting
 {
