@@ -75,160 +75,338 @@ cv::Size getBestSize(const std::vector<std::shared_ptr<atv::Source>>& sources, c
 }
 
 
-void rotateKnobsStart(bool fixSettings, atv::AnalogTV& tv, cv::RNG& rng)
+
+
+
+
+
+
+
+//TODO: this
+struct Control
 {
-  // from analogtv_set_defaults()
-
-  // values taken from analogtv-cli
-
-  // tint: 0 to 360, default 5
-  tv.tint_control  = 5;
-  // color: 0 to 400, default 70
-  // or 0 to +/- 500, need to check it
-  tv.color_control = 70 / 100.0;
-
-  // brightness: -75 to 100, default 1.5 or 3.0
-  tv.brightness_control = 2 / 100.0;
-  // contrast: 0 to 500, default 150
-  tv.contrast_control   = 150 / 100.0;
-  tv.height_control = 1.0;
-  tv.width_control  = 1.0;
-  tv.squish_control = 0.0;
-
-  tv.powerup =1000.0;
-
-  //tv.hashnoise_rpm = 0;
-  tv.hashnoise_on = 0;
-  tv.hashnoise_enable = 1;
-
-  tv.horiz_desync  = rng.uniform(-5.0, 5.0);
-  tv.squeezebottom = rng.uniform(-1.0, 4.0);
-
-  if (!fixSettings)
+  struct Operation
   {
-    if (rng() % 4 == 0)
+    enum class Type
     {
-      tv.tint_control += pow(rng.uniform(-1.0, 1.0), 7) * 180.0;
-    }
-    if (1)
-    {
-      tv.color_control += rng.uniform(0.0, 0.3) * ((rng() & 1) ? 1 : -1);
-    }
-    if (0) //if (darkp)
-    {
-      if (rng() % 4 == 0)
-      {
-        tv.brightness_control += rng.uniform(0.0, 0.15);
-      }
-      if (rng() % 4 == 0)
-      {
-        tv.contrast_control += rng.uniform(0.0, 0.2) * ((rng() & 1) ? 1 : -1);
-      }
-    }
+      QUIT, SWITCH, KNOBS, NONE
+    };
+
+    Type type;
+    int channel;
+  };
+
+  //TODO: delegate construction
+  Control() {}
+
+  Control(const std::vector<std::shared_ptr<atv::Source>> _sources, uint64_t rngSeed, bool _fixSettings,
+          double _fps, double _duration, bool _powerUpDown)
+  {
+    this->sources = _sources;
+    this->rng = cv::RNG(rngSeed);
+    this->fixSettings = _fixSettings;
+
+    this->fps = _fps;
+    this->duration = _duration;
+    this->usePowerUpDown = _powerUpDown;
   }
-}
 
 
-void rotateKnobsSwitch(bool fixSettings, atv::AnalogTV& tv, cv::RNG& rng)
-{
-  if (!fixSettings && !(rng() % 5))
+  // why const ref to sources does not work?
+  void createChannels(const std::vector<std::shared_ptr<atv::Source>> sources)
   {
-    if (rng() % 4 == 0) 
+    size_t nChannels = std::max(sources.size() * 2, 6UL);
+
+    this->chanSettings = { };
+    for (size_t i = 0; i < nChannels; i++)
     {
-      tv.tint_control += pow(rng.uniform(-1.0, 1.0), 7) * 180.0 * ((rng() & 1) ? 1 : -1);
-    }
-    if (1)
-    {
-      tv.color_control += rng.uniform(0.0, 0.3) * ((rng() & 1) ? 1 : -1);
-    }
-    if (0) //(darkp)
-    {
-      if (rng() % 4 == 0)
+      ChanSetting channel;
+      // noise: 0 to 0.2 or 0 to 5.0, default 0.04
+      channel.noise_level = 0.06;
+
+      int last_station = 42;
+      for (int stati = 0; stati < MAX_MULTICHAN; stati++)
       {
-        tv.brightness_control += rng.uniform(0.0, 0.15);
-      }
-      if (rng() % 4 == 0)
-      {
-        tv.contrast_control += rng.uniform(0.0, 0.2) * ((rng() & 1) ? 1 : -1);
-      }
-    }
-  }
-}
-
-// why const ref to sources does not work?
-std::vector<ChanSetting> createChannels(bool fixSettings, const std::vector<std::shared_ptr<atv::Source>> sources,
-                                        cv::RNG& rng)
-{
-  size_t nChannels = std::max(sources.size() * 2, 6UL);
-
-  std::vector<ChanSetting> chanSettings;
-  for (size_t i = 0; i < nChannels; i++)
-  {
-    ChanSetting channel;
-    // noise: 0 to 0.2 or 0 to 5.0, default 0.04
-    channel.noise_level = 0.06;
-
-    int last_station = 42;
-    for (int stati = 0; stati < MAX_MULTICHAN; stati++)
-    {
-        int stationId;
-        while (1)
-        {
-          stationId = rng() % (sources.size());
-          // don't do ghost reception with the same station...
-          if (stationId != last_station) break;
-          // ...at least too often
-          if (rng() % 10 == 0) break;
-        }
-        last_station = stationId;
-        std::shared_ptr<atv::Source> source = sources[stationId];
-
-        atv::AnalogReception rec;
-        if (fixSettings)
-        {
-          rec.level = 0.3;
-          rec.ofs = 0;
-          rec.multipath = 0.0;
-          rec.freqerr = 0;
-        }
-        else
-        {
-          rec.level = pow(rng.uniform(0.0, 1.0), 3.0) * 2.0 + 0.05;
-          rec.ofs   = rng() % atv::ANALOGTV_SIGNAL_LEN;
-          if (rng() % 3)
+          int stationId;
+          while (1)
           {
-            rec.multipath = rng.uniform(0.0, 1.0);
+            stationId = this->rng() % (sources.size());
+            // don't do ghost reception with the same station...
+            if (stationId != last_station) break;
+            // ...at least too often
+            if (this->rng() % 10 == 0) break;
+          }
+          last_station = stationId;
+          std::shared_ptr<atv::Source> source = sources[stationId];
+
+          atv::AnalogReception rec;
+          if (this->fixSettings)
+          {
+            rec.level = 0.3;
+            rec.ofs = 0;
+            rec.multipath = 0.0;
+            rec.freqerr = 0;
           }
           else
           {
-            rec.multipath = 0.0;
+            rec.level = pow(this->rng.uniform(0.0, 1.0), 3.0) * 2.0 + 0.05;
+            rec.ofs   = this->rng() % atv::ANALOGTV_SIGNAL_LEN;
+            if (this->rng() % 3)
+            {
+              rec.multipath = this->rng.uniform(0.0, 1.0);
+            }
+            else
+            {
+              rec.multipath = 0.0;
+            }
+            if (stati > 0)
+            {
+              /* We only set a frequency error for ghosting stations,
+                because it doesn't matter otherwise */
+              rec.freqerr = this->rng.uniform(-1.0, 1.0) * 3.0;
+            }
           }
-          if (stati > 0)
-          {
-            /* We only set a frequency error for ghosting stations,
-              because it doesn't matter otherwise */
-            rec.freqerr = rng.uniform(-1.0, 1.0) * 3.0;
-          }
-        }
 
-        channel.receptions.push_back(rec);
-        channel.sources.push_back(source);
+          channel.receptions.push_back(rec);
+          channel.sources.push_back(source);
 
-        if (rec.level > 0.3) break;
-        if (rng() % 4) break;
+          if (rec.level > 0.3) break;
+          if (this->rng() % 4) break;
+      }
+
+      this->chanSettings.push_back(channel);
     }
-
-    chanSettings.push_back(channel);
   }
 
-  return chanSettings;
-}
+  void setTvControls(atv::AnalogTV& tv)
+  {
+    tv.tint_control  = this->tint;
+    tv.color_control = this->color;
+
+    tv.brightness_control = this->brightness;
+    tv.contrast_control   = this->contrast;
+    tv.height_control = this->height;
+    tv.width_control  = this->width;
+    tv.squish_control = this->squish;
+
+    tv.powerup = this->powerup;
+
+    tv.hashnoise_on     = this->useHashNoise;
+    tv.hashnoise_enable = this->enableHashNoise;
+
+    tv.horiz_desync  = this->horizontalDesync;
+    tv.squeezebottom = this->squeezeBottom;
+
+    tv.flutter_horiz_desync = this->useFlutterHorizontalDesync;
+  }
+
+  void rotateKnobsStart()
+  {
+    // from analogtv_set_defaults()
+
+    // values taken from analogtv-cli
+
+    // tint: 0 to 360, default 5
+    this->tint = 5;
+    // color: 0 to 400, default 70
+    // or 0 to +/- 500, need to check it
+    this->color = 70 / 100.0;
+
+    // brightness: -75 to 100, default 1.5 or 3.0
+    this->brightness = 2 / 100.0;
+    // contrast: 0 to 500, default 150
+    this->contrast   = 150 / 100.0;
+    this->height = 1.0;
+    this->width  = 1.0;
+    this->squish = 0.0;
+
+    this->powerup = 1000.0;
+
+    //tv.hashnoise_rpm = 0;
+    //TODO: do we need both?
+    this->useHashNoise = 0;
+    this->enableHashNoise = 1;
+
+    this->horizontalDesync = this->rng.uniform(-5.0, 5.0);
+    this->squeezeBottom = this->rng.uniform(-1.0, 4.0);
+
+    this->useFlutterHorizontalDesync = false;
+
+    if (!this->fixSettings)
+    {
+      if (this->rng() % 4 == 0)
+      {
+        this->tint += pow(this->rng.uniform(-1.0, 1.0), 7) * 180.0;
+      }
+      if (1)
+      {
+        this->color += this->rng.uniform(0.0, 0.3) * ((this->rng() & 1) ? 1 : -1);
+      }
+      if (0) //if (darkp)
+      {
+        if (this->rng() % 4 == 0)
+        {
+          this->brightness += this->rng.uniform(0.0, 0.15);
+        }
+        if (this->rng() % 4 == 0)
+        {
+          this->contrast += this->rng.uniform(0.0, 0.2) * ((this->rng() & 1) ? 1 : -1);
+        }
+      }
+    }
+  }
+
+  void rotateKnobsSwitch()
+  {
+    if (!fixSettings && !(this->rng() % 5))
+    {
+      if (this->rng() % 4 == 0) 
+      {
+        this->tint += pow(this->rng.uniform(-1.0, 1.0), 7) * 180.0 * ((this->rng() & 1) ? 1 : -1);
+      }
+      if (1)
+      {
+        this->color += this->rng.uniform(0.0, 0.3) * ((this->rng() & 1) ? 1 : -1);
+      }
+      if (0) //(darkp)
+      {
+        if (this->rng() % 4 == 0)
+        {
+          this->brightness += this->rng.uniform(0.0, 0.15);
+        }
+        if (this->rng() % 4 == 0)
+        {
+          this->contrast += this->rng.uniform(0.0, 0.2) * ((this->rng() & 1) ? 1 : -1);
+        }
+      }
+    }
+  }
+
+  void run()
+  {
+    this->channel = rng() % this->chanSettings.size();
+    // for fading out
+    this->lastBrightness = -std::numeric_limits<double>::max();
+
+    this->frameCounter = 0;
+    this->lastFrame = this->fps * this->duration;
+    this->powerUpLastFrame = POWERUP_DURATION * this->fps;
+    this->fadeOutFirstFrame = (this->duration - POWERDOWN_DURATION) * this->fps;
+
+    this->channelLastFrame = 0;
+  }
+
+  Operation getNext()
+  {
+    Operation op;
+    op.channel = channel;
+    op.type = Operation::Type::NONE;
+
+    double curTime = this->frameCounter / this->fps;
+    // power up -> switch channels -> power down
+
+    bool canSwitchChannels = true;
+    if (this->usePowerUpDown)
+    {
+      // don't switch channels when powering up / fading out
+      if (this->frameCounter < this->powerUpLastFrame)
+      {
+        this->powerup = curTime;
+        canSwitchChannels = false;
+      }
+      else if (this->frameCounter >= this->fadeOutFirstFrame)
+      {
+        /* Usable range is something like -0.75 to 1.0 */
+        static const double minBrightness = -1.5;
+
+        // initialize fading out
+        if (lastBrightness <= -10.0) // some big value
+        {
+          lastBrightness = brightness;
+        }
+
+        /* Fade out, as there is no power-down animation. */
+        double rate = (duration - curTime) / POWERDOWN_DURATION;
+        brightness = minBrightness * (1.0 - rate) + lastBrightness * rate;
+
+        canSwitchChannels = false;
+      }
+    }
+
+    if (canSwitchChannels)
+    {
+      // channel switch is allowed
+      if (this->frameCounter >= this->channelLastFrame)
+      {
+        /* 1 - 7 sec */
+        this->channelLastFrame = frameCounter + fps * (1 + rng.uniform(0.0, 6.0));
+
+        this->channel = rng() % this->chanSettings.size();
+
+        atv::Log::write(2, std::to_string(curTime) + " sec: channel " + std::to_string(channel));
+
+        /* Turn the knobs every now and then */
+        this->rotateKnobsSwitch();
+
+        op.type = Operation::Type::SWITCH;
+      }
+    }
+
+    if (frameCounter >= lastFrame)
+    {
+      op.type = Operation::Type::QUIT;
+    }
+
+    frameCounter++;
+
+    op.channel = channel;
+    return op;
+  }
+
+  //TODO: mark all usages by this->
+  std::vector<std::shared_ptr<atv::Source>> sources;
+  std::vector<ChanSetting> chanSettings;
+
+  cv::RNG rng;
+
+  bool fixSettings;
+
+  double duration;
+  double fps;
+  bool usePowerUpDown;
+
+  // state
+  int frameCounter;
+  int channel;
+  int lastFrame;
+  int channelLastFrame;
+  int fadeOutFirstFrame;
+  int powerUpLastFrame;
+
+  // for fading out
+  double lastBrightness;
+  // tv knobs
+  double powerup;
+  double brightness;
+  double tint;
+  double color;
+  double contrast;
+  double height;
+  double width;
+  double squish;
+
+  bool useHashNoise;
+  bool enableHashNoise;
+
+  double horizontalDesync;
+  double squeezeBottom;
+
+  bool useFlutterHorizontalDesync;
+};
 
 
 static void run(Params params)
 {
-  int duration = params.duration;
-
   int seed = params.seed;
   if (params.seed == 0)
   {
@@ -237,7 +415,7 @@ static void run(Params params)
   }
   cv::RNG rng(seed);
 
-  int fps = 30;
+  const int fps = 30;
 
   std::vector<std::shared_ptr<atv::Source>> sources;
   for (const auto& s : params.sources)
@@ -252,6 +430,7 @@ static void run(Params params)
   for (const auto& s : sources)
   {
     s->setOutSize(outSize);
+    //TODO: what's this?
     // randomly set ssavi (what's this? BW?) for image sources
     s->setSsavi(rng() % 20 == 0);
   }
@@ -268,58 +447,41 @@ static void run(Params params)
   atv::AnalogTV tv(seed);
   tv.set_buffer(outBuffer);
 
-  rotateKnobsStart(params.fixSettings, tv, rng);
+  Control control(sources, seed, params.fixSettings, fps, params.duration, params.powerup);
 
-  std::vector<ChanSetting> chanSettings = createChannels(params.fixSettings, sources, rng);
+  control.createChannels(sources);
 
-  size_t nChannels = chanSettings.size();
+  control.rotateKnobsStart();
+  control.setTvControls(tv);
 
-  unsigned long start_time = time((time_t *)0);
+  control.run();
 
-  unsigned long curticks = 0;
-  time_t lastlog = time((time_t *)0);
-  int frames_left = 0;
-  int channel_changes = 0;
-  int curinputi = 0;
-
+  //TODO: remove it
   tv.powerup = 0.0;
 
-  std::vector<int> stats(nChannels);
-
-  /* This is xanalogtv_draw()
-   */
-  while (1)
+  while (true)
   {
-    double curtime = curticks * 0.001;
+    auto action = control.getNext();
 
-    frames_left--;
-    if (frames_left <= 0 &&
-        (!params.powerup || curticks > POWERUP_DURATION*1000))
+    if (action.type == Control::Operation::Type::QUIT)
     {
-      channel_changes++;
-
-      /* 1 - 7 sec */
-      frames_left = fps * (1 + rng.uniform(0.0, 6.0));
-
-      /* Otherwise random */
-      curinputi = 1 + (rng() % (nChannels - 1));
-
-      stats[curinputi]++;
-      /* Set channel change noise flag */
-      tv.channel_change_cycles = 200000;
-
-      atv::Log::write(2, std::to_string(curticks/1000.0) + " sec: channel " + std::to_string(curinputi));
-
-      /* Turn the knobs every now and then */
-      rotateKnobsSwitch(params.fixSettings, tv, rng);
+      break;
     }
 
-    tv.powerup = params.powerup ? curtime : 9999;
+    int curInput = action.channel;
 
-    ChanSetting& curChannel = chanSettings[curinputi];
+    if (action.type == Control::Operation::Type::SWITCH)
+    {
+      tv.channel_change_cycles = 200000;
+    }
+
+    control.setTvControls(tv);
+
+    ChanSetting& curChannel = control.chanSettings[curInput];
     for (size_t i = 0; i < curChannel.receptions.size(); i++)
     {
       atv::AnalogReception& rec = curChannel.receptions[i];
+      //TODO: pass current time
       curChannel.sources[i]->update(rec.input);
       /* Noisy image */
       rec.update(rng);
@@ -332,55 +494,9 @@ static void run(Params params)
     {
       o->send(outBuffer);
     }
-
-    if (params.powerup &&
-        curticks > (unsigned int)((duration*1000) - (POWERDOWN_DURATION*1000)))
-    {
-      /* Fade out, as there is no power-down animation. */
-      double r = ((duration*1000 - curticks) /
-                  (double) (POWERDOWN_DURATION*1000));
-      static double ob = 9999;
-      double min = -1.5;  /* Usable range is something like -0.75 to 1.0 */
-      if (ob == 9999)
-        ob = tv.brightness_control;  /* Terrible */
-      tv.brightness_control = min + (ob - min) * r;
-    }
-
-    if (curtime >= duration)
-      break;
-
-    curticks     += 1000/fps;
-
-    //TODO: refactor it
-    unsigned long now = time((time_t *)0);
-    if (now > (unsigned int)(atv::Log::getVerbosity() == 1 ? lastlog : lastlog + 10))
-    {
-      unsigned long elapsed = now - start_time;
-        double ratio = curtime / (double) duration;
-        int remaining = (ratio ? (elapsed / ratio) - elapsed : 0);
-        int percent = 100 * ratio;
-        int cols = 47;
-        std::string dots(cols * ratio, '.');
-        fprintf (stderr, "%sprocessing%s %2d%%, %d:%02d:%02d ETA%s",
-                 (atv::Log::getVerbosity() == 1 ? "\r" : ""),
-                 dots.c_str(), percent, 
-                 (remaining/60/60),
-                 (remaining/60)%60,
-                 remaining%60,
-                 (atv::Log::getVerbosity() == 1 ? "" : "\n"));
-        lastlog = now;
-    }
   }
 
-  if (atv::Log::getVerbosity() == 1) fprintf(stderr, "\n");
-
-  if (channel_changes == 0) channel_changes++;
-
-  atv::Log::write(2, "channels shown: " + std::to_string(channel_changes));
-  for (size_t i = 0; i < nChannels; i++)
-  {
-    atv::Log::write(2, "  " + std::to_string(i+1) + ":  " + std::to_string(stats[i] * 100 / channel_changes));
-  }
+  atv::Log::write(2, "Finish");
 }
 
 
