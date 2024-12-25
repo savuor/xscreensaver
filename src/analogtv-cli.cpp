@@ -7,19 +7,6 @@
  * documentation.  No representations are made about the suitability of this
  * software for any purpose.  It is provided "as is" without express or 
  * implied warranty.
- *
- * Performs the "Analog TV" transform on an image file, converting it to
- * an MP4.  The MP4 file will have the same dimensions as the largest of
- * the input images.
- *
- *    --duration     Length in seconds of output MP4.
- *    --size WxH     Dimensions of output MP4.  Defaults to dimensions of
- *                   the largest input image.
- *    --powerup      Do the power-on animation at the beginning, and
- *                   fade to black at the end.
- *    --logo FILE    Small image overlayed onto the colorbars image.
- *
- *  Created: 10-Dec-2018 by jwz.
  */
 
 #include "precomp.hpp"
