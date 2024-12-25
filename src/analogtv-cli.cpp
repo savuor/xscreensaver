@@ -20,7 +20,7 @@
 
 #include <opencv2/core.hpp>
 
-#include "wx/wx.h"
+//#include "wx/wx.h"
 
 struct Params
 {
