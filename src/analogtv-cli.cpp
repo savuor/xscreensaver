@@ -499,7 +499,7 @@ int main (int argc, char **argv)
   atv::Log::setVerbosity(oparams.value().verbosity);
 
   // Check that wxWidgets builds and works
-  wxPuts(wxT("TODO: implement a real GUI instead"));
+  //wxPuts(wxT("TODO: implement a real GUI instead"));
 
 
   run(oparams.value());
