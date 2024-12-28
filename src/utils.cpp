@@ -7,6 +7,23 @@
 namespace atv
 {
 
+std::vector<std::string> split(const std::string& s, char d)
+{
+    std::vector<std::string> tokens;
+    size_t pos = 0;
+    for (size_t i = 0; i < s.length(); i++)
+    {
+        if (s.at(i) == d)
+        {
+            tokens.push_back(s.substr(pos, i - pos));
+            pos = i + 1;
+        }
+    }
+    tokens.push_back(s.substr(pos, s.length() - pos));
+
+    return tokens;
+}
+
 // I/O
 
 cv::Mat loadImage(const std::string& fname)

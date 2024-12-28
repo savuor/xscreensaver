@@ -19,6 +19,11 @@ cv::Mat loadImage(const std::string& fname);
 
 std::optional<int> parseInt(const std::string &s);
 
+// splits string by a delimiting char, start and end of source string:
+// ":asdf:qwer:" by ":" -> ["", "asdf", "qwer", ""]
+// "asdf:qwer"   by ":" -> ["asdf", "qwer"]
+std::vector<std::string> split(const std::string& s, char d);
+
 struct CmdArgument
 {
   enum class Type

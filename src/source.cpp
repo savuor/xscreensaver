@@ -353,23 +353,20 @@ void VideoSource::update(AnalogInput& input)
 
 
 // the sources can be tuned later for different size or other params
-std::shared_ptr<Source> Source::create(const std::string& name)
+std::shared_ptr<Source> Source::create(const std::string& srcStr)
 {
   std::shared_ptr<Source> src;
-  if (name.at(0) == ':')
+  std::vector<std::string> tokens = atv::split(srcStr, ':');
+
+  if (tokens[0].empty())
   {
-    //TODO: split string by ":"
-    size_t at = name.find_first_of(":", 1);
-    std::string stype, arg;
-    if (at != std::string::npos)
+    // string starts from ":"
+    if (tokens.size() < 2)
     {
-      stype = name.substr(1, at - 1);
-      arg = name.substr(at + 1, name.length() - at);
+      throw std::runtime_error("Source type not given");
     }
-    else
-    {
-      stype = name.substr(1, name.length() - 1);
-    }
+    std::string stype = tokens[1];
+    std::string arg = tokens.size() > 2 ? tokens[2] : std::string();
     // should be like ":bars" or ":bars:/path/to/image"
     if (stype == "bars")
     {
@@ -398,18 +395,18 @@ std::shared_ptr<Source> Source::create(const std::string& name)
       "vp8", "mov", "wmv", "flv",
       "avi", "mkv"
     };
-    int extIdx = name.find_last_of(".");
-    std::string ext = name.substr(extIdx + 1, name.length() - extIdx - 1);
+    int extIdx = srcStr.find_last_of(".");
+    std::string ext = srcStr.substr(extIdx + 1, srcStr.length() - extIdx - 1);
     std::transform(ext.begin(), ext.end(), ext.begin(),
                    [](unsigned char c){ return std::tolower(c); });
 
     if (knownVideoExtensions.count(ext))
     {
-      src = std::make_shared<VideoSource>(name);
+      src = std::make_shared<VideoSource>(srcStr);
     }
     else
     {
-      cv::Mat img = loadImage(name);
+      cv::Mat img = loadImage(srcStr);
       src = std::make_shared<ImageSource>(img);
     }
   }

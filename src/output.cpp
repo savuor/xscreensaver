@@ -75,9 +75,11 @@ void VideoOutput::send(const cv::Mat &m)
 
 std::shared_ptr<Output> Output::create(const std::string &s, cv::Size imgSize)
 {
-    if (s.at(0) == ':')
+    std::vector<std::string> tokens = atv::split(s, ':');
+    if (tokens[0].empty())
     {
-        std::string name = s.substr(1, s.length() - 1);
+        // string starts with ":"
+        std::string name = tokens[1];
         if (name == "highgui")
         {
             return std::make_shared<HighguiOutput>();
