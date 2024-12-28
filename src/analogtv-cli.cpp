@@ -25,12 +25,10 @@
 struct Params
 {
   int         verbosity;
-  int         duration;
   int         seed;
-  bool        powerup;
-  bool        fixSettings;
   cv::Size    size;
 
+  std::string controlDescription;
   std::vector<std::string> sources;
   std::vector<std::string> outputs;
 };
@@ -99,11 +97,8 @@ struct Control
   //TODO: delegate construction
   Control() {}
 
-  Control(const std::vector<std::shared_ptr<atv::Source>> _sources, uint64_t rngSeed, bool _fixSettings,
-          double _fps, double _duration, bool _powerUpDown)
+  Control(bool _fixSettings, double _fps, double _duration, bool _powerUpDown)
   {
-    this->sources = _sources;
-    this->rng = cv::RNG(rngSeed);
     this->fixSettings = _fixSettings;
 
     this->fps = _fps;
@@ -111,6 +106,71 @@ struct Control
     this->usePowerUpDown = _powerUpDown;
   }
 
+  static std::shared_ptr<Control> create(const std::string& desc)
+  {
+    std::shared_ptr<Control> control;
+    std::vector<std::string> tokens = atv::split(desc, ':');
+
+    if (tokens[0].empty())
+    {
+      // string starts from ":"
+      if (tokens.size() < 2)
+      {
+        throw std::runtime_error("Control type not given");
+      }
+      std::string stype = tokens[1];
+      // should be like ":random" or ":random:p=1:q=2:b"
+      if (stype == "random")
+      {
+        std::map<std::string, std::string> kv;
+        for (size_t ti = 2; ti < tokens.size(); ti++)
+        {
+          const std::string& st = tokens[ti];
+          if (!st.empty())
+          {
+            std::vector<std::string> ttk = atv::split(st, '=');
+            if (ttk.size() > 2)
+            {
+              throw std::runtime_error("Parameters should be of a form param=value");
+            }
+            std::string arg = ttk.size() == 2 ? ttk[1] : std::string();
+            kv[ttk[0]] = arg;
+          }
+        }
+
+        double duration = 60;
+        if (kv.count("duration"))
+        {
+          duration = atv::parseInt(kv.at("duration")).value_or(60);
+        }
+        bool powerUpDown = kv.count("powerup");
+        bool fixSettings = kv.count("fixsettings");
+        int fps = 30;
+        if (kv.count("fps"))
+        {
+          fps = atv::parseInt(kv.at("fps")).value_or(30);
+        }
+
+        control = std::make_shared<Control>(fixSettings, fps, duration, powerUpDown);
+      }
+      else
+      {
+          throw std::runtime_error("Unknown source type: " + stype);
+      }
+    }
+    else
+    {
+      //TODO: load json with settings
+      throw std::runtime_error("JSON loading is not implemented yet");
+    }
+
+    return control;
+  }
+
+  void setRNG(uint64_t rngSeed)
+  {
+    this->rng = cv::RNG(rngSeed);
+  }
 
   // why const ref to sources does not work?
   void createChannels(const std::vector<std::shared_ptr<atv::Source>> sources)
@@ -258,7 +318,7 @@ struct Control
 
   void rotateKnobsSwitch()
   {
-    if (!fixSettings && !(this->rng() % 5))
+    if (!this->fixSettings && !(this->rng() % 5))
     {
       if (this->rng() % 4 == 0) 
       {
@@ -284,7 +344,7 @@ struct Control
 
   void run()
   {
-    this->channel = rng() % this->chanSettings.size();
+    this->channel = this->rng() % this->chanSettings.size();
     // for fading out
     this->lastBrightness = -std::numeric_limits<double>::max();
 
@@ -299,7 +359,7 @@ struct Control
   Operation getNext()
   {
     Operation op;
-    op.channel = channel;
+    op.channel = this->channel;
     op.type = Operation::Type::NONE;
 
     double curTime = this->frameCounter / this->fps;
@@ -320,14 +380,14 @@ struct Control
         static const double minBrightness = -1.5;
 
         // initialize fading out
-        if (lastBrightness <= -10.0) // some big value
+        if (this->lastBrightness <= -10.0) // some big value
         {
-          lastBrightness = brightness;
+          this->lastBrightness = brightness;
         }
 
         /* Fade out, as there is no power-down animation. */
-        double rate = (duration - curTime) / POWERDOWN_DURATION;
-        brightness = minBrightness * (1.0 - rate) + lastBrightness * rate;
+        double rate = (this->duration - curTime) / POWERDOWN_DURATION;
+        brightness = minBrightness * (1.0 - rate) + this->lastBrightness * rate;
 
         canSwitchChannels = false;
       }
@@ -339,11 +399,11 @@ struct Control
       if (this->frameCounter >= this->channelLastFrame)
       {
         /* 1 - 7 sec */
-        this->channelLastFrame = frameCounter + fps * (1 + rng.uniform(0.0, 6.0));
+        this->channelLastFrame = frameCounter + this->fps * (1 + this->rng.uniform(0.0, 6.0));
 
-        this->channel = rng() % this->chanSettings.size();
+        this->channel = this->rng() % this->chanSettings.size();
 
-        atv::Log::write(2, std::to_string(curTime) + " sec: channel " + std::to_string(channel));
+        atv::Log::write(2, std::to_string(curTime) + " sec: channel " + std::to_string(this->channel));
 
         /* Turn the knobs every now and then */
         this->rotateKnobsSwitch();
@@ -352,19 +412,17 @@ struct Control
       }
     }
 
-    if (frameCounter >= lastFrame)
+    if (this->frameCounter >= this->lastFrame)
     {
       op.type = Operation::Type::QUIT;
     }
 
-    frameCounter++;
+    this->frameCounter++;
 
-    op.channel = channel;
+    op.channel = this->channel;
     return op;
   }
 
-  //TODO: mark all usages by this->
-  std::vector<std::shared_ptr<atv::Source>> sources;
   std::vector<ChanSetting> chanSettings;
 
   cv::RNG rng;
@@ -415,8 +473,6 @@ static void run(Params params)
   }
   cv::RNG rng(seed);
 
-  const int fps = 30;
-
   std::vector<std::shared_ptr<atv::Source>> sources;
   for (const auto& s : params.sources)
   {
@@ -447,21 +503,22 @@ static void run(Params params)
   atv::AnalogTV tv(seed);
   tv.set_buffer(outBuffer);
 
-  Control control(sources, seed, params.fixSettings, fps, params.duration, params.powerup);
+  std::shared_ptr<Control> control = Control::create(params.controlDescription);
+  control->setRNG(seed);
 
-  control.createChannels(sources);
+  control->createChannels(sources);
 
-  control.rotateKnobsStart();
-  control.setTvControls(tv);
+  control->rotateKnobsStart();
+  control->setTvControls(tv);
 
-  control.run();
+  control->run();
 
   //TODO: remove it
   tv.powerup = 0.0;
 
   while (true)
   {
-    auto action = control.getNext();
+    auto action = control->getNext();
 
     if (action.type == Control::Operation::Type::QUIT)
     {
@@ -475,9 +532,9 @@ static void run(Params params)
       tv.channel_change_cycles = 200000;
     }
 
-    control.setTvControls(tv);
+    control->setTvControls(tv);
 
-    ChanSetting& curChannel = control.chanSettings[curInput];
+    ChanSetting& curChannel = control->chanSettings[curInput];
     for (size_t i = 0; i < curChannel.receptions.size(); i++)
     {
       atv::AnalogReception& rec = curChannel.receptions[i];
@@ -506,21 +563,22 @@ static const std::map<std::string, atv::CmdArgument> knownArgs =
     {"verbose",
       { "n",     atv::CmdArgument::Type::INT,  true,
         "level of verbosity from 0 to 5" }},
-    {"duration",
-      { "secs",  atv::CmdArgument::Type::INT,  false,
-        "length of video in secs, e.g. 60" }},
-    {"powerup",
-      { "",      atv::CmdArgument::Type::BOOL, true,
-        "to run or not the power-on animation at the beginning, and fade to black at the end" }},
-    {"fixsettings",
-      { "",      atv::CmdArgument::Type::BOOL, true,
-        "apply less randomness to settings" }},
     {"size",
       { "width height", atv::CmdArgument::Type::LIST_INT, true,
         "use different size than maximum of given images" }},
     {"seed",
       { "value", atv::CmdArgument::Type::INT, true,
         "random seed to start random generator or 0 to randomize by current date and time" }},
+    {"control",
+      { "<file.json or param string>", atv::CmdArgument::Type::STRING, false,
+        "control scenario file in JSON format or a special control with its arguments separated by semicolon:\n"
+        "  * JSON file containing prescripted instructions (not implemented yet)\n"
+        "  * :random:par1=1:par2=0:boolPar3 is a random control with the following available parameters:\n"
+        "    * duration: length of video in secs, 60 if not given\n"
+        "    * powerup: if given, power-on animation is run at the beginning, and fade to black is done at the end\n"
+        "    * fixsettings: if given, some TV settings are not random\n"
+        "    * fps: frames per second, 30 if not given (not implemented properly yet)\n"
+        "    Example control description: \":random:duration=60:fixsettings:powerup\"" }},
     {"in",
       { "src1 [src2 ... srcN]", atv::CmdArgument::Type::LIST_STRING, false,
         "signal sources: still images, video files or special sources:\n"
@@ -552,24 +610,12 @@ std::optional<Params> parseParams(int args, char** argv)
   Params p;
   p.sources  = std::get<std::vector<std::string>>(usedArgs.at("in"));
   p.outputs  = std::get<std::vector<std::string>>(usedArgs.at("out"));
-  p.duration = std::get<int>(usedArgs.at("duration"));
+  p.controlDescription = std::get<std::string>(usedArgs.at("control"));
 
   p.verbosity = 0;
   if (usedArgs.count("verbose"))
   {
     p.verbosity = std::get<int>(usedArgs.at("verbose"));
-  }
-
-  p.powerup = false;
-  if (usedArgs.count("powerup"))
-  {
-    p.powerup = std::get<bool>(usedArgs.at("powerup"));
-  }
-
-  p.fixSettings = false;
-  if (usedArgs.count("fixsettings"))
-  {
-    p.fixSettings = std::get<bool>(usedArgs.at("fixsettings"));
   }
 
   p.size = { };

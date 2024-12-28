@@ -27,9 +27,8 @@
 				"program": "${command:cmake.buildDirectory}/analogtv-cli",
 				"args": [
 					"--verbose", "3",
-					"--duration", "60",
-					//"--fixsettings",
-					"--powerup",
+					//"--control", ":random:duration=60:powerup:fixsettings",
+					"--control", ":random:duration=60:powerup",
 					"--size", "1280", "1024",
 					"--seed", "1234",
 					"--in", //"~/Pictures/90s/*",
